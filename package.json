@@ -1,11 +1,12 @@
 {
   "name": "astromap",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "AstroMap — Premium Astrocartography App",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "vercel-build": "echo 'No build step needed'"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -13,5 +14,8 @@
     "express": "^4.18.2",
     "iyzipay": "^2.0.65",
     "openai": "^4.20.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
