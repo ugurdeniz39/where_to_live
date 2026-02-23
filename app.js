@@ -200,11 +200,23 @@ async function callAI(endpoint, body, useCache = true) {
         }
     }
     
-    const res = await fetch('/api/' + endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-    });
+    let res;
+    try {
+        res = await fetch('/api/' + endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+    } catch (networkErr) {
+        throw new Error('Sunucuya bağlanılamadı. Lütfen localhost:3000 üzerinden açın.');
+    }
+
+    // Check content type before parsing
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+        throw new Error('AI özellikleri için uygulamayı localhost:3000 üzerinden açın. (GitHub Pages sadece statik içerik sunar)');
+    }
+
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || 'AI isteği başarısız');
     
@@ -491,6 +503,10 @@ async function submitBillingAndPay(e) {
             })
         });
 
+        const ct = response.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+            throw new Error('Ödeme sistemi şu an kullanılamıyor. localhost:3000 üzerinden açın.');
+        }
         const data = await response.json();
 
         if (data.success && data.checkoutFormContent) {
