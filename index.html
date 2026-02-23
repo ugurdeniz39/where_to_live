@@ -889,12 +889,27 @@
 <script src="astro-engine.js"></script>
 <script src="app.js"></script>
 
-<!-- Service Worker Registration -->
+<!-- Service Worker Registration — force fresh updates -->
 <script>
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('✦ SW registered:', reg.scope))
+            .then(reg => {
+                console.log('✦ SW registered:', reg.scope);
+                // Check for updates immediately & on every page load
+                reg.update();
+                reg.addEventListener('updatefound', () => {
+                    const newSW = reg.installing;
+                    if (newSW) {
+                        newSW.addEventListener('statechange', () => {
+                            if (newSW.state === 'activated') {
+                                console.log('✦ New SW activated — reloading for fresh content');
+                                window.location.reload();
+                            }
+                        });
+                    }
+                });
+            })
             .catch(err => console.warn('SW registration failed:', err));
     });
 }
@@ -922,6 +937,7 @@ if ('serviceWorker' in navigator) {
         "AI Tarot",
         "Kristal Rehberi",
         "Rüya Yorumu",
+        "Kahve Falı",
         "Ay Takvimi"
     ]
 }

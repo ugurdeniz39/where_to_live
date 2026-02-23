@@ -37,8 +37,12 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; }
-body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+    font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6;
+    overflow-x: hidden; -webkit-font-smoothing: antialiased;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+}
 
 ::selection { background: var(--accent-dark); color: white; }
 ::-webkit-scrollbar { width: 6px; }
@@ -184,7 +188,7 @@ a:hover { color: var(--accent-light); }
     .page-title { font-size: 24px; }
     .page-subtitle { font-size: 13px; }
     .form-row { grid-template-columns: 1fr; }
-    .tarot-form, .crystal-form, .dream-form { padding: 0 8px; margin: 24px auto; }
+    .tarot-form, .crystal-form, .dream-form, .fortune-form { padding: 0 8px; margin: 24px auto; }
     textarea { font-size: 16px; /* Prevents iOS zoom */ }
     input[type="date"], input[type="time"], input[type="email"], input[type="text"], input[type="tel"], input[type="password"] { font-size: 16px; /* Prevents iOS zoom */ }
     
@@ -207,12 +211,20 @@ a:hover { color: var(--accent-light); }
     .compat-heart { transform: rotate(90deg); }
     .compat-categories { grid-template-columns: 1fr; }
     
-    /* Tarot/Crystal/Dream mobile */
+    /* Tarot/Crystal/Dream/Fortune mobile */
     .tarot-spread { flex-direction: column; align-items: center; }
     .wellness-grid { grid-template-columns: 1fr; }
     .crystal-support-grid { grid-template-columns: 1fr; }
     .dream-symbols-grid { grid-template-columns: 1fr; }
     .daily-scores { grid-template-columns: repeat(2, 1fr); }
+    .fortune-form select { font-size: 16px; }
+    .fortune-reveal { padding: 0 4px; }
+    .fortune-title { font-size: 22px; }
+    .fortune-cup-icon { font-size: 44px; }
+    .fortune-general, .fortune-symbols, .fortune-sections, .fortune-answer, .fortune-advice { padding: 14px; margin-bottom: 16px; }
+    .fortune-section { padding: 14px; }
+    .fortune-section h4 { font-size: 14px; }
+    .fortune-section p { font-size: 12px; }
 }
 
 /* ════════════ PAGES ════════════ */
@@ -2398,7 +2410,18 @@ body::before {
 .fortune-form select {
     width: 100%; padding: 12px 16px; border-radius: var(--radius-sm);
     background: var(--bg-card); border: 1px solid var(--border); color: var(--text);
-    font-size: 14px; font-family: var(--font);
+    font-size: 14px; font-family: var(--font); -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238a84a0' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+}
+.fortune-form .form-group { margin-bottom: 18px; }
+.fortune-form .form-group label { display: block; font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 8px; }
+.fortune-form .form-group small { color: var(--text-dim); }
+.fortune-form textarea, .fortune-form input { width: 100%; }
+.fortune-form .btn-primary {
+    width: 100%; padding: 16px; font-size: 16px; font-weight: 600;
+    background: var(--gradient-main); border: none; border-radius: var(--radius-sm);
+    color: white; cursor: pointer; font-family: var(--font);
 }
 .fortune-loading-scene { text-align: center; padding: 80px 24px; }
 .fortune-cup-anim {

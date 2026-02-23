@@ -1,5 +1,5 @@
-// AstroMap Service Worker v4
-const CACHE_NAME = 'astromap-v4';
+// AstroMap Service Worker v5 — Network-first for fresh deploys
+const CACHE_NAME = 'astromap-v5';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -16,13 +16,12 @@ const EXTERNAL_ASSETS = [
     'https://html2canvas.hertzen.com/dist/html2canvas.min.js'
 ];
 
-// Install — cache static assets
+// Install — cache static assets & activate immediately
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
             return cache.addAll(STATIC_ASSETS).catch(err => {
                 console.warn('SW: Some assets failed to cache', err);
-                // Cache what we can
                 return Promise.allSettled(
                     STATIC_ASSETS.map(url => cache.add(url).catch(() => {}))
                 );
@@ -32,27 +31,26 @@ self.addEventListener('install', event => {
     self.skipWaiting();
 });
 
-// Activate — clean old caches
+// Activate — clean ALL old caches, claim clients immediately
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(keys => {
             return Promise.all(
                 keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
             );
-        })
+        }).then(() => self.clients.claim())
     );
-    self.clients.claim();
 });
 
-// Fetch — Network first for API, Cache first for static
+// Fetch — Network-first for everything (fresh content on every load)
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
-    
-    // API requests — network only with timeout fallback
+
+    // API requests — network only
     if (url.pathname.startsWith('/api/')) {
         event.respondWith(
             fetch(event.request)
-                .then(response => response)
+                .then(r => r)
                 .catch(() => new Response(
                     JSON.stringify({ error: 'Çevrimdışısınız. İnternet bağlantınızı kontrol edin.' }),
                     { status: 503, headers: { 'Content-Type': 'application/json' } }
@@ -60,29 +58,18 @@ self.addEventListener('fetch', event => {
         );
         return;
     }
-    
-    // Static assets — cache first, network fallback
+
+    // Everything else — network first, cache fallback
     event.respondWith(
-        caches.match(event.request).then(cached => {
-            if (cached) {
-                // Update cache in background
-                fetch(event.request).then(response => {
-                    if (response.ok) {
-                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, response));
-                    }
-                }).catch(() => {});
-                return cached;
+        fetch(event.request).then(response => {
+            if (response.ok && event.request.method === 'GET') {
+                const clone = response.clone();
+                caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
             }
-            
-            return fetch(event.request).then(response => {
-                // Cache successful responses
-                if (response.ok && event.request.method === 'GET') {
-                    const clone = response.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-                }
-                return response;
-            }).catch(() => {
-                // Offline fallback for navigation
+            return response;
+        }).catch(() => {
+            return caches.match(event.request).then(cached => {
+                if (cached) return cached;
                 if (event.request.mode === 'navigate') {
                     return caches.match('/index.html');
                 }
@@ -92,7 +79,7 @@ self.addEventListener('fetch', event => {
     );
 });
 
-// Background sync for failed API requests
+// Accept skip-waiting messages from client
 self.addEventListener('message', event => {
     if (event.data === 'skipWaiting') {
         self.skipWaiting();
