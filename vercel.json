@@ -1,27 +1,10 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/**/*.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "*.{css,js,json}",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    { "src": "/api/checkout/init", "dest": "/api/checkout/init.js" },
-    { "src": "/api/checkout/callback", "dest": "/api/checkout/callback.js" },
-    { "src": "/api/(.*)", "dest": "/api/$1.js" },
-    { "src": "/(.*\\.css)", "dest": "/$1" },
-    { "src": "/(.*\\.js)", "dest": "/$1" },
-    { "src": "/(.*\\.json)", "dest": "/$1" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/api/checkout/init", "destination": "/api/checkout/init" },
+    { "source": "/api/checkout/callback", "destination": "/api/checkout/callback" },
+    { "source": "/api/:path", "destination": "/api/:path" },
+    { "source": "/((?!api|.*\\..*).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
