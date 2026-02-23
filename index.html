@@ -471,7 +471,7 @@
 <section id="page-fortune" class="page">
     <div class="page-container">
         <h1 class="page-title">☕ Kahve <em>Falı</em></h1>
-        <p class="page-subtitle">Fincanındaki şekilleri anlat, AI astrolojik kahve falı baksın.</p>
+        <p class="page-subtitle">Fincanının fotoğrafını yükle, AI kahve falına baksın.</p>
 
         <div id="fortune-form" class="fortune-form">
             <div class="form-group">
@@ -487,16 +487,24 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Fincanında Neler Görüyorsun?</label>
-                <textarea id="fortune-cup" placeholder="Fincanındaki şekilleri anlat... Örn: Kuş gibi bir şekil var, kalp görünüyor, ağaç gibi bir şey var, yol çizgisi..." rows="5"></textarea>
+                <label>Fincan Fotoğrafı</label>
+                <div class="fortune-dropzone" id="fortune-dropzone" onclick="document.getElementById('fortune-file').click()">
+                    <input type="file" id="fortune-file" accept="image/*" capture="environment" hidden onchange="handleFortuneImage(this)">
+                    <div id="fortune-preview" class="fortune-preview">
+                        <div class="fortune-drop-icon">📸</div>
+                        <p class="fortune-drop-text">Fincanın fotoğrafını çek veya yükle</p>
+                        <small>JPG, PNG — max 5MB</small>
+                    </div>
+                </div>
             </div>
             <div class="form-group">
-                <label>Aklında Bir Soru Var mı? <small>(opsiyonel)</small></label>
-                <input type="text" id="fortune-question" placeholder="Örn: İş değişikliği olacak mı?">
+                <label>Eklemek İstediğin Bir Şey Var mı? <small>(opsiyonel)</small></label>
+                <textarea id="fortune-cup" placeholder="Fincanında gördüğün şeyleri veya aklındaki soruyu yaz..." rows="3"></textarea>
             </div>
-            <button class="btn-primary" onclick="showFortune()">
+            <button class="btn-primary" id="fortune-submit-btn" onclick="showFortune()" disabled>
                 <span class="btn-sparkle">☕</span> Falıma Bak
             </button>
+            <p class="fortune-hint">💡 Net bir fotoğraf çek — fincanı düz tutarak, iyi ışıkta.</p>
         </div>
 
         <div id="fortune-result"></div>

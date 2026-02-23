@@ -37,7 +37,7 @@ const PLANS = {
 };
 
 app.use(cors());
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 // ═══════════════════════════════════════
 // SECURITY HEADERS
@@ -413,12 +413,12 @@ Bu rüyayı astrolojik ve psikolojik açıdan yorumla.`;
 // ═══════════════════════════════════════
 app.post('/api/fortune', async (req, res) => {
     try {
-        const { cup, sunSign, status, question } = req.body;
-        if (!cup) return res.status(400).json({ error: 'Fincan açıklaması gerekli' });
+        const { image, cup, sunSign, status } = req.body;
+        if (!image) return res.status(400).json({ error: 'Fincan fotoğrafı gerekli' });
 
         const systemPrompt = `Sen deneyimli bir Türk kahve falcısısın. Geleneksel Türk kahve falı geleneğine hakimsin.
-Sıcak, samimi, gizemli ama umut verici bir ton kullan. Türkçe yaz. Kadın kullanıcılara hitap ediyorsun.
-Fincan tabanı, duvarları ve kenarlarındaki şekilleri yorumla.
+Sıcak, samimi, gizemli ama umut verici bir ton kullan. Türkçe yaz.
+Fotoğraftaki fincanı detaylı incele — tabanı, duvarları, kenarları.
 Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
 {
   "title": "Falın başlığı — yaratıcı ve dikkat çekici, 4-6 kelime",
@@ -432,23 +432,34 @@ Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma
   "love": "Aşk ve ilişki hakkında yorum, 2-3 cümle",
   "career": "Kariyer ve para hakkında yorum, 2-3 cümle",
   "health": "Sağlık ve enerji hakkında yorum, 1-2 cümle",
-  "answer": "Eğer soru varsa yanıtı, yoksa null",
+  "answer": "Kullanıcının notundaki soruya yanıt, yoksa null",
   "luckyTip": "Şans getiren bir ipucu veya tavsiye",
   "timing": "Falda görülen olayların tahmini zamanlaması"
 }`;
 
-        const userPrompt = `Kişinin burcu: ${sunSign || 'bilinmiyor'}.
-Medeni durumu: ${status === 'single' ? 'Bekar' : status === 'married' ? 'Evli' : 'İlişkide'}.
-Fincanda gördüğü şekiller: "${cup}"
-${question ? `Aklındaki soru: "${question}"` : 'Belirli bir sorusu yok, genel fal bak.'}
-Bu fincanı detaylı bir şekilde yorumla.`;
+        const textPart = `Kişinin burcu: ${sunSign || 'bilinmiyor'}. Medeni durumu: ${status === 'single' ? 'Bekar' : status === 'married' ? 'Evli' : 'İlişkide'}.
+${cup ? `Kullanıcının notu: "${cup}"` : ''}
+Bu fincan fotoğrafını detaylı incele ve kahve falı yorumla.`;
 
-        const raw = await askGPT(systemPrompt, userPrompt, 800);
+        const response = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: [
+                    { type: 'text', text: textPart },
+                    { type: 'image_url', image_url: { url: image, detail: 'high' } }
+                ]}
+            ],
+            max_tokens: 900,
+            temperature: 0.85
+        });
+        const raw = response.choices[0].message.content;
         const jsonMatch = raw.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error('AI yanıtı parse edilemedi');
         const result = JSON.parse(jsonMatch[0]);
         res.json({ success: true, data: result });
     } catch (err) {
+        console.error('Fortune error:', err.message);
         res.status(500).json({ error: err.message });
     }
 });

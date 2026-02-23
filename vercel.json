@@ -1,5 +1,8 @@
 {
   "version": 2,
+  "functions": {
+    "api/fortune.js": { "maxDuration": 60 }
+  },
   "rewrites": [
     { "source": "/api/checkout/init", "destination": "/api/checkout/init" },
     { "source": "/api/checkout/callback", "destination": "/api/checkout/callback" },

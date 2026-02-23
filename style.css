@@ -225,6 +225,10 @@ a:hover { color: var(--accent-light); }
     .fortune-section { padding: 14px; }
     .fortune-section h4 { font-size: 14px; }
     .fortune-section p { font-size: 12px; }
+    .fortune-dropzone { padding: 24px 12px; min-height: 150px; }
+    .fortune-drop-icon { font-size: 36px; }
+    .fortune-drop-text { font-size: 14px; }
+    .fortune-preview-img { max-height: 240px; }
 }
 
 /* ════════════ PAGES ════════════ */
@@ -2422,6 +2426,35 @@ body::before {
     width: 100%; padding: 16px; font-size: 16px; font-weight: 600;
     background: var(--gradient-main); border: none; border-radius: var(--radius-sm);
     color: white; cursor: pointer; font-family: var(--font);
+}
+.fortune-dropzone {
+    border: 2px dashed var(--border-light); border-radius: var(--radius);
+    padding: 32px 16px; text-align: center; cursor: pointer;
+    transition: var(--transition); background: rgba(255,255,255,0.02);
+    position: relative; min-height: 180px; display: flex; align-items: center; justify-content: center;
+}
+.fortune-dropzone:hover, .fortune-dropzone:focus-within {
+    border-color: var(--accent); background: rgba(201,160,255,0.04);
+}
+.fortune-preview { width: 100%; }
+.fortune-drop-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.7; }
+.fortune-drop-text { font-size: 15px; color: var(--text-muted); font-weight: 500; margin-bottom: 4px; }
+.fortune-dropzone small { font-size: 12px; color: var(--text-dim); }
+.fortune-preview-img {
+    max-width: 100%; max-height: 320px; border-radius: var(--radius-sm);
+    object-fit: contain; display: block; margin: 0 auto;
+}
+.fortune-remove-img {
+    position: absolute; top: 8px; right: 8px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2);
+    color: white; font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: var(--transition); backdrop-filter: blur(4px);
+}
+.fortune-remove-img:hover { background: var(--rose); }
+.fortune-hint {
+    text-align: center; font-size: 12px; color: var(--text-dim); margin-top: 12px;
 }
 .fortune-loading-scene { text-align: center; padding: 80px 24px; }
 .fortune-cup-anim {

@@ -1756,14 +1756,64 @@ async function showCrystalGuide() {
 // AI DREAM INTERPRETATION — DREAMY ANIMATION
 // ═══════════════════════════════════════
 // ═══════════════════════════════════════
-// KAHVE FALI
+// KAHVE FALI — IMAGE UPLOAD
 // ═══════════════════════════════════════
+let fortuneImageBase64 = null;
+
+function handleFortuneImage(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { showToast('Dosya 5MB'den büyük olamaz'); input.value = ''; return; }
+    if (!file.type.startsWith('image/')) { showToast('Sadece resim dosyası yükleyebilirsin'); input.value = ''; return; }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        // Resize image to max 1024px to reduce payload
+        const img = new Image();
+        img.onload = () => {
+            const maxDim = 1024;
+            let w = img.width, h = img.height;
+            if (w > maxDim || h > maxDim) {
+                const ratio = Math.min(maxDim / w, maxDim / h);
+                w = Math.round(w * ratio);
+                h = Math.round(h * ratio);
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            fortuneImageBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+            // Show preview
+            const preview = document.getElementById('fortune-preview');
+            preview.innerHTML = `
+                <img src="${fortuneImageBase64}" alt="Fincan" class="fortune-preview-img">
+                <button type="button" class="fortune-remove-img" onclick="removeFortuneImage(event)">✕</button>
+            `;
+            document.getElementById('fortune-submit-btn').disabled = false;
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeFortuneImage(e) {
+    e.stopPropagation();
+    fortuneImageBase64 = null;
+    document.getElementById('fortune-file').value = '';
+    document.getElementById('fortune-preview').innerHTML = `
+        <div class="fortune-drop-icon">📸</div>
+        <p class="fortune-drop-text">Fincanın fotoğrafını çek veya yükle</p>
+        <small>JPG, PNG — max 5MB</small>
+    `;
+    document.getElementById('fortune-submit-btn').disabled = true;
+}
+
 async function showFortune() {
     const birthDate = document.getElementById('fortune-birth-date').value;
     const status = document.getElementById('fortune-status').value;
     const cup = document.getElementById('fortune-cup').value;
-    const question = document.getElementById('fortune-question').value;
-    if (!cup || cup.trim().length < 10) { showToast('Fincanındaki şekilleri biraz daha detaylı anlat 🙏'); return; }
+    if (!fortuneImageBase64) { showToast('Lütfen fincanın fotoğrafını yükle 📸'); return; }
 
     const sunSign = getSunSignFromDate(birthDate);
     const resultEl = document.getElementById('fortune-result');
@@ -1779,7 +1829,7 @@ async function showFortune() {
     `;
 
     try {
-        const data = await callAI('fortune', { cup, sunSign, status, question });
+        const data = await callAI('fortune', { image: fortuneImageBase64, cup, sunSign, status }, false);
         SoundFX.play('mystic');
         const symbols = data.symbols || [];
         resultEl.innerHTML = `
@@ -1824,13 +1874,26 @@ async function showFortune() {
                     <div class="dream-advice-item"><strong>⏰ Zamanlama:</strong> ${data.timing || ''}</div>
                 </div>
 
-                <button class="btn-ghost reset-btn stagger-6" onclick="resetAIPage('fortune-form','fortune-result')">☕ Yeni Fal Baktır</button>
+                <button class="btn-ghost reset-btn stagger-6" onclick="resetFortunePage()">☕ Yeni Fal Baktır</button>
             </div>
         `;
     } catch (err) {
         showAIError(resultEl, err.message);
         document.getElementById('fortune-form').style.display = '';
     }
+}
+
+function resetFortunePage() {
+    fortuneImageBase64 = null;
+    document.getElementById('fortune-file').value = '';
+    document.getElementById('fortune-preview').innerHTML = `
+        <div class="fortune-drop-icon">📸</div>
+        <p class="fortune-drop-text">Fincanın fotoğrafını çek veya yükle</p>
+        <small>JPG, PNG — max 5MB</small>
+    `;
+    document.getElementById('fortune-submit-btn').disabled = true;
+    document.getElementById('fortune-cup').value = '';
+    resetAIPage('fortune-form', 'fortune-result');
 }
 
 async function showDreamInterpretation() {
