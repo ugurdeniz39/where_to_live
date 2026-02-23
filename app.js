@@ -1755,6 +1755,84 @@ async function showCrystalGuide() {
 // ═══════════════════════════════════════
 // AI DREAM INTERPRETATION — DREAMY ANIMATION
 // ═══════════════════════════════════════
+// ═══════════════════════════════════════
+// KAHVE FALI
+// ═══════════════════════════════════════
+async function showFortune() {
+    const birthDate = document.getElementById('fortune-birth-date').value;
+    const status = document.getElementById('fortune-status').value;
+    const cup = document.getElementById('fortune-cup').value;
+    const question = document.getElementById('fortune-question').value;
+    if (!cup || cup.trim().length < 10) { showToast('Fincanındaki şekilleri biraz daha detaylı anlat 🙏'); return; }
+
+    const sunSign = getSunSignFromDate(birthDate);
+    const resultEl = document.getElementById('fortune-result');
+    document.getElementById('fortune-form').style.display = 'none';
+    resultEl.classList.remove('hidden');
+
+    resultEl.innerHTML = `
+        <div class="fortune-loading-scene">
+            <div class="fortune-cup-anim">☕</div>
+            <p class="fortune-loading-msg">Fincanın okunuyor...</p>
+            <div class="dream-loading-dots"><span>.</span><span>.</span><span>.</span></div>
+        </div>
+    `;
+
+    try {
+        const data = await callAI('fortune', { cup, sunSign, status, question });
+        SoundFX.play('mystic');
+        const symbols = data.symbols || [];
+        resultEl.innerHTML = `
+            <div class="fortune-reveal">
+                <div class="fortune-header stagger-1">
+                    <div class="fortune-cup-icon">☕</div>
+                    <h2 class="fortune-title">${data.title || 'Fincan Yorumun'}</h2>
+                    <span class="fortune-mood">${data.mood || ''}</span>
+                </div>
+
+                <div class="fortune-general stagger-2">
+                    <h3>🔮 Genel Yorum</h3>
+                    <p>${data.general || ''}</p>
+                </div>
+
+                <div class="fortune-symbols stagger-3">
+                    <h3>☕ Fincandaki Semboller</h3>
+                    <div class="dream-symbols-grid">
+                        ${symbols.map((s, i) => `
+                            <div class="dream-symbol-card" style="animation-delay:${0.6 + i * 0.1}s">
+                                <strong>${s.symbol}</strong>
+                                <p>${s.meaning}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="fortune-sections stagger-4">
+                    ${data.love ? `<div class="fortune-section"><h4>💕 Aşk & İlişki</h4><p>${data.love}</p></div>` : ''}
+                    ${data.career ? `<div class="fortune-section"><h4>💼 Kariyer & Para</h4><p>${data.career}</p></div>` : ''}
+                    ${data.health ? `<div class="fortune-section"><h4>🌿 Sağlık & Enerji</h4><p>${data.health}</p></div>` : ''}
+                </div>
+
+                ${data.answer ? `
+                <div class="fortune-answer stagger-5">
+                    <h3>❓ Sorunun Yanıtı</h3>
+                    <p>${data.answer}</p>
+                </div>` : ''}
+
+                <div class="fortune-advice stagger-5">
+                    <div class="dream-advice-item"><strong>🍀 Şans İpucu:</strong> ${data.luckyTip || ''}</div>
+                    <div class="dream-advice-item"><strong>⏰ Zamanlama:</strong> ${data.timing || ''}</div>
+                </div>
+
+                <button class="btn-ghost reset-btn stagger-6" onclick="resetAIPage('fortune-form','fortune-result')">☕ Yeni Fal Baktır</button>
+            </div>
+        `;
+    } catch (err) {
+        showAIError(resultEl, err.message);
+        document.getElementById('fortune-form').style.display = '';
+    }
+}
+
 async function showDreamInterpretation() {
     const birthDate = document.getElementById('dream-birth-date').value;
     const dream = document.getElementById('dream-text').value;

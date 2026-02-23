@@ -57,6 +57,7 @@
             <a class="nav-link" data-page="tarot" onclick="navigateTo('tarot')">🃏 Tarot</a>
             <a class="nav-link" data-page="crystal" onclick="navigateTo('crystal')">💎 Kristal</a>
             <a class="nav-link" data-page="dream" onclick="navigateTo('dream')">💭 Rüya</a>
+            <a class="nav-link" data-page="fortune" onclick="navigateTo('fortune')">☕ Fal</a>
             <a class="nav-link" data-page="about" onclick="navigateTo('about')">Hakkında</a>
             <a class="nav-link" data-page="pricing" onclick="navigateTo('pricing')">Premium ✨</a>
         </div>
@@ -129,6 +130,12 @@
                 <span class="feature-icon">💭</span>
                 <h3>Rüya Yorumu</h3>
                 <p>Rüyanı yaz, AI astrolojik ve psikolojik açıdan yorumlasın.</p>
+                <span class="lock-badge ai-badge">AI ✦</span>
+            </div>
+            <div class="feature-card" onclick="navigateTo('fortune')">
+                <span class="feature-icon">☕</span>
+                <h3>Kahve Falı</h3>
+                <p>Fincanındaki şekilleri anlat ya da fotoğrafını çek, AI yorumlasın.</p>
                 <span class="lock-badge ai-badge">AI ✦</span>
             </div>
             <div class="feature-card glass-locked" onclick="navigateTo('pricing')">
@@ -460,6 +467,42 @@
 </section>
 
 <!-- ══════════════════ PAGE: DREAM ══════════════════ -->
+<!-- ══════════════════ PAGE: KAHVE FALI ══════════════════ -->
+<section id="page-fortune" class="page">
+    <div class="page-container">
+        <h1 class="page-title">☕ Kahve <em>Falı</em></h1>
+        <p class="page-subtitle">Fincanındaki şekilleri anlat, AI astrolojik kahve falı baksın.</p>
+
+        <div id="fortune-form" class="fortune-form">
+            <div class="form-group">
+                <label>Doğum Tarihi</label>
+                <input type="date" id="fortune-birth-date" value="1995-06-15">
+            </div>
+            <div class="form-group">
+                <label>Medeni Durum</label>
+                <select id="fortune-status">
+                    <option value="single">Bekar</option>
+                    <option value="relationship">İlişkide</option>
+                    <option value="married">Evli</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Fincanında Neler Görüyorsun?</label>
+                <textarea id="fortune-cup" placeholder="Fincanındaki şekilleri anlat... Örn: Kuş gibi bir şekil var, kalp görünüyor, ağaç gibi bir şey var, yol çizgisi..." rows="5"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Aklında Bir Soru Var mı? <small>(opsiyonel)</small></label>
+                <input type="text" id="fortune-question" placeholder="Örn: İş değişikliği olacak mı?">
+            </div>
+            <button class="btn-primary" onclick="showFortune()">
+                <span class="btn-sparkle">☕</span> Falıma Bak
+            </button>
+        </div>
+
+        <div id="fortune-result"></div>
+    </div>
+</section>
+
 <section id="page-dream" class="page">
     <div class="page-container">
         <h1 class="page-title">💭 Rüya <em>Yorumu</em></h1>

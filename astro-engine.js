@@ -240,12 +240,12 @@ const AstroEngine = (function () {
         else if (city.size === 'medium') sizeMod = 0;
         else if (city.size === 'mega') sizeMod = 3;
 
-        // Calculate final score
-        const astroBase = maxPossible > 0 ? (totalScore / maxPossible) * 85 : 0;
+        // Calculate final score — bigger spread via 70 base multiplier + stronger bonuses
+        const astroBase = maxPossible > 0 ? (totalScore / maxPossible) * 70 : 0;
         const raw = astroBase + lifestyleBonus + regionBonus + convergenceBonus + harmonicBonus + sizeMod;
         
-        // Floor of 15 — distant/small cities should score low
-        const score = Math.min(98, Math.max(15, Math.round(raw)));
+        // Floor of 12 — distant/unmatched cities should clearly score low
+        const score = Math.min(98, Math.max(12, Math.round(raw)));
 
         influences.sort((a, b) => parseFloat(b.proximity) - parseFloat(a.proximity));
 
@@ -678,16 +678,65 @@ const AstroEngine = (function () {
         const cities = CITY_DATABASE.ALL_CITIES;
 
         function generateReason(city, result, prefs) {
-            const topInf = result.influences[0];
             const prefLabels = {
                 love: 'aşk', career: 'kariyer', peace: 'huzur', luck: 'şans',
                 creativity: 'yaratıcılık', growth: 'dönüşüm', adventure: 'macera', learning: 'öğrenme'
             };
-            const prefStr = prefs.map(p => prefLabels[p]).filter(Boolean).join(', ');
-            if (topInf) {
-                return `${topInf.symbol} ${topInf.planet} ${topInf.lineType} çizgisine yakın — ${prefStr || 'genel uyum'} için güçlü.`;
+            const lineLabels = { MC: 'Gökyüzü Tepesi', IC: 'Ev & Kök', ASC: 'Yükselen', DSC: 'İlişkiler' };
+            const lineContext = {
+                MC: 'kariyer ve toplumsal kimlik', IC: 'iç huzur ve aile',
+                ASC: 'kişisel enerji ve ilk izlenim', DSC: 'ilişkiler ve ortaklıklar'
+            };
+            const parts = [];
+
+            // 1. Top 2 planetary influences with context
+            const top2 = result.influences.slice(0, 2);
+            for (const inf of top2) {
+                const lineCtx = lineContext[inf.lineType] || inf.lineType;
+                const proxPct = Math.round(parseFloat(inf.proximity) * 100);
+                if (proxPct >= 60) {
+                    parts.push(`${inf.symbol} ${inf.planet} ${lineLabels[inf.lineType] || inf.lineType} çizgisinde çok güçlü (%${proxPct}) — ${lineCtx} alanını aydınlatıyor`);
+                } else if (proxPct >= 35) {
+                    parts.push(`${inf.symbol} ${inf.planet} ${inf.lineType} çizgisine yakın (%${proxPct}) — ${lineCtx} enerjisi hissediliyor`);
+                }
             }
-            return `${prefStr ? prefStr.charAt(0).toUpperCase() + prefStr.slice(1) : 'Genel uyum'} enerjisi hissediliyor.`;
+
+            // 2. Preference match summary
+            if (prefs.length > 0) {
+                const prefStr = prefs.map(p => prefLabels[p]).filter(Boolean).join(', ');
+                const matchingPlanets = [];
+                for (const inf of result.influences.slice(0, 4)) {
+                    for (const pref of prefs) {
+                        const w = (PREFERENCE_PLANET_WEIGHTS[pref] || {})[inf.planetKey] || 0;
+                        if (w >= 0.6) { matchingPlanets.push(inf.planet); break; }
+                    }
+                }
+                if (matchingPlanets.length >= 2) {
+                    parts.push(`${prefStr} için ${matchingPlanets.join(' & ')} desteği aktif`);
+                } else if (parts.length === 0) {
+                    parts.push(`${prefStr.charAt(0).toUpperCase() + prefStr.slice(1)} enerjisi dolaylı yoldan hissediliyor`);
+                }
+            }
+
+            // 3. Lifestyle / vibe / element resonance
+            if (result.lifestyleMatch && result.vibeMatch) {
+                parts.push('Yaşam tarzı ve şehir atmosferi haritanla örtüşüyor ✨');
+            } else if (result.lifestyleMatch) {
+                parts.push('İklim ve şehir büyüklüğü tercihlerinle uyumlu');
+            } else if (result.vibeMatch) {
+                parts.push('Şehrin enerjisi seçtiğin temalarla rezonans halinde');
+            }
+
+            // Fallback if still empty
+            if (parts.length === 0) {
+                const topInf = result.influences[0];
+                if (topInf) {
+                    return `${topInf.symbol} ${topInf.planet} etkisi mevcut — genel uyum potansiyeli taşıyor.`;
+                }
+                return 'Bu bölgede dolaylı gezegen etkisi hissediliyor.';
+            }
+
+            return parts.join('. ') + '.';
         }
 
         const scoredCities = cities.map(city => {

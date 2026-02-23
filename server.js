@@ -409,6 +409,51 @@ Bu rüyayı astrolojik ve psikolojik açıdan yorumla.`;
 });
 
 // ═══════════════════════════════════════
+// API: Kahve Falı
+// ═══════════════════════════════════════
+app.post('/api/fortune', async (req, res) => {
+    try {
+        const { cup, sunSign, status, question } = req.body;
+        if (!cup) return res.status(400).json({ error: 'Fincan açıklaması gerekli' });
+
+        const systemPrompt = `Sen deneyimli bir Türk kahve falcısısın. Geleneksel Türk kahve falı geleneğine hakimsin.
+Sıcak, samimi, gizemli ama umut verici bir ton kullan. Türkçe yaz. Kadın kullanıcılara hitap ediyorsun.
+Fincan tabanı, duvarları ve kenarlarındaki şekilleri yorumla.
+Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
+{
+  "title": "Falın başlığı — yaratıcı ve dikkat çekici, 4-6 kelime",
+  "mood": "Falın genel havası — tek emoji + 1-2 kelime",
+  "general": "Fincanın genel yorumu, 4-5 cümle. Gizemli ve etkileyici.",
+  "symbols": [
+    { "symbol": "Sembol adı", "meaning": "1-2 cümle anlamı" },
+    { "symbol": "Sembol 2", "meaning": "Anlamı" },
+    { "symbol": "Sembol 3", "meaning": "Anlamı" }
+  ],
+  "love": "Aşk ve ilişki hakkında yorum, 2-3 cümle",
+  "career": "Kariyer ve para hakkında yorum, 2-3 cümle",
+  "health": "Sağlık ve enerji hakkında yorum, 1-2 cümle",
+  "answer": "Eğer soru varsa yanıtı, yoksa null",
+  "luckyTip": "Şans getiren bir ipucu veya tavsiye",
+  "timing": "Falda görülen olayların tahmini zamanlaması"
+}`;
+
+        const userPrompt = `Kişinin burcu: ${sunSign || 'bilinmiyor'}.
+Medeni durumu: ${status === 'single' ? 'Bekar' : status === 'married' ? 'Evli' : 'İlişkide'}.
+Fincanda gördüğü şekiller: "${cup}"
+${question ? `Aklındaki soru: "${question}"` : 'Belirli bir sorusu yok, genel fal bak.'}
+Bu fincanı detaylı bir şekilde yorumla.`;
+
+        const raw = await askGPT(systemPrompt, userPrompt, 800);
+        const jsonMatch = raw.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('AI yanıtı parse edilemedi');
+        const result = JSON.parse(jsonMatch[0]);
+        res.json({ success: true, data: result });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ═══════════════════════════════════════
 // API: iyzico Checkout — Form Başlat
 // ═══════════════════════════════════════
 app.post('/api/checkout/init', async (req, res) => {
@@ -555,6 +600,6 @@ app.listen(PORT, () => {
     console.log(`  → AI: ${process.env.OPENAI_API_KEY ? '✅ OpenAI bağlı' : '❌ API key yok'}`);
     console.log(`  → Security: Headers ✅ | Rate Limit: ${RATE_MAX}/min ✅ | Cache: ${CACHE_TTL/1000}s ✅`);
     console.log(`  → iyzico: ${process.env.IYZICO_API_KEY ? '✅ Bağlı' : '⚠️ Sandbox'} (${process.env.IYZICO_URI || 'sandbox'})`);
-    console.log(`  → Routes: /api/daily-horoscope, /api/compatibility, /api/crystal-guide, /api/tarot, /api/city-insight, /api/dream`);
+    console.log(`  → Routes: /api/daily-horoscope, /api/compatibility, /api/crystal-guide, /api/tarot, /api/city-insight, /api/dream, /api/fortune`);
     console.log(`  → Payment: /api/checkout/init, /api/checkout/callback\n`);
 });
