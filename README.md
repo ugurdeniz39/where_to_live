@@ -2,7 +2,7 @@
 
 > Yıldızlar seni nereye çağırıyor? 🌍✨
 
-**AstroMap**, doğum haritanızdaki gezegen pozisyonlarını dünya haritası üzerine yansıtan, AI destekli premium bir astrokartografi uygulamasıdır. 335+ şehir veritabanı, gerçek zamanlı gezegen hesaplamaları ve OpenAI entegrasyonu ile çalışır.
+**AstroMap**, doğum haritanızdaki gezegen pozisyonlarını dünya haritası üzerine yansıtan, AI destekli premium bir astrokartografi uygulamasıdır. 290+ şehir veritabanı, gerçek zamanlı gezegen hesaplamaları ve OpenAI entegrasyonu ile çalışır.
 
 ---
 
@@ -10,7 +10,7 @@
 
 | Özellik | Açıklama |
 |---------|----------|
-| 🌍 **Astrokartografi Haritası** | 335+ şehir, 10 gezegen çizgisi, Leaflet harita |
+| 🌍 **Astrokartografi Haritası** | 290+ şehir, 10 gezegen çizgisi, Leaflet harita |
 | 🔮 **Günlük Burç Yorumu** | AI destekli kişiselleştirilmiş günlük yorumlar |
 | 💕 **Uyum Testi** | İki kişi arasında astrolojik uyum analizi |
 | 🌙 **Ay Takvimi** | Günlük ay fazları ve astrolojik etkileri |
@@ -73,7 +73,7 @@ IYZICO_URI=https://sandbox-api.iyzipay.com
 ├── style.css           # Tüm stiller
 ├── app.js              # Frontend SPA controller
 ├── astro-engine.js     # Gezegen hesaplama motoru
-├── cities-database.js  # 335+ şehir veritabanı
+├── cities-database.js  # 290+ şehir veritabanı
 ├── server.js           # Express backend + API routes
 ├── sw.js               # Service Worker (PWA/offline)
 ├── manifest.json       # PWA manifest

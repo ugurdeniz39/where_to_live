@@ -166,8 +166,8 @@ const AstroEngine = (function () {
                     const dist = Math.sqrt(dLat * dLat + dLon * dLon);
                     if (dist < minDist) minDist = dist;
                 }
-                // Wider Gaussian (sigma=28) so cities within ~30° get meaningful scores
-                const proximity = Math.exp(-Math.pow(minDist, 2) / (2 * Math.pow(28, 2)));
+                // Gaussian proximity — sigma=18 for tighter, more meaningful results
+                const proximity = Math.exp(-Math.pow(minDist, 2) / (2 * Math.pow(18, 2)));
 
                 let prefWeight = 0;
                 for (const pref of preferences) {
@@ -234,12 +234,18 @@ const AstroEngine = (function () {
         const topInfluences = influences.filter(inf => parseFloat(inf.proximity) > 0.4);
         const harmonicBonus = Math.min(10, topInfluences.length * 2);
 
-        // Calculate final score with higher base multiplier (92 instead of 80)
-        const astroBase = maxPossible > 0 ? (totalScore / maxPossible) * 92 : 0;
-        const raw = astroBase + lifestyleBonus + regionBonus + convergenceBonus + harmonicBonus;
+        // Size penalty — small/unknown cities get penalized, mega cities get a slight boost
+        let sizeMod = 0;
+        if (city.size === 'small') sizeMod = -8;
+        else if (city.size === 'medium') sizeMod = 0;
+        else if (city.size === 'mega') sizeMod = 3;
+
+        // Calculate final score
+        const astroBase = maxPossible > 0 ? (totalScore / maxPossible) * 85 : 0;
+        const raw = astroBase + lifestyleBonus + regionBonus + convergenceBonus + harmonicBonus + sizeMod;
         
-        // Minimum floor of 35 for any city (they all have some astrological connection)
-        const score = Math.min(98, Math.max(35, Math.round(raw)));
+        // Floor of 15 — distant/small cities should score low
+        const score = Math.min(98, Math.max(15, Math.round(raw)));
 
         influences.sort((a, b) => parseFloat(b.proximity) - parseFloat(a.proximity));
 
