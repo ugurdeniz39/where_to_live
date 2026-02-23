@@ -1,0 +1,50 @@
+{
+    "name": "AstroMap — Yıldızların Seni Nereye Çağırıyor?",
+    "short_name": "AstroMap",
+    "description": "AI destekli astrokartografi, günlük burç yorumu, tarot, kristal rehberi ve rüya yorumu",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#07071a",
+    "theme_color": "#c9a0ff",
+    "orientation": "portrait-primary",
+    "categories": ["lifestyle", "entertainment"],
+    "lang": "tr",
+    "icons": [
+        {
+            "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%2307071a'/%3E%3Ctext x='96' y='120' text-anchor='middle' font-size='100'%3E✦%3C/text%3E%3C/svg%3E",
+            "sizes": "192x192",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%2307071a'/%3E%3Ctext x='256' y='320' text-anchor='middle' font-size='260'%3E✦%3C/text%3E%3C/svg%3E",
+            "sizes": "512x512",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Günlük Burç Yorumu",
+            "short_name": "Günlük",
+            "description": "AI ile günlük burç yorumunu al",
+            "url": "/?page=daily",
+            "icons": [{"src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='16' fill='%2307071a'/%3E%3Ctext x='48' y='64' text-anchor='middle' font-size='48'%3E🌟%3C/text%3E%3C/svg%3E", "sizes": "96x96"}]
+        },
+        {
+            "name": "AI Tarot",
+            "short_name": "Tarot",
+            "description": "AI ile tarot falı bak",
+            "url": "/?page=tarot",
+            "icons": [{"src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='16' fill='%2307071a'/%3E%3Ctext x='48' y='64' text-anchor='middle' font-size='48'%3E🃏%3C/text%3E%3C/svg%3E", "sizes": "96x96"}]
+        },
+        {
+            "name": "Kristal Rehberi",
+            "short_name": "Kristal",
+            "description": "AI kristal enerji rehberin",
+            "url": "/?page=crystal",
+            "icons": [{"src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='16' fill='%2307071a'/%3E%3Ctext x='48' y='64' text-anchor='middle' font-size='48'%3E💎%3C/text%3E%3C/svg%3E", "sizes": "96x96"}]
+        }
+    ]
+}

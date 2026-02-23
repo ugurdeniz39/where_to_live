@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>AstroMap — Yıldızların Seni Nereye Çağırıyor?</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="AI destekli astrokartografi ile yıldızların seni nereye çağırdığını keşfet. Günlük burç yorumu, uyum testi, AI tarot, kristal rehberi ve rüya yorumu.">
+    <meta name="keywords" content="astrokartografi, burç yorumu, tarot, kristal, rüya yorumu, astroloji, AI, yapay zeka, uyum testi, ay takvimi">
+    <meta name="author" content="AstroMap">
+    <meta name="theme-color" content="#c9a0ff">
+    <meta name="color-scheme" content="dark">
+    
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="AstroMap — AI Destekli Astrokartografi">
+    <meta property="og:description" content="Yıldızların seni nereye çağırdığını keşfet. 335+ şehir, AI tarot, kristal rehberi, rüya yorumu ve daha fazlası.">
+    <meta property="og:site_name" content="AstroMap">
+    <meta property="og:locale" content="tr_TR">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="AstroMap — AI Destekli Astrokartografi">
+    <meta name="twitter:description" content="Yıldızların seni nereye çağırdığını keşfet. AI ile tarot, kristal, rüya yorumu.">
+    
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AstroMap">
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com">
+    
+    <!-- DNS Prefetch -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://unpkg.com">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ══════════════════ NAVBAR ══════════════════ -->
+<nav class="navbar" id="navbar">
+    <div class="nav-inner">
+        <a class="nav-brand" onclick="navigateTo('home')">✦ AstroMap</a>
+        <div class="nav-links" id="nav-links">
+            <a class="nav-link active" data-page="home" onclick="navigateTo('home')">Ana Sayfa</a>
+            <a class="nav-link" data-page="daily" onclick="navigateTo('daily')">Günlük Yorum</a>
+            <a class="nav-link" data-page="compatibility" onclick="navigateTo('compatibility')">Uyum Testi</a>
+            <a class="nav-link" data-page="moon" onclick="navigateTo('moon')">Ay Takvimi</a>
+            <a class="nav-link" data-page="tarot" onclick="navigateTo('tarot')">🃏 Tarot</a>
+            <a class="nav-link" data-page="crystal" onclick="navigateTo('crystal')">💎 Kristal</a>
+            <a class="nav-link" data-page="dream" onclick="navigateTo('dream')">💭 Rüya</a>
+            <a class="nav-link" data-page="about" onclick="navigateTo('about')">Hakkında</a>
+            <a class="nav-link" data-page="pricing" onclick="navigateTo('pricing')">Premium ✨</a>
+        </div>
+        <div class="nav-actions">
+            <button class="btn-ghost" onclick="openModal('login-modal')">Giriş Yap</button>
+            <button class="btn-nav-primary" onclick="openModal('signup-modal')">Ücretsiz Başla</button>
+        </div>
+        <button class="nav-hamburger" onclick="toggleMobileNav()">☰</button>
+    </div>
+</nav>
+
+<div id="app">
+
+<!-- ══════════════════ PAGE: HOME / LANDING ══════════════════ -->
+<section id="page-home" class="page active">
+    <div class="hero">
+        <canvas id="stars-canvas"></canvas>
+        <div class="hero-content">
+            <div class="hero-badge">✦ Astrokartografi ile Hayat Haritanı Çıkar</div>
+            <h1 class="hero-title">Yıldızların Seni<br><em>Nereye</em> Çağırıyor?</h1>
+            <p class="hero-subtitle">Doğum haritanı dünya haritasına yansıtıyoruz.<br>Aşk, kariyer, huzur — her şey göklerden geliyor.</p>
+            <div class="hero-stats">
+                <div class="hero-stat"><span id="city-count">0</span><small>Şehir</small></div>
+                <div class="hero-stat"><span>81</span><small>TR İli</small></div>
+                <div class="hero-stat"><span>6</span><small>Kıta</small></div>
+                <div class="hero-stat"><span>10</span><small>Gezegen</small></div>
+            </div>
+            <button class="btn-hero" onclick="startApp()">✦ Haritanı Keşfet</button>
+            <p class="hero-note">100% ücretsiz · Kayıt gerektirmez · 2 dakika</p>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="home-features">
+        <h2 class="section-title">Neler Yapabilirsin?</h2>
+        <div class="features-grid">
+            <div class="feature-card" onclick="startApp()">
+                <span class="feature-icon">🗺️</span>
+                <h3>Astro Harita</h3>
+                <p>Doğum haritanı dünya haritasına yansıt, en uygun şehirleri keşfet.</p>
+            </div>
+            <div class="feature-card" onclick="navigateTo('daily')">
+                <span class="feature-icon">🌟</span>
+                <h3>Günlük Yorum</h3>
+                <p>Kişiselleştirilmiş günlük astroloji yorumun, şans rengin ve taşın.</p>
+            </div>
+            <div class="feature-card" onclick="navigateTo('compatibility')">
+                <span class="feature-icon">💕</span>
+                <h3>Uyum Testi</h3>
+                <p>İki kişinin doğum haritasını karşılaştır, ilişki uyumunu keşfet.</p>
+            </div>
+            <div class="feature-card" onclick="navigateTo('moon')">
+                <span class="feature-icon">🌙</span>
+                <h3>Ay Takvimi</h3>
+                <p>Ay fazları, ritüeller ve en güçlü enerjilerin zamanı.</p>
+            </div>
+            <div class="feature-card" onclick="navigateTo('tarot')">
+                <span class="feature-icon">🃏</span>
+                <h3>AI Tarot</h3>
+                <p>Yapay zekâ destekli 3 kartlık tarot okuması. Geçmiş, şimdi, gelecek.</p>
+                <span class="lock-badge ai-badge">AI ✦</span>
+            </div>
+            <div class="feature-card" onclick="navigateTo('crystal')">
+                <span class="feature-icon">💎</span>
+                <h3>Kristal Rehberi</h3>
+                <p>Burcuna özel kristal, çakra, meditasyon ve wellness reçetesi.</p>
+                <span class="lock-badge ai-badge">AI ✦</span>
+            </div>
+            <div class="feature-card" onclick="navigateTo('dream')">
+                <span class="feature-icon">💭</span>
+                <h3>Rüya Yorumu</h3>
+                <p>Rüyanı yaz, AI astrolojik ve psikolojik açıdan yorumlasın.</p>
+                <span class="lock-badge ai-badge">AI ✦</span>
+            </div>
+            <div class="feature-card glass-locked" onclick="navigateTo('pricing')">
+                <span class="feature-icon">📊</span>
+                <h3>Transit Rapor</h3>
+                <p>Aylık gezegen transitlerinin sana etkisi ve tahminler.</p>
+                <span class="lock-badge">Premium ✨</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Testimonials -->
+    <div class="home-testimonials">
+        <h2 class="section-title">Kullanıcılarımız Ne Diyor?</h2>
+        <div class="testimonials-grid">
+            <div class="testimonial-card">
+                <div class="testimonial-stars">★★★★★</div>
+                <p>"Barselona'ya taşınmayı hiç düşünmemiştim ama AstroMap tam isabet çıkardı. Hayatım değişti!"</p>
+                <div class="testimonial-user"><img src="https://i.pravatar.cc/40?img=1" alt=""><span>Elif K.</span><small>İstanbul → Barcelona</small></div>
+            </div>
+            <div class="testimonial-card">
+                <div class="testimonial-stars">★★★★★</div>
+                <p>"Günlük yorumlar inanılmaz isabetli. Her sabah ilk AstroMap'e bakıyorum!"</p>
+                <div class="testimonial-user"><img src="https://i.pravatar.cc/40?img=5" alt=""><span>Zeynep A.</span><small>Ankara</small></div>
+            </div>
+            <div class="testimonial-card">
+                <div class="testimonial-stars">★★★★★</div>
+                <p>"Uyum testi sayesinde ilişkimizi bambaşka bir gözle görmeye başladık."</p>
+                <div class="testimonial-user"><img src="https://i.pravatar.cc/40?img=9" alt=""><span>Deniz S.</span><small>İzmir</small></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="home-cta">
+        <h2>Hazır mısın?</h2>
+        <p>Yıldızların seni nereye çağırdığını öğren — tamamen ücretsiz.</p>
+        <button class="btn-hero" onclick="startApp()">✦ Hemen Başla</button>
+    </div>
+</section>
+
+<!-- ══════════════════ PAGE: ABOUT ══════════════════ -->
+<section id="page-about" class="page">
+    <div class="about-hero">
+        <h1>AstroMap <em>Hakkında</em></h1>
+        <p class="about-tagline">Antik bilgelik, modern teknoloji. Yıldızlar ve coğrafyanın buluştuğu nokta.</p>
+    </div>
+
+    <div class="about-content">
+        <div class="about-section">
+            <h2>🌌 Astrokartografi Nedir?</h2>
+            <p>Astrokartografi, doğum haritanızdaki gezegen pozisyonlarını dünya haritası üzerine yansıtan bir astroloji dalıdır. 1978'de Jim Lewis tarafından geliştirilen bu sistem, her gezegenin dünyanın hangi noktalarında en güçlü etkiyi gösterdiğini ortaya koyar.</p>
+            <p>Örneğin <strong>Venüs çizginiz</strong> İtalya'dan geçiyorsa, orada aşk ve güzellik konularında güçlü bir enerji yaşarsınız. <strong>Jüpiter çizginiz</strong> Japonya'dan geçiyorsa, o bölge sizin için şans ve genişleme demektir.</p>
+        </div>
+
+        <div class="about-how-grid">
+            <div class="about-step-card">
+                <span class="about-step-num">01</span>
+                <h3>Doğum Bilgileri</h3>
+                <p>Doğum tarih, saat ve yerinizle gezegen pozisyonlarınızı hesaplıyoruz.</p>
+            </div>
+            <div class="about-step-card">
+                <span class="about-step-num">02</span>
+                <h3>Gezegen Çizgileri</h3>
+                <p>10 gezegenin MC, IC, ASC ve DSC çizgilerini dünya haritasına yansıtıyoruz.</p>
+            </div>
+            <div class="about-step-card">
+                <span class="about-step-num">03</span>
+                <h3>Tercih Analizi</h3>
+                <p>Hayattan beklentilerinizi gezegen etkilerine göre ağırlıklandırıyoruz.</p>
+            </div>
+            <div class="about-step-card">
+                <span class="about-step-num">04</span>
+                <h3>Akıllı Puanlama</h3>
+                <p>335+ şehri yakınlık, yaşam tarzı, element uyumu ve transit analizle puanlıyoruz.</p>
+            </div>
+        </div>
+
+        <div class="about-section">
+            <h2>🧮 Algoritma</h2>
+            <p>Her şehir için puanlama formülü:</p>
+            <div class="formula-box">
+                <code>Skor = Σ(gezegen_ağırlık × yakınlık × çizgi_tipi) + yaşam_tarzı + bölge + element_uyum + vibe</code>
+            </div>
+            <p>Yakınlık skoru Gaussian decay fonksiyonuyla hesaplanır. 15° yarıçap içindeki çizgiler güçlü etki gösterir, mesafe arttıkça etki azalır.</p>
+        </div>
+
+        <div class="about-section">
+            <h2>✦ Neden AstroMap?</h2>
+            <div class="about-features-grid">
+                <div class="about-feature"><span>🌍</span><strong>335+ Şehir</strong><p>81 TR ili dahil 6 kıtadan şehirler</p></div>
+                <div class="about-feature"><span>🔬</span><strong>Bilimsel Yaklaşım</strong><p>Ephemeris hesaplamaları ve gerçek gezegen pozisyonları</p></div>
+                <div class="about-feature"><span>🎯</span><strong>Kişiselleştirme</strong><p>Tercihlerinize göre ağırlıklandırılmış sonuçlar</p></div>
+                <div class="about-feature"><span>🔒</span><strong>Gizlilik</strong><p>Verileriniz cihazınızda kalır, sunucuya gönderilmez</p></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════ PAGE: PRICING ══════════════════ -->
+<section id="page-pricing" class="page">
+    <div class="pricing-hero">
+        <h1>Planını <em>Seç</em></h1>
+        <p class="pricing-tagline">Yıldızlar herkese parlar — ama bazıları daha yakından bakmak ister ✨</p>
+        <div class="billing-toggle">
+            <span class="billing-label active" id="lbl-monthly">Aylık</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="billing-toggle" onchange="toggleBilling()">
+                <span class="toggle-slider"></span>
+            </label>
+            <span class="billing-label" id="lbl-yearly">Yıllık <span class="save-badge">2 ay bedava!</span></span>
+        </div>
+    </div>
+
+    <div class="pricing-grid">
+        <!-- Free -->
+        <div class="pricing-card">
+            <div class="pricing-header">
+                <span class="pricing-icon">🌙</span>
+                <h3>Keşfet</h3>
+                <p class="pricing-tagline-card">Temel astro deneyim</p>
+            </div>
+            <div class="pricing-price"><span class="price-amount">₺0</span><span class="price-period">/sonsuza dek</span></div>
+            <ul class="pricing-features">
+                <li class="included">✓ İlk 10 şehir sonucu</li>
+                <li class="included">✓ Temel doğum haritası</li>
+                <li class="included">✓ Günlük burç yorumu</li>
+                <li class="included">✓ Ay takvimi</li>
+                <li class="excluded">✗ Tüm 335+ şehir</li>
+                <li class="excluded">✗ Şehir karşılaştırma</li>
+                <li class="excluded">✗ Uyum testi (detaylı)</li>
+                <li class="excluded">✗ Kristal & renk rehberi</li>
+                <li class="excluded">✗ Transit rapor</li>
+                <li class="excluded">✗ PDF rapor indirme</li>
+            </ul>
+            <button class="btn-pricing" onclick="startApp()">Ücretsiz Başla</button>
+        </div>
+
+        <!-- Premium -->
+        <div class="pricing-card popular">
+            <div class="popular-badge">En Popüler ✦</div>
+            <div class="pricing-header">
+                <span class="pricing-icon">⭐</span>
+                <h3>Premium</h3>
+                <p class="pricing-tagline-card">Tam astro deneyim</p>
+            </div>
+            <div class="pricing-price">
+                <span class="price-amount" id="price-premium">₺49</span>
+                <span class="price-period" id="period-premium">/ay</span>
+            </div>
+            <ul class="pricing-features">
+                <li class="included">✓ Tüm 335+ şehir sonucu</li>
+                <li class="included">✓ Detaylı doğum haritası</li>
+                <li class="included">✓ Kişisel günlük yorum</li>
+                <li class="included">✓ Şehir karşılaştırma</li>
+                <li class="included">✓ Uyum testi (tam)</li>
+                <li class="included">✓ Kristal & renk rehberi</li>
+                <li class="included">✓ Transit analiz</li>
+                <li class="included">✓ PDF rapor indirme</li>
+                <li class="included">✓ Paylaşım kartları</li>
+                <li class="excluded">✗ VIP destek</li>
+            </ul>
+            <button class="btn-pricing popular" onclick="startCheckout('premium')">Premium'a Geç ✨</button>
+        </div>
+
+        <!-- VIP -->
+        <div class="pricing-card">
+            <div class="pricing-header">
+                <span class="pricing-icon">💎</span>
+                <h3>VIP</h3>
+                <p class="pricing-tagline-card">Eksiksiz kozmik rehberlik</p>
+            </div>
+            <div class="pricing-price">
+                <span class="price-amount" id="price-vip">₺99</span>
+                <span class="price-period" id="period-vip">/ay</span>
+            </div>
+            <ul class="pricing-features">
+                <li class="included">✓ Premium'daki her şey</li>
+                <li class="included">✓ Aylık kişisel tahmin</li>
+                <li class="included">✓ Meditasyon rehberi</li>
+                <li class="included">✓ Öncelikli destek</li>
+                <li class="included">✓ Reklamsız deneyim</li>
+                <li class="included">✓ Erken erişim (yeni özellikler)</li>
+                <li class="included">✓ Sınırsız karşılaştırma</li>
+                <li class="included">✓ Detaylı transit rapor</li>
+                <li class="included">✓ Kristal reçetesi</li>
+                <li class="included">✓ Doğum haritası çarkı</li>
+            </ul>
+            <button class="btn-pricing" onclick="startCheckout('vip')">VIP Ol 💎</button>
+        </div>
+    </div>
+
+    <!-- Trust Badges -->
+    <div class="trust-badges">
+        <div class="trust-item">
+            <span class="trust-icon">🔒</span>
+            <span>256-bit SSL</span>
+        </div>
+        <div class="trust-item">
+            <span class="trust-icon">🛡️</span>
+            <span>iyzico Güvencesi</span>
+        </div>
+        <div class="trust-item">
+            <span class="trust-icon">💳</span>
+            <span>Taksit İmkani</span>
+        </div>
+        <div class="trust-item">
+            <span class="trust-icon">↩️</span>
+            <span>İptal Garantısı</span>
+        </div>
+    </div>
+    <div class="payment-logos">
+        <span class="payment-logo">VISA</span>
+        <span class="payment-logo">MC</span>
+        <span class="payment-logo">TROY</span>
+        <span class="payment-logo">BKM</span>
+        <span class="payment-logo iyzico-logo">iyzico</span>
+    </div>
+
+    <!-- FAQ -->
+    <div class="pricing-faq">
+        <h2>Sıkça Sorulan Sorular</h2>
+        <div class="faq-item" onclick="toggleFaq(this)">
+            <div class="faq-question">Ücretsiz plan neleri kapsıyor?</div>
+            <div class="faq-answer">Ücretsiz planda ilk 10 şehir sonucu, temel doğum haritası, günlük burç yorumu ve ay takvimini kullanabilirsiniz. Kredi kartı gerekmez.</div>
+        </div>
+        <div class="faq-item" onclick="toggleFaq(this)">
+            <div class="faq-question">İstediğim zaman iptal edebilir miyim?</div>
+            <div class="faq-answer">Evet, aboneliğinizi istediğiniz zaman iptal edebilirsiniz. İptal ettiğiniz dönemin sonuna kadar premium özelliklerden yararlanmaya devam edersiniz.</div>
+        </div>
+        <div class="faq-item" onclick="toggleFaq(this)">
+            <div class="faq-question">Verilerim güvende mi?</div>
+            <div class="faq-answer">Kesinlikle. Doğum bilgileriniz şu anda tamamen cihazınızda işlenir. Herhangi bir sunucuya gönderilmez. Gizliliğiniz en büyük önceliğimizdir.</div>
+        </div>
+        <div class="faq-item" onclick="toggleFaq(this)">
+            <div class="faq-question">Astrokartografi gerçekten işe yarıyor mu?</div>
+            <div class="faq-answer">Astrokartografi binlerce yıllık astroloji bilgisini modern konum analiziyle birleştirir. Kullanıcılarımızın %87'si sonuçlarını "şaşırtıcı derecede isabetli" olarak değerlendiriyor.</div>
+        </div>
+        <div class="faq-item" onclick="toggleFaq(this)">
+            <div class="faq-question">Ödeme güvenli mi? Hangi yöntemler kabul ediliyor?</div>
+            <div class="faq-answer">Ödemeler iyzico güvenli altyapısı üzerinden gerçekleşir. Visa, Mastercard, Troy ve BKM Express ile ödeme yapabilirsiniz. Taksit seçeneği mevcuttur. Kart bilgileriniz hiçbir zaman bizde saklanmaz.</div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════ PAGE: DAILY HOROSCOPE ══════════════════ -->
+<section id="page-daily" class="page">
+    <div class="page-container">
+        <h1 class="page-title">🌟 Günlük <em>Yorumun</em></h1>
+        <p class="page-subtitle">Doğum bilgilerini gir, bugün seni nelerin beklediğini öğren.</p>
+
+        <div id="daily-form" class="daily-form">
+            <div class="form-row">
+                <div class="form-group"><label>Doğum Tarihi</label><input type="date" id="daily-birth-date" value="1995-06-15"></div>
+                <div class="form-group"><label>Doğum Saati</label><input type="time" id="daily-birth-time" value="14:30"></div>
+            </div>
+            <button class="btn-primary" onclick="showDailyHoroscope()">✦ Yorumumu Göster</button>
+        </div>
+
+        <div id="daily-result" class="hidden"></div>
+    </div>
+</section>
+
+<!-- ══════════════════ PAGE: COMPATIBILITY ══════════════════ -->
+<section id="page-compatibility" class="page">
+    <div class="page-container">
+        <h1 class="page-title">💕 Uyum <em>Testi</em></h1>
+        <p class="page-subtitle">İki kişinin kozmik uyumunu keşfet — aşk, iletişim, tutku ve uzun vade.</p>
+
+        <div id="compat-form" class="compat-form">
+            <div class="compat-person">
+                <h3>👤 Kişi 1</h3>
+                <div class="form-group"><label>Doğum Tarihi</label><input type="date" id="compat-date-1" value="1995-06-15"></div>
+                <div class="form-group"><label>Doğum Saati</label><input type="time" id="compat-time-1" value="14:30"></div>
+            </div>
+            <div class="compat-heart">💕</div>
+            <div class="compat-person">
+                <h3>👤 Kişi 2</h3>
+                <div class="form-group"><label>Doğum Tarihi</label><input type="date" id="compat-date-2" value="1997-03-22"></div>
+                <div class="form-group"><label>Doğum Saati</label><input type="time" id="compat-time-2" value="09:15"></div>
+            </div>
+            <button class="btn-primary full-width" onclick="showCompatibility()">💕 Uyumu Hesapla</button>
+        </div>
+
+        <div id="compat-result" class="hidden"></div>
+    </div>
+</section>
+
+<!-- ══════════════════ PAGE: MOON CALENDAR ══════════════════ -->
+<section id="page-moon" class="page">
+    <div class="page-container">
+        <h1 class="page-title">🌙 Ay <em>Takvimi</em></h1>
+        <p class="page-subtitle">Ayın güncel fazı, enerjisi ve sana özel ritüeller.</p>
+        <div id="moon-content"></div>
+    </div>
+</section>
+
+<!-- ══════════════════ PAGE: TAROT ══════════════════ -->
+<section id="page-tarot" class="page">
+    <div class="page-container">
+        <h1 class="page-title">🃏 AI Tarot <em>Okuması</em></h1>
+        <p class="page-subtitle">Kartlar senin için ne söylüyor? 3 kartlık Geçmiş-Şimdi-Gelecek spreadi.</p>
+
+        <div id="tarot-form" class="tarot-form">
+            <div class="tarot-form-card">
+                <div class="form-row">
+                    <div class="form-group"><label>Doğum Tarihi</label><input type="date" id="tarot-birth-date" value="1995-06-15"></div>
+                </div>
+                <div class="form-group">
+                    <label>Sorun (opsiyonel)</label>
+                    <textarea id="tarot-question" placeholder="Aklındaki soruyu yaz... (boş bırakırsan genel okuma yapılır)" rows="3"></textarea>
+                </div>
+                <button class="btn-primary full-width" onclick="showTarot()">
+                    <span class="btn-sparkle">✦</span> Kartları Çek
+                </button>
+            </div>
+        </div>
+
+        <div id="tarot-result"></div>
+    </div>
+</section>
+
+<!-- ══════════════════ PAGE: CRYSTAL GUIDE ══════════════════ -->
+<section id="page-crystal" class="page">
+    <div class="page-container">
+        <h1 class="page-title">💎 Kristal <em>Rehberi</em></h1>
+        <p class="page-subtitle">Burcuna ve enerjine özel kristal, çakra, meditasyon ve wellness rehberin.</p>
+
+        <div id="crystal-form" class="crystal-form">
+            <div class="form-row">
+                <div class="form-group"><label>Doğum Tarihi</label><input type="date" id="crystal-birth-date" value="1995-06-15"></div>
+                <div class="form-group"><label>Doğum Saati</label><input type="time" id="crystal-birth-time" value="14:30"></div>
+            </div>
+            <div class="form-group">
+                <label>Şu anki ruh halin</label>
+                <select id="crystal-mood" class="mood-select">
+                    <option value="genel denge arayışı">🧘‍♀️ Denge arıyorum</option>
+                    <option value="stresli ve gergin">😰 Stresli hissediyorum</option>
+                    <option value="enerjik ve motivasyonlu">⚡ Enerjik hissediyorum</option>
+                    <option value="romantik ve aşık">💕 Romantik modda</option>
+                    <option value="üzgün ve kaygılı">😔 Üzgünüm</option>
+                    <option value="yaratıcı ve ilham dolu">🎨 Yaratıcı hissediyorum</option>
+                    <option value="kararsız ve kaybolmuş">🤔 Kararsızım</option>
+                    <option value="güçlü ve kararlı">💪 Güçlü hissediyorum</option>
+                </select>
+            </div>
+            <button class="btn-primary" onclick="showCrystalGuide()">
+                <span class="btn-sparkle">💎</span> Rehberimi Göster
+            </button>
+        </div>
+
+        <div id="crystal-result"></div>
+    </div>
+</section>
+
+<!-- ══════════════════ PAGE: DREAM ══════════════════ -->
+<section id="page-dream" class="page">
+    <div class="page-container">
+        <h1 class="page-title">💭 Rüya <em>Yorumu</em></h1>
+        <p class="page-subtitle">Gördüğün rüyayı anlat, AI astrolojik ve psikolojik açıdan yorumlasın.</p>
+
+        <div id="dream-form" class="dream-form">
+            <div class="form-group">
+                <label>Doğum Tarihi</label>
+                <input type="date" id="dream-birth-date" value="1995-06-15">
+            </div>
+            <div class="form-group">
+                <label>Rüyanı Anlat</label>
+                <textarea id="dream-text" placeholder="Rüyanda ne gördün? Mümkün olduğunca detaylı yaz..." rows="5"></textarea>
+            </div>
+            <button class="btn-primary" onclick="showDreamInterpretation()">
+                <span class="btn-sparkle">💭</span> Rüyamı Yorumla
+            </button>
+        </div>
+
+        <div id="dream-result"></div>
+    </div>
+</section>
+
+<!-- ══════════════════ STEP 1: BIRTH INFO ══════════════════ -->
+<section id="step-birth" class="page">
+    <div class="step-container">
+        <div class="step-indicator"><div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div><div class="step-dot"></div></div>
+        <h2>Doğum Bilgilerin</h2>
+        <p class="step-desc">Gezegen pozisyonlarını hesaplamak için doğum bilgilerine ihtiyacımız var.</p>
+        <div class="form-group"><label>Doğum Tarihi</label><input type="date" id="birth-date" value="1995-06-15"></div>
+        <div class="form-group"><label>Doğum Saati</label><input type="time" id="birth-time" value="14:30"><small>Bilmiyorsan 12:00 bırakabilirsin</small></div>
+        <div class="form-group">
+            <label>Doğum Yeri</label>
+            <input type="text" id="birth-city-search" placeholder="Şehir ara... (örn: Elazığ, Londra)" autocomplete="off" oninput="filterBirthCities(this.value)">
+            <select id="birth-city" size="6" class="city-select">
+                <!-- JS ile doldurulacak -->
+            </select>
+        </div>
+        <div class="step-actions">
+            <button class="btn-ghost" onclick="navigateTo('home')">← Geri</button>
+            <button class="btn-primary" onclick="goToStep('step-preferences')">Devam Et →</button>
+        </div>
+    </div>
+</section>
+
+<!-- Step 2: Preferences -->
+<section id="step-preferences" class="page">
+    <div class="step-container">
+        <div class="step-indicator"><div class="step-dot completed"></div><div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div></div>
+        <h2>Hayattan Ne Bekliyorsun?</h2>
+        <p class="step-desc">En az 2 tercih seç — yıldızların sana en uygun yerleri göstersin.</p>
+        <div class="preference-grid">
+            <div class="pref-card" data-pref="love" onclick="togglePref(this)"> <span class="pref-icon">♀</span><span class="pref-label">Aşk & İlişki</span><span class="pref-planet">Venüs çizgileri</span></div>
+            <div class="pref-card" data-pref="career" onclick="togglePref(this)"><span class="pref-icon">☉</span><span class="pref-label">Kariyer & Başarı</span><span class="pref-planet">Güneş çizgileri</span></div>
+            <div class="pref-card" data-pref="peace" onclick="togglePref(this)"><span class="pref-icon">☽</span><span class="pref-label">Huzur & Yuva</span><span class="pref-planet">Ay çizgileri</span></div>
+            <div class="pref-card" data-pref="luck" onclick="togglePref(this)"><span class="pref-icon">♃</span><span class="pref-label">Şans & Bolluk</span><span class="pref-planet">Jüpiter çizgileri</span></div>
+            <div class="pref-card" data-pref="creativity" onclick="togglePref(this)"><span class="pref-icon">♆</span><span class="pref-label">Yaratıcılık & Sanat</span><span class="pref-planet">Neptün çizgileri</span></div>
+            <div class="pref-card" data-pref="growth" onclick="togglePref(this)"><span class="pref-icon">♇</span><span class="pref-label">Dönüşüm & Güç</span><span class="pref-planet">Plüton çizgileri</span></div>
+            <div class="pref-card" data-pref="adventure" onclick="togglePref(this)"><span class="pref-icon">♂</span><span class="pref-label">Macera & Enerji</span><span class="pref-planet">Mars çizgileri</span></div>
+            <div class="pref-card" data-pref="learning" onclick="togglePref(this)"><span class="pref-icon">☿</span><span class="pref-label">Öğrenme & İletişim</span><span class="pref-planet">Merkür çizgileri</span></div>
+        </div>
+        <div class="step-actions">
+            <button class="btn-ghost" onclick="goToStep('step-birth')">← Geri</button>
+            <button class="btn-primary" onclick="goToStep('step-lifestyle')">Devam Et →</button>
+        </div>
+    </div>
+</section>
+
+<!-- Step 3: Lifestyle -->
+<section id="step-lifestyle" class="page">
+    <div class="step-container">
+        <div class="step-indicator"><div class="step-dot completed"></div><div class="step-dot completed"></div><div class="step-dot active"></div><div class="step-dot"></div></div>
+        <h2>Yaşam Tarzın</h2>
+        <p class="step-desc">Tercihlerini belirle — sonuçlar sana özel olsun.</p>
+
+        <div class="lifestyle-group">
+            <h3>🌡️ İklim Tercihin</h3>
+            <div class="option-row">
+                <button class="option-btn" data-group="climate" data-value="warm" onclick="selectOption(this)">☀️ Sıcak</button>
+                <button class="option-btn selected" data-group="climate" data-value="moderate" onclick="selectOption(this)">🌤️ Ilıman</button>
+                <button class="option-btn" data-group="climate" data-value="cold" onclick="selectOption(this)">❄️ Soğuk</button>
+            </div>
+        </div>
+        <div class="lifestyle-group">
+            <h3>🏙️ Şehir Boyutu</h3>
+            <div class="option-row">
+                <button class="option-btn" data-group="size" data-value="mega" onclick="selectOption(this)">🏙️ Metropol</button>
+                <button class="option-btn selected" data-group="size" data-value="medium" onclick="selectOption(this)">🌆 Orta</button>
+                <button class="option-btn" data-group="size" data-value="small" onclick="selectOption(this)">🏘️ Küçük</button>
+            </div>
+        </div>
+        <div class="lifestyle-group">
+            <h3>🌊 Doğa Tercihin</h3>
+            <div class="option-row">
+                <button class="option-btn" data-group="nature" data-value="coastal" onclick="selectOption(this)">🏖️ Deniz</button>
+                <button class="option-btn" data-group="nature" data-value="mountain" onclick="selectOption(this)">🏔️ Dağ</button>
+                <button class="option-btn selected" data-group="nature" data-value="urban" onclick="selectOption(this)">🌃 Şehir</button>
+            </div>
+        </div>
+
+        <div class="step-actions">
+            <button class="btn-ghost" onclick="goToStep('step-preferences')">← Geri</button>
+            <button class="btn-primary" onclick="calculateResults()">✦ Sonuçları Göster</button>
+        </div>
+    </div>
+</section>
+
+<!-- Step 4: Results -->
+<section id="step-results" class="page">
+    <div class="results-header">
+        <button class="btn-ghost" onclick="resetApp()">← Ana Sayfa</button>
+        <h2>✦ Senin Kozmik Haritanın</h2>
+        <p id="results-intro"></p>
+    </div>
+    <div class="results-layout">
+        <aside class="results-sidebar">
+            <div class="tab-bar">
+                <button class="tab-btn active" data-tab="cities-tab" onclick="switchTab(this)">🏙️ Şehirler</button>
+                <button class="tab-btn" data-tab="natal-tab" onclick="switchTab(this)">🌌 Natal</button>
+                <button class="tab-btn" data-tab="timing-tab" onclick="switchTab(this)">⏱️ Transit</button>
+                <button class="tab-btn" data-tab="compare-tab" onclick="switchTab(this)">⚖️ Karşılaştır</button>
+            </div>
+
+            <div id="cities-tab" class="tab-content active">
+                <div class="search-container">
+                    <div class="search-input-wrap">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="search-results" placeholder="Şehir veya ülke ara..." oninput="filterResults()" autocomplete="off">
+                        <button class="search-clear hidden" id="search-clear-btn" onclick="clearSearch()" title="Temizle">✕</button>
+                    </div>
+                    <div class="search-toolbar">
+                        <div class="filter-chips">
+                            <button class="filter-chip active" data-region="all" onclick="filterByRegion(this)">✦ Tümü</button>
+                            <button class="filter-chip" data-region="tr" onclick="filterByRegion(this)">🇹🇷 Türkiye</button>
+                            <button class="filter-chip" data-region="europe" onclick="filterByRegion(this)">🇪🇺 Avrupa</button>
+                            <button class="filter-chip" data-region="asia" onclick="filterByRegion(this)">🌏 Asya</button>
+                            <button class="filter-chip" data-region="americas" onclick="filterByRegion(this)">🌎 Amerika</button>
+                            <button class="filter-chip" data-region="africa" onclick="filterByRegion(this)">🌍 Afrika</button>
+                            <button class="filter-chip" data-region="oceania" onclick="filterByRegion(this)">🌊 Okyanusya</button>
+                        </div>
+                    </div>
+                    <div class="search-sort-row">
+                        <div id="results-count" class="results-meta"></div>
+                        <select id="sort-results" onchange="sortResults(this.value)" class="sort-select">
+                            <option value="score-desc">En yüksek puan</option>
+                            <option value="score-asc">En düşük puan</option>
+                            <option value="name-asc">A-Z</option>
+                            <option value="name-desc">Z-A</option>
+                        </select>
+                    </div>
+                    <div id="results-stats" class="results-stats"></div>
+                </div>
+                <div id="results-list" class="results-list"></div>
+            </div>
+
+            <div id="natal-tab" class="tab-content">
+                <div id="natal-summary"></div>
+                <h3 style="margin-top:24px;">Gezegen Çizgileri</h3>
+                <div id="line-toggles" class="line-toggles"></div>
+            </div>
+
+            <div id="timing-tab" class="tab-content">
+                <h3>⏱️ Aktif Transitler</h3>
+                <div id="timing-analysis"></div>
+            </div>
+
+            <div id="compare-tab" class="tab-content">
+                <h3>⚖️ Şehir Karşılaştırma</h3>
+                <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Sonuç kartlarına çift tıkla ekle</p>
+                <div class="compare-slots">
+                    <div id="compare-slot-0" class="compare-slot empty"><span>+ Şehir Ekle</span><small>Sonuç kartına çift tıkla</small></div>
+                    <div class="compare-vs">VS</div>
+                    <div id="compare-slot-1" class="compare-slot empty"><span>+ Şehir Ekle</span><small>Sonuç kartına çift tıkla</small></div>
+                </div>
+                <div id="compare-result"></div>
+                <button class="btn-ghost" onclick="clearComparison()" style="margin-top:16px;width:100%">Temizle</button>
+            </div>
+
+            <div class="sidebar-actions">
+                <button class="btn-primary" onclick="shareResults()">📸 Paylaş</button>
+                <button class="btn-ghost" onclick="downloadReport()">📄 Rapor İndir</button>
+            </div>
+        </aside>
+
+        <div class="results-map-wrap">
+            <div class="map-controls">
+                <button id="toggle-markers" class="map-ctrl active" onclick="toggleMapLayer('markers')">📍 İşaretçiler</button>
+                <button id="toggle-lines" class="map-ctrl active" onclick="toggleMapLayer('lines')">〰️ Çizgiler</button>
+                <button id="toggle-heatmap" class="map-ctrl" onclick="toggleMapLayer('heatmap')">🔥 Isı Haritası</button>
+            </div>
+            <div id="map"></div>
+        </div>
+    </div>
+</section>
+
+</div><!-- /app -->
+
+<!-- ══════════════════ PREMIUM FOOTER ══════════════════ -->
+<footer class="premium-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">
+            <h3>✦ AstroMap</h3>
+            <p>Antik bilgelik, modern teknoloji. Yıldızlarla yazılmış hayat haritanı keşfet.</p>
+            <p style="margin-top:12px; font-size:12px; color:rgba(201,160,255,0.5)">Powered by GPT-4o ✦</p>
+        </div>
+        <div class="footer-col">
+            <h4>Keşfet</h4>
+            <a onclick="startApp()">Astro Harita</a>
+            <a onclick="navigateTo('daily')">Günlük Yorum</a>
+            <a onclick="navigateTo('compatibility')">Uyum Testi</a>
+            <a onclick="navigateTo('moon')">Ay Takvimi</a>
+        </div>
+        <div class="footer-col">
+            <h4>AI Araçlar</h4>
+            <a onclick="navigateTo('tarot')">AI Tarot</a>
+            <a onclick="navigateTo('crystal')">Kristal Rehberi</a>
+            <a onclick="navigateTo('dream')">Rüya Yorumu</a>
+            <a onclick="navigateTo('pricing')">Premium</a>
+        </div>
+        <div class="footer-col">
+            <h4>Hakkında</h4>
+            <a onclick="navigateTo('about')">Hakkımızda</a>
+            <a href="#">Gizlilik Politikası</a>
+            <a href="#">Kullanım Şartları</a>
+            <a href="#">İletişim</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>© 2024 AstroMap. Tüm hakları saklıdır. ✦</span>
+        <div class="footer-socials">
+            <a href="#" title="Instagram">📸</a>
+            <a href="#" title="Twitter">🐦</a>
+            <a href="#" title="TikTok">🎵</a>
+            <a href="#" title="YouTube">🎬</a>
+        </div>
+    </div>
+</footer>
+
+<!-- ══════════════════ LOGIN MODAL ══════════════════ -->
+<div id="login-modal" class="modal hidden">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal('login-modal')">✕</button>
+        <h2>Tekrar Hoş Geldin ✨</h2>
+        <p class="modal-subtitle">Hesabına giriş yap</p>
+        <form onsubmit="handleLogin(event)">
+            <div class="form-group"><label>E-posta</label><input type="email" placeholder="ornek@email.com" required></div>
+            <div class="form-group"><label>Şifre</label><input type="password" placeholder="••••••••" required></div>
+            <div class="form-row-between">
+                <label class="checkbox-label"><input type="checkbox"> Beni hatırla</label>
+                <a class="link-sm">Şifremi unuttum</a>
+            </div>
+            <button type="submit" class="btn-primary full-width">Giriş Yap</button>
+        </form>
+        <div class="social-divider"><span>veya</span></div>
+        <button class="btn-social google" onclick="socialLogin('google')">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+            Google ile Giriş Yap
+        </button>
+        <button class="btn-social apple" onclick="socialLogin('apple')">🍎 Apple ile Giriş Yap</button>
+        <p class="modal-footer">Hesabın yok mu? <a onclick="closeModal('login-modal');openModal('signup-modal')">Ücretsiz oluştur</a></p>
+    </div>
+</div>
+
+<!-- ══════════════════ SIGNUP MODAL ══════════════════ -->
+<div id="signup-modal" class="modal hidden">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal('signup-modal')">✕</button>
+        <h2>Yıldızlarla Tanış ✨</h2>
+        <p class="modal-subtitle">Ücretsiz hesap oluştur</p>
+        <form onsubmit="handleSignup(event)">
+            <div class="form-group"><label>Ad Soyad</label><input type="text" placeholder="Adınız" required></div>
+            <div class="form-group"><label>Doğum Tarihi</label><input type="date" required></div>
+            <div class="form-group"><label>E-posta</label><input type="email" placeholder="ornek@email.com" required></div>
+            <div class="form-group"><label>Şifre</label><input type="password" placeholder="En az 8 karakter" required></div>
+            <label class="checkbox-label"><input type="checkbox" required> <a>Kullanım şartlarını</a> ve <a>gizlilik politikasını</a> kabul ediyorum</label>
+            <button type="submit" class="btn-primary full-width">Hesap Oluştur</button>
+        </form>
+        <div class="social-divider"><span>veya</span></div>
+        <button class="btn-social google" onclick="socialLogin('google')">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+            Google ile Kaydol
+        </button>
+        <button class="btn-social apple" onclick="socialLogin('apple')">🍎 Apple ile Kaydol</button>
+        <p class="modal-footer">Zaten hesabın var mı? <a onclick="closeModal('signup-modal');openModal('login-modal')">Giriş yap</a></p>
+    </div>
+</div>
+<!-- ════════════════ CHECKOUT MODAL ════════════════ -->
+<div id="checkout-modal" class="modal hidden">
+    <div class="modal-content checkout-modal-content">
+        <button class="modal-close" onclick="closeCheckout()">✕</button>
+        
+        <!-- Step 1: Billing Info -->
+        <div id="checkout-step-billing" class="checkout-step">
+            <div class="checkout-header">
+                <span class="checkout-icon">💳</span>
+                <h2>Ödeme Bilgileri</h2>
+                <p class="checkout-plan-info" id="checkout-plan-label"></p>
+            </div>
+            <form id="checkout-billing-form" onsubmit="submitBillingAndPay(event)">
+                <div class="form-group">
+                    <label>Ad Soyad</label>
+                    <input type="text" id="checkout-name" placeholder="Adınız Soyadınız" required>
+                </div>
+                <div class="form-group">
+                    <label>E-posta</label>
+                    <input type="email" id="checkout-email" placeholder="ornek@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Telefon</label>
+                    <input type="tel" id="checkout-phone" placeholder="05XX XXX XX XX" required>
+                </div>
+                <div class="checkout-summary">
+                    <div class="summary-row">
+                        <span>Plan</span>
+                        <span id="checkout-summary-plan">-</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Tutar</span>
+                        <span id="checkout-summary-amount" class="summary-amount">-</span>
+                    </div>
+                    <div class="summary-row summary-note">
+                        <span>🔒 iyzico güvenli ödeme altyapısı</span>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary full-width btn-checkout">
+                    🔒 Güvenli Ödemeye Geç
+                </button>
+                <p class="checkout-disclaimer">Kartlı ödeme iyzico güvencesiyle gerçekleşir. Kart bilgileriniz bizde saklanmaz.</p>
+            </form>
+        </div>
+
+        <!-- Step 2: iyzico Payment Form -->
+        <div id="checkout-step-payment" class="checkout-step hidden">
+            <div class="checkout-header">
+                <span class="checkout-icon">🛡️</span>
+                <h2>Kart Bilgileri</h2>
+                <p class="checkout-secure-note">iyzico güvenli ödeme</p>
+            </div>
+            <div id="iyzico-checkout-form" class="iyzico-form-container">
+                <div class="checkout-loading">
+                    <div class="loading-spinner">✦</div>
+                    <p>Ödeme formu yükleniyor...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- ══════════════════ SHARE MODAL ══════════════════ -->
+<div id="share-modal" class="modal hidden">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal('share-modal')">✕</button>
+        <h2>Sonuçlarını Paylaş ✦</h2>
+        <div id="share-card-inner" class="share-card">
+            <div class="share-card-header">✦ AstroMap Sonuçlarım</div>
+            <div id="share-natal" class="share-natal"></div>
+            <div id="share-top3" class="share-top3"></div>
+            <div class="share-card-footer">astromap.app ✦</div>
+        </div>
+        <div class="share-actions">
+            <button class="btn-primary" onclick="downloadShareCard()">📸 Kart İndir</button>
+            <button class="btn-ghost" onclick="downloadReport()">📄 Rapor İndir</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════ LOADING OVERLAY ══════════════════ -->
+<div id="loading-overlay" class="loading-overlay hidden">
+    <div class="loading-content">
+        <div class="loading-spinner">✦</div>
+        <div id="loading-text" class="loading-text">Hesaplanıyor...</div>
+        <div class="loading-bar-wrap"><div id="loading-bar" class="loading-bar"></div></div>
+        <div id="loading-sub" class="loading-sub"></div>
+    </div>
+</div>
+
+<!-- ══════════════════ TOAST ══════════════════ -->
+<div id="toast" class="toast hidden">Mesaj</div>
+
+<!-- ══════════════════ SCRIPTS ══════════════════ -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="cities-database.js"></script>
+<script src="astro-engine.js"></script>
+<script src="app.js"></script>
+
+<!-- Service Worker Registration -->
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('✦ SW registered:', reg.scope))
+            .catch(err => console.warn('SW registration failed:', err));
+    });
+}
+</script>
+
+<!-- Structured Data (JSON-LD) -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "AstroMap",
+    "description": "AI destekli astrokartografi ile yıldızların seni nereye çağırdığını keşfet",
+    "url": "https://astromap.app",
+    "applicationCategory": "LifestyleApplication",
+    "operatingSystem": "Web",
+    "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "TRY"
+    },
+    "featureList": [
+        "AI Günlük Burç Yorumu",
+        "Astrokartografi Haritası",
+        "Uyum Testi",
+        "AI Tarot",
+        "Kristal Rehberi",
+        "Rüya Yorumu",
+        "Ay Takvimi"
+    ]
+}
+</script>
+
+</body>
+</html>
