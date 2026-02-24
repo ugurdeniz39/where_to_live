@@ -321,6 +321,8 @@ function navigateToStep(stepId) {
     if (el) el.classList.add('active');
     // Clear nav active state
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    // Hide floating toggles on results page (they overlap sidebar actions)
+    document.body.classList.toggle('results-active', stepId === 'step-results');
     window.scrollTo(0, 0);
 }
 
@@ -337,6 +339,7 @@ function resetApp() {
         mapHeatCircles.forEach(c => map.removeLayer(c));
         mapMarkers = []; mapLines = []; mapHeatCircles = [];
     }
+    document.body.classList.remove('results-active');
     navigateTo('home');
 }
 
