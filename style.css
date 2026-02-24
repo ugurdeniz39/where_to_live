@@ -187,39 +187,42 @@ a:hover { color: var(--accent-light); }
     .results-header { padding: 8px 16px; }
     .results-header h2 { font-size: 16px; }
     .results-header p { font-size: 12px; }
-    .results-layout { flex-direction: column; height: calc(100vh - 120px); }
-    .results-map-wrap { height: 35vh; min-height: 200px; flex-shrink: 0; touch-action: pan-x pan-y; }
+    .results-layout { flex-direction: column; height: calc(100vh - 100px); }
+    .results-map-wrap { order: -1; height: 30vh; min-height: 180px; flex-shrink: 0; touch-action: pan-x pan-y; }
     .results-sidebar {
         width: 100%; flex: 1; min-height: 0; border-right: none;
-        border-top: 1px solid var(--border); overflow-y: auto;
+        border-top: 1px solid var(--border); overflow: hidden;
         -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;
         display: flex; flex-direction: column;
     }
-    .results-sidebar .tab-content { overflow-y: auto; flex: 1; min-height: 0; }
+    .results-sidebar .tab-content { overflow-y: auto; flex: 1; min-height: 0; -webkit-overflow-scrolling: touch; }
+    .sidebar-actions { order: 99; }
     .map-controls { top: 8px; right: 8px; gap: 4px; flex-wrap: wrap; }
     .map-ctrl { padding: 6px 10px; font-size: 11px; touch-action: manipulation; }
     .tab-bar { touch-action: manipulation; flex-shrink: 0; }
     .tab-btn { padding: 10px 6px; font-size: 11px; touch-action: manipulation; min-height: 44px; }
     .search-container {
         position: sticky; top: 0; z-index: 10;
-        background: var(--surface); margin: -20px -20px 12px; padding: 12px 14px 10px;
+        background: var(--surface); margin: -20px -20px 8px; padding: 10px 12px 8px;
     }
-    .search-input-wrap { margin-bottom: 8px; }
+    .search-input-wrap { margin-bottom: 6px; }
     .search-input-wrap input { padding: 10px 36px 10px 36px; font-size: 13px; }
-    .filter-chips { gap: 4px; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; touch-action: pan-x; }
+    .filter-chips { gap: 4px; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; touch-action: pan-x; scrollbar-width: none; }
+    .filter-chips::-webkit-scrollbar { display: none; }
     .filter-chip { padding: 5px 10px; font-size: 11px; flex-shrink: 0; touch-action: manipulation; min-height: 32px; }
-    .search-sort-row { margin-top: 6px; }
+    .search-sort-row { margin-top: 4px; }
     .results-meta { font-size: 11px; }
     .sort-select { font-size: 11px; padding: 4px 24px 4px 8px; }
-    .results-stats { margin-top: 6px; padding: 6px 10px; font-size: 10px; }
-    .result-card { padding: 12px; touch-action: manipulation; }
-    .result-city { font-size: 15px; }
+    .results-stats { margin-top: 4px; padding: 4px 8px; font-size: 10px; }
+    .result-card { padding: 10px 12px; touch-action: manipulation; }
+    .result-city { font-size: 14px; }
+    .result-country { margin-bottom: 4px; }
     .result-reason { font-size: 11px; line-height: 1.4; }
     .result-tags { gap: 3px; margin-bottom: 4px; }
     .result-tag { font-size: 10px; padding: 2px 6px; }
-    .results-list { overscroll-behavior: contain; gap: 8px; padding-bottom: 16px; }
-    .sidebar-actions { padding: 10px; gap: 6px; flex-shrink: 0; }
-    .sidebar-actions .btn-primary, .sidebar-actions .btn-ghost { font-size: 13px; padding: 10px; }
+    .results-list { overscroll-behavior: contain; gap: 6px; padding-bottom: 16px; }
+    .sidebar-actions { padding: 8px 10px; gap: 6px; flex-shrink: 0; border-top: 1px solid var(--border); }
+    .sidebar-actions .btn-primary, .sidebar-actions .btn-ghost { font-size: 12px; padding: 8px; }
     .natal-grid .natal-row { padding: 6px 10px; }
     .natal-sign { font-size: 12px; }
     
@@ -1177,8 +1180,8 @@ a:hover { color: var(--accent-light); }
 /* ════════════ RESPONSIVE ════════════ */
 @media (max-width: 900px) {
     .results-layout { flex-direction: column; }
-    .results-sidebar { width: 100%; flex: 1; min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-    .results-map, .results-map-wrap { height: 35vh; min-height: 200px; flex-shrink: 0; }
+    .results-sidebar { width: 100%; flex: 1; min-height: 0; overflow: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+    .results-map, .results-map-wrap { order: -1; height: 35vh; min-height: 200px; flex-shrink: 0; }
     .page-container { padding: 80px 16px 60px; }
     .page-title { font-size: 28px; }
 }

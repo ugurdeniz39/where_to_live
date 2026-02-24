@@ -117,6 +117,21 @@ const AstroEngine = (function () {
             return { x, y, r };
         }
 
+        // ── Nutation in longitude (Meeus Ch.22, IAU 1980 — dominant terms) ──
+        function calcNutation(T2) {
+            const Om = normDeg(125.04452 - 1934.136261 * T2) * deg2rad;
+            const Ls = normDeg(280.4665 + 36000.7698 * T2) * deg2rad;
+            const Lm = normDeg(218.3165 + 481267.8813 * T2) * deg2rad;
+            // Nutation in longitude (arcseconds)
+            const dpsi = -17.20 * Math.sin(Om) - 1.32 * Math.sin(2 * Ls) - 0.23 * Math.sin(2 * Lm) + 0.21 * Math.sin(2 * Om);
+            return dpsi / 3600; // convert to degrees
+        }
+
+        // ── Aberration correction (~20.5" constant of aberration) ──
+        function calcAberration(sunLon_deg) {
+            return -20.4898 / 3600; // constant aberration in degrees (simplified)
+        }
+
         // NASA/JPL Keplerian orbital elements at J2000 + rates per Julian century
         const orbitalElements = {
             mercury: { a: 0.38709927, e0: 0.20563593, eR: 0.00001906, I0: 7.00497902, IR: -0.00594749, L0: 252.25032350, LR: 149472.67411175, w0: 77.45779628, wR: 0.16047689, O0: 48.33076593, OR: -0.12534081 },
@@ -130,6 +145,26 @@ const AstroEngine = (function () {
             pluto:   { a: 39.48211675, e0: 0.24882730, eR: 0.00005170, I0: 17.14001206, IR: 0.00004818, L0: 238.92903833, LR: 145.20780515, w0: 224.06891629, wR: -0.04062942, O0: 110.30393684, OR: -0.01183482 }
         };
 
+        // ── NASA/JPL perturbation corrections for outer planets ──
+        function applyPerturbations(key, L, T2) {
+            if (key === 'jupiter') {
+                return L - 0.00012452 * T2 * T2 + 0.06064060 * Math.cos(38.35125000 * deg2rad * T2)
+                    + -0.35635438 * Math.sin(38.35125000 * deg2rad * T2);
+            } else if (key === 'saturn') {
+                return L + 0.00025899 * T2 * T2 + -0.13434469 * Math.cos(38.35125000 * deg2rad * T2)
+                    + 0.87320147 * Math.sin(38.35125000 * deg2rad * T2);
+            } else if (key === 'uranus') {
+                return L + 0.00058331 * T2 * T2 + -0.97731848 * Math.cos(7.67025000 * deg2rad * T2)
+                    + 0.17689245 * Math.sin(7.67025000 * deg2rad * T2);
+            } else if (key === 'neptune') {
+                return L + -0.00041348 * T2 * T2 + 0.68346318 * Math.cos(7.67025000 * deg2rad * T2)
+                    + -0.10162547 * Math.sin(7.67025000 * deg2rad * T2);
+            } else if (key === 'pluto') {
+                return L + -0.01262724 * T2 * T2;
+            }
+            return L;
+        }
+
         // ── Earth's heliocentric position (needed for geocentric conversion) ──
         const eE = orbitalElements.earth;
         const earthXYZ = getHeliocentricXYZ(
@@ -137,8 +172,23 @@ const AstroEngine = (function () {
             eE.e0 + eE.eR * T, eE.a, 0, 0
         );
 
-        // ── Sun (geocentric = opposite of Earth's heliocentric) ──
-        const sunLon = normDeg(Math.atan2(-earthXYZ.y, -earthXYZ.x) * rad2deg);
+        // ── Nutation & Aberration corrections ──
+        const nutationDeg = calcNutation(T);
+
+        // ── General precession: J2000 → mean equinox of date (for planets) ──
+        const precessionDeg = (5029.0966 * T + 1.1120 * T * T) / 3600;
+
+        // ── Sun — Meeus Ch.25 high-accuracy formula (tropical, ~0.01° precision) ──
+        const L0_sun = normDeg(280.46646 + 36000.76983 * T + 0.0003032 * T * T);
+        const M_sun = normDeg(357.52911 + 35999.05029 * T - 0.0001537 * T * T);
+        const M_sun_rad = M_sun * deg2rad;
+        const C_sun = (1.914602 - 0.004817 * T - 0.000014 * T * T) * Math.sin(M_sun_rad)
+                    + (0.019993 - 0.000101 * T) * Math.sin(2 * M_sun_rad)
+                    + 0.000289 * Math.sin(3 * M_sun_rad);
+        const sunTrueLon = normDeg(L0_sun + C_sun);
+        // Apparent longitude: add nutation + aberration (Meeus eq.25.8)
+        const omega_nut = normDeg(125.04 - 1934.136 * T) * deg2rad;
+        const sunLon = normDeg(sunTrueLon - 0.00569 - 0.00478 * Math.sin(omega_nut));
 
         // ── Moon (Meeus simplified lunar longitude — ~1° accuracy) ──
         const Lp = normDeg(218.3164477 + 481267.88123421 * T);
@@ -167,12 +217,13 @@ const AstroEngine = (function () {
         );
 
         // ── Build positions ──
-        // Helper: convert decimal degrees to { deg, min, sec }
+        // Helper: convert decimal degrees to { deg, min, sec } with proper carry
         function toDMS(decimalDeg) {
-            const d = Math.floor(decimalDeg);
-            const mFull = (decimalDeg - d) * 60;
-            const m = Math.floor(mFull);
-            const s = Math.round((mFull - m) * 60);
+            let totalSec = Math.round(Math.abs(decimalDeg) * 3600);
+            let s = totalSec % 60;
+            totalSec = Math.floor(totalSec / 60);
+            let m = totalSec % 60;
+            let d = Math.floor(totalSec / 60);
             return { deg: d, min: m, sec: s };
         }
 
@@ -186,15 +237,19 @@ const AstroEngine = (function () {
         const sunDeg = sunLon % 30;
         positions.sun = { longitude: sunLon, sign: sunSign.name, signSymbol: sunSign.symbol, degree: sunDeg, dms: toDMS(sunDeg), dmsStr: formatDMS(sunDeg), element: sunSign.element };
 
-        const moonSign = SIGNS[Math.floor(moonLon / 30)];
-        const moonDeg = moonLon % 30;
-        positions.moon = { longitude: moonLon, sign: moonSign.name, signSymbol: moonSign.symbol, degree: moonDeg, dms: toDMS(moonDeg), dmsStr: formatDMS(moonDeg), element: moonSign.element };
+        // Apply nutation to Moon
+        const moonLonCorrected = normDeg(moonLon + nutationDeg);
+        const moonSign = SIGNS[Math.floor(moonLonCorrected / 30)];
+        const moonDeg = moonLonCorrected % 30;
+        positions.moon = { longitude: moonLonCorrected, sign: moonSign.name, signSymbol: moonSign.symbol, degree: moonDeg, dms: toDMS(moonDeg), dmsStr: formatDMS(moonDeg), element: moonSign.element };
 
-        // ── Planets: heliocentric → geocentric conversion ──
+        // ── Planets: heliocentric → geocentric conversion with corrections ──
         const planetKeys = ['mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto'];
         for (const key of planetKeys) {
             const el = orbitalElements[key];
-            const L = el.L0 + el.LR * T;
+            let L = el.L0 + el.LR * T;
+            // Apply NASA/JPL perturbation corrections for outer planets
+            L = applyPerturbations(key, L, T);
             const e = el.e0 + el.eR * T;
             const I = el.I0 + el.IR * T;
             const wbar = el.w0 + el.wR * T;
@@ -203,7 +258,8 @@ const AstroEngine = (function () {
             // Geocentric = planet heliocentric - Earth heliocentric
             const xGeo = helio.x - earthXYZ.x;
             const yGeo = helio.y - earthXYZ.y;
-            const geoLon = normDeg(Math.atan2(yGeo, xGeo) * rad2deg);
+            // Apply precession (J2000→tropical) + nutation correction
+            const geoLon = normDeg(Math.atan2(yGeo, xGeo) * rad2deg + precessionDeg + nutationDeg);
             const sign = SIGNS[Math.floor(geoLon / 30)];
             const pDeg = geoLon % 30;
             positions[key] = { longitude: geoLon, sign: sign.name, signSymbol: sign.symbol, degree: pDeg, dms: toDMS(pDeg), dmsStr: formatDMS(pDeg), element: sign.element };
