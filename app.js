@@ -1833,8 +1833,9 @@ function initMap() {
     });
     // Zoom control — bottom-right on mobile, top-right on desktop
     L.control.zoom({ position: isMobileMap ? 'bottomright' : 'topright' }).addTo(map);
-    // Dark tile layer with better contrast
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19 }).addTo(map);
+    // Theme-aware tile layer
+    const tileUrl = (themes[currentTheme] && themes[currentTheme].tileUrl) || 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+    L.tileLayer(tileUrl, { subdomains: 'abcd', maxZoom: 19 }).addTo(map);
 
     drawPlanetaryLines();
     addCityMarkers();
@@ -1885,30 +1886,88 @@ function addCityMarkers() {
     const top30 = allRenderedCities.slice(0, 30);
     top30.forEach((city, index) => {
         const isTop3 = index < 3;
-        const markerSize = isTop3 ? 28 : 16;
-        const markerClass = isTop3 ? 'astro-marker-top' : 'astro-marker';
+        const isTop10 = index < 10;
+        const markerSize = isTop3 ? 32 : isTop10 ? 20 : 14;
+        const markerClass = isTop3 ? 'astro-marker-top' : isTop10 ? 'astro-marker-mid' : 'astro-marker';
         const icon = L.divIcon({
             className: markerClass, iconSize: [markerSize, markerSize],
             iconAnchor: [markerSize / 2, markerSize / 2],
-            html: isTop3 ? `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;color:#ffd700;">${index + 1}</div>` : ''
+            html: isTop3 ? `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;color:#ffd700;text-shadow:0 1px 3px rgba(0,0,0,0.5);">${index + 1}</div>` : ''
         });
         const marker = L.marker([city.lat, city.lon], { icon })
             .addTo(map)
-            .bindPopup(createPopupContent(city, index), { autoClose: false, closeOnClick: false });
+            .bindPopup(createPopupContent(city, index), { 
+                autoClose: false, closeOnClick: false,
+                maxWidth: 260, className: 'astro-popup'
+            });
         if (index === 0) marker.openPopup();
-        marker.on('click', () => highlightCard(allRenderedCities.indexOf(city)));
+        marker.on('click', () => {
+            highlightCard(allRenderedCities.indexOf(city));
+            showCityPeek(city);
+        });
+        marker.on('mouseover', () => showCityPeek(city));
         mapMarkers.push(marker);
     });
+    renderMapLegend();
 }
 
 function createPopupContent(city, rank) {
     const tagLine = city.influences.slice(0, 2).map(i => `${i.symbol} ${i.planet} ${i.lineType}`).join(' · ');
+    const medal = rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : '';
+    const scoreColor = city.score >= 85 ? '#4ade80' : city.score >= 70 ? 'var(--accent-light)' : city.score >= 55 ? 'var(--gold)' : 'var(--text-muted)';
+    const hue = Math.min(120, (city.score / 100) * 140);
+    const gradient = `linear-gradient(90deg, hsl(${hue}, 70%, 50%), hsl(${hue + 20}, 80%, 55%))`;
     return `
-        <div class="popup-city">#${rank + 1} ${city.city}</div>
-        <div class="popup-score">Uyum: ${city.score}%</div>
-        <div style="font-size:11px;color:#c9a0ff;margin-bottom:6px;">${tagLine}</div>
+        <div class="popup-header">
+            <span class="popup-rank">${medal} #${rank + 1}</span>
+            <span class="popup-flag">${_regionFlag[city.region] || ''}</span>
+        </div>
+        <div class="popup-city">${city.city}</div>
+        <div class="popup-country">${city.country}</div>
+        <div class="popup-score-bar">
+            <div class="popup-score-fill" style="width:${city.score}%;background:${gradient}"></div>
+            <span class="popup-score-val" style="color:${scoreColor}">${city.score}%</span>
+        </div>
+        <div class="popup-tags">${tagLine}</div>
         <div class="popup-reason">${city.reason}</div>
     `;
+}
+
+function resetMapView() {
+    if (!map) return;
+    const topCities = allRenderedCities.slice(0, 5);
+    if (topCities.length > 1) {
+        const bounds = L.latLngBounds(topCities.map(c => [c.lat, c.lon]));
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 5, duration: 1.5 });
+    }
+}
+
+function renderMapLegend() {
+    const legendBody = document.getElementById('map-legend-body');
+    if (!legendBody || !results) return;
+    const legendItems = [];
+    for (const planetKey of visiblePlanets) {
+        const planetInfo = AstroEngine.PLANETS[planetKey];
+        if (!planetInfo) continue;
+        legendItems.push(`<div class="legend-item"><span class="legend-line" style="background:${planetInfo.color}"></span><span>${planetInfo.symbol} ${planetInfo.name}</span></div>`);
+    }
+    legendItems.push('<div class="legend-sep"></div>');
+    legendItems.push('<div class="legend-item"><span class="legend-dot top"></span><span>Top 3 Şehir</span></div>');
+    legendItems.push('<div class="legend-item"><span class="legend-dot normal"></span><span>Diğer Şehirler</span></div>');
+    legendBody.innerHTML = legendItems.join('');
+}
+
+function showCityPeek(city) {
+    const peek = document.getElementById('map-city-peek');
+    if (!peek) return;
+    const scoreColor = city.score >= 85 ? '#4ade80' : city.score >= 70 ? 'var(--accent-light)' : 'var(--gold)';
+    peek.innerHTML = `
+        <div class="peek-name">${_regionFlag[city.region] || ''} ${city.city}</div>
+        <div class="peek-score" style="color:${scoreColor}">${city.score}%</div>
+    `;
+    peek.classList.add('visible');
+    clearTimeout(peek._hideTimer);
+    peek._hideTimer = setTimeout(() => peek.classList.remove('visible'), 3000);
 }
 
 // ═══════════════════════════════════════
@@ -3122,61 +3181,217 @@ function initSwipeNavigation() {
 }
 
 // ═══════════════════════════════════════
-// THEME SYSTEM (3 COSMIC THEMES)
+// THEME SYSTEM (6 CONCEPTUAL THEMES)
 // ═══════════════════════════════════════
 const themes = {
     cosmic: {
-        name: 'Kozmik Gece',
-        icon: '🌌',
+        name: 'Kozmik Mor',
+        icon: '🔮',
+        desc: 'Klasik kozmik gece',
+        premium: false,
+        preview: ['#07071a', '#c9a0ff', '#ff6b9d'],
+        tileUrl: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
         vars: {
             '--bg': '#07071a',
-            '--bg-card': 'rgba(255,255,255,0.03)',
-            '--surface': 'rgba(255,255,255,0.04)',
-            '--border': 'rgba(255,255,255,0.06)',
+            '--bg-card': 'rgba(255,255,255,0.04)',
+            '--bg-card-hover': 'rgba(255,255,255,0.08)',
+            '--bg-glass': 'rgba(255,255,255,0.06)',
+            '--surface': '#0e0e2a',
+            '--surface-2': '#151538',
+            '--border': 'rgba(255,255,255,0.08)',
+            '--border-light': 'rgba(255,255,255,0.12)',
+            '--text': '#f0eef6',
+            '--text-muted': '#8a84a0',
+            '--text-dim': '#5a5475',
             '--accent': '#c9a0ff',
-            '--accent-light': '#dfc4ff',
-            '--accent-dark': '#8b5fbf',
+            '--accent-light': '#e0c8ff',
+            '--accent-dark': '#7c5cbf',
             '--rose': '#ff6b9d',
+            '--rose-light': '#ff8fb8',
             '--gold': '#ffd76e',
+            '--gold-dark': '#c8a84e',
             '--teal': '#6ee7c8',
-            '--text': '#e8e0f0',
-            '--text-muted': 'rgba(232,224,240,0.6)'
+            '--gradient-main': 'linear-gradient(135deg, #c9a0ff, #ff6b9d)',
+            '--gradient-gold': 'linear-gradient(135deg, #ffd76e, #ff9a56)',
+            '--gradient-cool': 'linear-gradient(135deg, #6ee7c8, #4fa0ff)',
+            '--shadow-glow': '0 0 40px rgba(201,160,255,0.15)',
+            '--navbar-bg': 'rgba(7,7,26,0.85)',
+            '--loading-bg': 'rgba(7,7,26,0.95)'
+        }
+    },
+    moonlight: {
+        name: 'Ay Işığı',
+        icon: '🌙',
+        desc: 'Aydınlık & zarif beyaz tema',
+        premium: false,
+        preview: ['#f5f3ff', '#7c3aed', '#ec4899'],
+        tileUrl: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        vars: {
+            '--bg': '#f8f6ff',
+            '--bg-card': 'rgba(124,58,237,0.04)',
+            '--bg-card-hover': 'rgba(124,58,237,0.08)',
+            '--bg-glass': 'rgba(124,58,237,0.06)',
+            '--surface': '#ede9fe',
+            '--surface-2': '#ddd6fe',
+            '--border': 'rgba(124,58,237,0.12)',
+            '--border-light': 'rgba(124,58,237,0.18)',
+            '--text': '#1e1b4b',
+            '--text-muted': '#6b6394',
+            '--text-dim': '#a5a0c0',
+            '--accent': '#7c3aed',
+            '--accent-light': '#8b5cf6',
+            '--accent-dark': '#5b21b6',
+            '--rose': '#ec4899',
+            '--rose-light': '#f472b6',
+            '--gold': '#d97706',
+            '--gold-dark': '#b45309',
+            '--teal': '#059669',
+            '--gradient-main': 'linear-gradient(135deg, #7c3aed, #ec4899)',
+            '--gradient-gold': 'linear-gradient(135deg, #f59e0b, #ef4444)',
+            '--gradient-cool': 'linear-gradient(135deg, #059669, #3b82f6)',
+            '--shadow-glow': '0 0 40px rgba(124,58,237,0.12)',
+            '--navbar-bg': 'rgba(248,246,255,0.88)',
+            '--loading-bg': 'rgba(248,246,255,0.95)'
         }
     },
     aurora: {
         name: 'Kuzey Işıkları',
         icon: '🌌',
+        desc: 'Aurora borealis yeşil-mavi',
+        premium: true,
+        preview: ['#020c1b', '#64ffda', '#38bdf8'],
+        tileUrl: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
         vars: {
-            '--bg': '#050d1a',
-            '--bg-card': 'rgba(100,255,218,0.03)',
-            '--surface': 'rgba(100,255,218,0.05)',
-            '--border': 'rgba(100,255,218,0.08)',
+            '--bg': '#020c1b',
+            '--bg-card': 'rgba(100,255,218,0.04)',
+            '--bg-card-hover': 'rgba(100,255,218,0.08)',
+            '--bg-glass': 'rgba(100,255,218,0.06)',
+            '--surface': '#0a192f',
+            '--surface-2': '#112240',
+            '--border': 'rgba(100,255,218,0.10)',
+            '--border-light': 'rgba(100,255,218,0.15)',
+            '--text': '#ccd6f6',
+            '--text-muted': '#8892b0',
+            '--text-dim': '#495670',
             '--accent': '#64ffda',
             '--accent-light': '#a8ffec',
             '--accent-dark': '#3db89e',
-            '--rose': '#ff6b9d',
-            '--gold': '#ffd76e',
+            '--rose': '#f472b6',
+            '--rose-light': '#fb7ebd',
+            '--gold': '#fbbf24',
+            '--gold-dark': '#d4980a',
             '--teal': '#64ffda',
-            '--text': '#e0f5f0',
-            '--text-muted': 'rgba(224,245,240,0.6)'
+            '--gradient-main': 'linear-gradient(135deg, #64ffda, #38bdf8)',
+            '--gradient-gold': 'linear-gradient(135deg, #fbbf24, #f97316)',
+            '--gradient-cool': 'linear-gradient(135deg, #64ffda, #818cf8)',
+            '--shadow-glow': '0 0 40px rgba(100,255,218,0.15)',
+            '--navbar-bg': 'rgba(2,12,27,0.88)',
+            '--loading-bg': 'rgba(2,12,27,0.95)'
         }
     },
     nebula: {
-        name: 'Nebula Pembesi',
+        name: 'Nebula',
         icon: '🌸',
+        desc: 'Pembe-mor nebula galaksisi',
+        premium: true,
+        preview: ['#1a0520', '#ff6b9d', '#c084fc'],
+        tileUrl: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
         vars: {
-            '--bg': '#110718',
-            '--bg-card': 'rgba(255,107,157,0.03)',
-            '--surface': 'rgba(255,107,157,0.05)',
-            '--border': 'rgba(255,107,157,0.08)',
+            '--bg': '#1a0520',
+            '--bg-card': 'rgba(255,107,157,0.05)',
+            '--bg-card-hover': 'rgba(255,107,157,0.10)',
+            '--bg-glass': 'rgba(255,107,157,0.06)',
+            '--surface': '#2a0a35',
+            '--surface-2': '#3d1048',
+            '--border': 'rgba(255,107,157,0.12)',
+            '--border-light': 'rgba(255,107,157,0.18)',
+            '--text': '#fce7f3',
+            '--text-muted': '#c084a8',
+            '--text-dim': '#7a4565',
             '--accent': '#ff6b9d',
             '--accent-light': '#ffa0c0',
             '--accent-dark': '#c44d78',
             '--rose': '#ff6b9d',
+            '--rose-light': '#ffa0c0',
             '--gold': '#ffc857',
-            '--teal': '#c9a0ff',
-            '--text': '#f0e0ea',
-            '--text-muted': 'rgba(240,224,234,0.6)'
+            '--gold-dark': '#c89e40',
+            '--teal': '#c084fc',
+            '--gradient-main': 'linear-gradient(135deg, #ff6b9d, #c084fc)',
+            '--gradient-gold': 'linear-gradient(135deg, #ffc857, #ff6b9d)',
+            '--gradient-cool': 'linear-gradient(135deg, #c084fc, #38bdf8)',
+            '--shadow-glow': '0 0 40px rgba(255,107,157,0.18)',
+            '--navbar-bg': 'rgba(26,5,32,0.88)',
+            '--loading-bg': 'rgba(26,5,32,0.95)'
+        }
+    },
+    ocean: {
+        name: 'Okyanus',
+        icon: '🌊',
+        desc: 'Derin okyanus mavisi',
+        premium: true,
+        preview: ['#0a1628', '#38bdf8', '#22d3ee'],
+        tileUrl: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        vars: {
+            '--bg': '#0a1628',
+            '--bg-card': 'rgba(56,189,248,0.04)',
+            '--bg-card-hover': 'rgba(56,189,248,0.08)',
+            '--bg-glass': 'rgba(56,189,248,0.06)',
+            '--surface': '#0f2440',
+            '--surface-2': '#163358',
+            '--border': 'rgba(56,189,248,0.10)',
+            '--border-light': 'rgba(56,189,248,0.15)',
+            '--text': '#e0f2fe',
+            '--text-muted': '#7aa8c8',
+            '--text-dim': '#4a6d8a',
+            '--accent': '#38bdf8',
+            '--accent-light': '#7dd3fc',
+            '--accent-dark': '#0284c7',
+            '--rose': '#f472b6',
+            '--rose-light': '#fb7ebd',
+            '--gold': '#fbbf24',
+            '--gold-dark': '#d4980a',
+            '--teal': '#22d3ee',
+            '--gradient-main': 'linear-gradient(135deg, #38bdf8, #22d3ee)',
+            '--gradient-gold': 'linear-gradient(135deg, #fbbf24, #38bdf8)',
+            '--gradient-cool': 'linear-gradient(135deg, #22d3ee, #818cf8)',
+            '--shadow-glow': '0 0 40px rgba(56,189,248,0.15)',
+            '--navbar-bg': 'rgba(10,22,40,0.88)',
+            '--loading-bg': 'rgba(10,22,40,0.95)'
+        }
+    },
+    solar: {
+        name: 'Güneş Patlaması',
+        icon: '☀️',
+        desc: 'Sıcak altın ve ateş',
+        premium: true,
+        preview: ['#1a0e04', '#fbbf24', '#f97316'],
+        tileUrl: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        vars: {
+            '--bg': '#1a0e04',
+            '--bg-card': 'rgba(251,191,36,0.04)',
+            '--bg-card-hover': 'rgba(251,191,36,0.08)',
+            '--bg-glass': 'rgba(251,191,36,0.06)',
+            '--surface': '#2a1a08',
+            '--surface-2': '#3d2810',
+            '--border': 'rgba(251,191,36,0.12)',
+            '--border-light': 'rgba(251,191,36,0.18)',
+            '--text': '#fef3c7',
+            '--text-muted': '#c8a860',
+            '--text-dim': '#7a6530',
+            '--accent': '#fbbf24',
+            '--accent-light': '#fcd34d',
+            '--accent-dark': '#d4980a',
+            '--rose': '#f97316',
+            '--rose-light': '#fb923c',
+            '--gold': '#fbbf24',
+            '--gold-dark': '#d4980a',
+            '--teal': '#34d399',
+            '--gradient-main': 'linear-gradient(135deg, #fbbf24, #f97316)',
+            '--gradient-gold': 'linear-gradient(135deg, #fbbf24, #ef4444)',
+            '--gradient-cool': 'linear-gradient(135deg, #34d399, #fbbf24)',
+            '--shadow-glow': '0 0 40px rgba(251,191,36,0.18)',
+            '--navbar-bg': 'rgba(26,14,4,0.88)',
+            '--loading-bg': 'rgba(26,14,4,0.95)'
         }
     }
 };
@@ -3185,14 +3400,108 @@ let currentTheme = localStorage.getItem('astromap_theme') || 'cosmic';
 
 function initThemeSystem() {
     applyTheme(currentTheme);
-    
-    // Theme toggle button
+    createThemeToggleBtn();
+    createThemePickerPanel();
+}
+
+function createThemeToggleBtn() {
     const btn = document.createElement('div');
     btn.className = 'theme-toggle';
     btn.title = 'Tema Değiştir';
     btn.innerHTML = themes[currentTheme].icon;
-    btn.addEventListener('click', () => cycleTheme());
+    btn.addEventListener('click', () => toggleThemePanel());
     document.body.appendChild(btn);
+}
+
+function createThemePickerPanel() {
+    const panel = document.createElement('div');
+    panel.className = 'theme-panel';
+    panel.id = 'theme-panel';
+    
+    const themeKeys = Object.keys(themes);
+    const cards = themeKeys.map(key => {
+        const t = themes[key];
+        const isActive = key === currentTheme;
+        const lockIcon = t.premium ? '<span class="theme-lock">🔒</span>' : '';
+        const activeClass = isActive ? ' active' : '';
+        const premiumClass = t.premium ? ' premium' : '';
+        return `
+            <div class="theme-card${activeClass}${premiumClass}" data-theme="${key}" onclick="selectTheme('${key}')">
+                <div class="theme-preview">
+                    <div class="theme-preview-bg" style="background:${t.vars['--bg']}">
+                        <div class="theme-preview-accent" style="background:${t.vars['--gradient-main']}"></div>
+                        <div class="theme-preview-dots">
+                            ${t.preview.map(c => `<span style="background:${c}"></span>`).join('')}
+                        </div>
+                    </div>
+                </div>
+                <div class="theme-card-info">
+                    <span class="theme-card-icon">${t.icon}</span>
+                    <span class="theme-card-name">${t.name}</span>
+                    ${lockIcon}
+                </div>
+                ${isActive ? '<div class="theme-active-badge">✓ Aktif</div>' : ''}
+            </div>
+        `;
+    }).join('');
+    
+    panel.innerHTML = `
+        <div class="theme-panel-header">
+            <h3>✦ Tema Seç</h3>
+            <button class="theme-panel-close" onclick="toggleThemePanel()">✕</button>
+        </div>
+        <div class="theme-panel-grid">${cards}</div>
+        <div class="theme-panel-hint">🔒 Premium temalar için <a href="javascript:void(0)" onclick="navigateTo('pricing');toggleThemePanel();">yükselt</a></div>
+    `;
+    document.body.appendChild(panel);
+}
+
+function toggleThemePanel() {
+    const panel = document.getElementById('theme-panel');
+    if (!panel) return;
+    panel.classList.toggle('open');
+    SoundFX.play('click');
+}
+
+function selectTheme(themeName) {
+    const theme = themes[themeName];
+    if (!theme) return;
+    
+    // Premium check — allow all for now (can gate with real auth later)
+    // if (theme.premium && !isPremiumUser()) {
+    //     showToast('Bu tema Premium kullanıcılara özel 🔒');
+    //     return;
+    // }
+    
+    applyTheme(themeName);
+    
+    // Update theme panel UI
+    document.querySelectorAll('.theme-card').forEach(card => {
+        const isThis = card.dataset.theme === themeName;
+        card.classList.toggle('active', isThis);
+        const badge = card.querySelector('.theme-active-badge');
+        if (badge) badge.remove();
+        if (isThis) {
+            const b = document.createElement('div');
+            b.className = 'theme-active-badge';
+            b.textContent = '✓ Aktif';
+            card.appendChild(b);
+        }
+    });
+    
+    // Update toggle button icon
+    const btn = document.querySelector('.theme-toggle');
+    if (btn) {
+        btn.innerHTML = theme.icon;
+        btn.style.transform = 'scale(1.3) rotate(360deg)';
+        setTimeout(() => btn.style.transform = '', 500);
+    }
+    
+    // Update map tiles if map is active
+    updateMapTiles(themeName);
+    
+    showToast(`${theme.icon} ${theme.name} teması aktif`);
+    SoundFX.play('click');
 }
 
 function applyTheme(themeName) {
@@ -3203,23 +3512,30 @@ function applyTheme(themeName) {
         root.style.setProperty(prop, val);
     }
     document.body.dataset.theme = themeName;
+    
+    // Special class for light themes
+    document.body.classList.toggle('light-theme', themeName === 'moonlight');
+    
     currentTheme = themeName;
     localStorage.setItem('astromap_theme', themeName);
 }
 
+function updateMapTiles(themeName) {
+    if (!map) return;
+    const theme = themes[themeName];
+    if (!theme) return;
+    // Remove old tile layers
+    map.eachLayer(layer => {
+        if (layer instanceof L.TileLayer) map.removeLayer(layer);
+    });
+    L.tileLayer(theme.tileUrl, { subdomains: 'abcd', maxZoom: 19 }).addTo(map);
+}
+
 function cycleTheme() {
-    const keys = Object.keys(themes);
+    const keys = Object.keys(themes).filter(k => !themes[k].premium);
     const idx = keys.indexOf(currentTheme);
     const next = keys[(idx + 1) % keys.length];
-    applyTheme(next);
-    const btn = document.querySelector('.theme-toggle');
-    if (btn) {
-        btn.innerHTML = themes[next].icon;
-        btn.style.transform = 'scale(1.3) rotate(360deg)';
-        setTimeout(() => btn.style.transform = '', 500);
-    }
-    showToast(`${themes[next].icon} ${themes[next].name} teması aktif`);
-    SoundFX.play('click');
+    selectTheme(next);
 }
 
 // ═══════════════════════════════════════

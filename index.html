@@ -641,9 +641,13 @@
 <!-- Step 4: Results -->
 <section id="step-results" class="page">
     <div class="results-header">
-        <button class="btn-ghost" onclick="resetApp()">← Ana Sayfa</button>
-        <h2>✦ Senin Kozmik Haritanın</h2>
-        <p id="results-intro"></p>
+        <div class="results-header-row">
+            <button class="btn-ghost btn-back" onclick="resetApp()">← Ana Sayfa</button>
+            <div class="results-header-title">
+                <h2>✦ Kozmik Haritanız</h2>
+                <p id="results-intro" class="results-intro"></p>
+            </div>
+        </div>
     </div>
     <div class="results-layout">
         <aside class="results-sidebar">
@@ -717,10 +721,19 @@
 
         <div class="results-map-wrap">
             <div class="map-controls">
-                <button id="toggle-markers" class="map-ctrl active" onclick="toggleMapLayer('markers')">📍 İşaretçiler</button>
+                <button id="toggle-markers" class="map-ctrl active" onclick="toggleMapLayer('markers')">📍 Şehirler</button>
                 <button id="toggle-lines" class="map-ctrl active" onclick="toggleMapLayer('lines')">〰️ Çizgiler</button>
                 <button id="toggle-heatmap" class="map-ctrl" onclick="toggleMapLayer('heatmap')">🔥 Isı Haritası</button>
+                <button class="map-ctrl" onclick="resetMapView()" title="Haritayı sıfırla">🔄</button>
             </div>
+            <div class="map-legend" id="map-legend">
+                <div class="map-legend-toggle" onclick="this.parentElement.classList.toggle('collapsed')">
+                    <span>📊 Lejant</span>
+                    <span class="legend-arrow">▾</span>
+                </div>
+                <div class="map-legend-body" id="map-legend-body"></div>
+            </div>
+            <div class="map-city-peek" id="map-city-peek"></div>
             <div id="map"></div>
         </div>
     </div>
