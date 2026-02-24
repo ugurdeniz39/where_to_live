@@ -1064,8 +1064,17 @@ function filterBirthCities(query) {
 function initBirthCityDropdown() {
     filterBirthCities('');
     const searchInput = document.getElementById('birth-city-search');
+    const select = document.getElementById('birth-city');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => filterBirthCities(e.target.value));
+    }
+    if (select && searchInput) {
+        const syncInput = () => {
+            const opt = select.options[select.selectedIndex];
+            if (opt && !opt.disabled) searchInput.value = opt.textContent;
+        };
+        select.addEventListener('change', syncInput);
+        select.addEventListener('click', syncInput);
     }
 }
 
