@@ -76,15 +76,16 @@ a:hover { color: var(--accent-light); }
 }
 .nav-brand:hover { filter: brightness(1.2) drop-shadow(0 0 8px rgba(201,160,255,0.4)); }
 .nav-brand { touch-action: manipulation; pointer-events: auto; -webkit-tap-highlight-color: rgba(201,160,255,0.15); user-select: none; -webkit-user-select: none; }
-.nav-links { display: flex; gap: 8px; flex: 1; }
+.nav-links { display: flex; gap: 4px; flex: 1; flex-wrap: nowrap; overflow: hidden; }
 .nav-link {
-    padding: 8px 14px; border-radius: var(--radius-xs);
-    font-size: 13.5px; font-weight: 500; color: var(--text-muted);
+    padding: 8px 10px; border-radius: var(--radius-xs);
+    font-size: 13px; font-weight: 500; color: var(--text-muted);
     transition: var(--transition); cursor: pointer; white-space: nowrap;
     touch-action: manipulation; pointer-events: auto;
     display: inline-flex; align-items: center;
     -webkit-tap-highlight-color: rgba(201,160,255,0.15);
     user-select: none; -webkit-user-select: none;
+    flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
 }
 .nav-link:hover { color: var(--text); background: var(--bg-card); }
 .nav-link.active { color: var(--accent); background: rgba(201,160,255,0.1); }
@@ -132,17 +133,21 @@ a:hover { color: var(--accent-light); }
     -webkit-tap-highlight-color: rgba(201,160,255,0.15);
 }
 
-@media (max-width: 768px) {
+/* Medium screens — collapse nav earlier for 14" laptops etc. */
+@media (max-width: 1100px) {
     .nav-links { display: none; position: fixed; top: 64px; left: 0; right: 0; flex-direction: column; background: rgba(7,7,26,0.98); backdrop-filter: blur(20px); padding: 16px; gap: 4px; border-bottom: 1px solid var(--border); max-height: 70vh; overflow-y: auto; z-index: 9999; }
     .nav-links.open { display: flex !important; }
-    .nav-link { padding: 14px 16px !important; font-size: 15px !important; border-radius: var(--radius-sm); min-height: 48px; display: flex; align-items: center; -webkit-tap-highlight-color: rgba(201,160,255,0.15); }
-    .nav-link:hover, .nav-link:active, .nav-link.active { background: rgba(201,160,255,0.12); }
+    .nav-link { padding: 12px 16px !important; font-size: 14px !important; border-radius: var(--radius-sm); min-height: 44px; display: flex; align-items: center; overflow: visible; text-overflow: unset; flex-shrink: 0; }
     .nav-actions { display: none; }
-    .nav-hamburger { display: flex; align-items: center; justify-content: center; margin-left: auto; font-size: 28px; padding: 8px; min-width: 48px; min-height: 48px; -webkit-tap-highlight-color: rgba(201,160,255,0.15); z-index: 10000; position: relative; }
+    .nav-hamburger { display: flex; align-items: center; justify-content: center; margin-left: auto; font-size: 28px; padding: 8px; min-width: 48px; min-height: 48px; z-index: 10000; position: relative; }
+    .navbar.nav-hidden.menu-open { transform: translateY(0) !important; }
+}
+
+@media (max-width: 768px) {
+    .nav-link { padding: 14px 16px !important; font-size: 15px !important; min-height: 48px; -webkit-tap-highlight-color: rgba(201,160,255,0.15); }
+    .nav-link:hover, .nav-link:active, .nav-link.active { background: rgba(201,160,255,0.12); }
     .nav-inner { padding: 0 16px; }
     .nav-brand { font-size: 18px; }
-    /* Prevent navbar hiding when mobile menu is open */
-    .navbar.nav-hidden.menu-open { transform: translateY(0) !important; }
     
     /* Hero mobile */
     .hero { min-height: calc(100svh - 64px); }
@@ -203,7 +208,8 @@ a:hover { color: var(--accent-light); }
     .tab-btn { padding: 10px 6px; font-size: 11px; touch-action: manipulation; min-height: 44px; }
     .search-container {
         position: sticky; top: 0; z-index: 10;
-        background: var(--surface); margin: -20px -20px 8px; padding: 10px 12px 8px;
+        background: #0e0e2a; margin: -20px -20px 8px; padding: 10px 12px 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.6);
     }
     .search-input-wrap { margin-bottom: 6px; }
     .search-input-wrap input { padding: 10px 36px 10px 36px; font-size: 13px; }
@@ -258,18 +264,20 @@ a:hover { color: var(--accent-light); }
     
     /* Tarot/Crystal/Dream/Fortune mobile */
     .tarot-deck { gap: 8px; padding: 0 4px; }
-    .tarot-card-slot { width: min(160px, 28vw); }
-    .tarot-front-content { padding: 12px 8px; }
-    .tarot-front-content .tarot-emoji { font-size: 32px; margin-bottom: 8px; }
-    .tarot-front-content .tarot-name { font-size: 13px; margin-bottom: 6px; }
+    .tarot-card-slot { width: min(180px, 40vw); }
+    .tarot-front-content { padding: 10px 8px; }
+    .tarot-front-content .tarot-emoji { font-size: 28px; margin-bottom: 6px; }
+    .tarot-front-content .tarot-name { font-size: 12px; margin-bottom: 4px; }
     .tarot-front-content .tarot-meaning { font-size: 10px; line-height: 1.4; }
-    .tarot-front-content .tarot-position { font-size: 9px; letter-spacing: 1px; margin-bottom: 8px; }
+    .tarot-front-content .tarot-position { font-size: 8px; letter-spacing: 1px; margin-bottom: 6px; }
     .tarot-slot-label { font-size: 10px; letter-spacing: 1px; }
     .tarot-back-symbol { font-size: 28px; }
     .tarot-overall { padding: 20px 16px; margin: 20px auto 0; }
     .tarot-overall h3 { font-size: 18px; }
     .tarot-overall p { font-size: 13px; }
-    .tarot-spread { flex-direction: column; align-items: center; }
+    .tarot-spread { flex-direction: column; align-items: center; gap: 16px; }
+    .tarot-deck .tarot-card-slot { width: min(220px, 60vw); }
+    .tarot-deck { flex-wrap: nowrap; flex-direction: column; align-items: center; gap: 12px; }
     .wellness-grid { grid-template-columns: 1fr; }
     .crystal-support-grid { grid-template-columns: 1fr; }
     .dream-symbols-grid { grid-template-columns: 1fr; }
@@ -794,9 +802,10 @@ a:hover { color: var(--accent-light); }
 /* Search Container */
 .search-container {
     position: sticky; top: 0; z-index: 10;
-    background: var(--surface); padding-bottom: 8px;
+    background: #0e0e2a; padding-bottom: 8px;
     border-bottom: 1px solid var(--border);
     margin: -20px -20px 16px; padding: 16px 16px 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
 }
 .search-input-wrap {
     position: relative; margin-bottom: 12px;
@@ -829,12 +838,13 @@ a:hover { color: var(--accent-light); }
 
 /* Search Toolbar */
 .search-toolbar { margin-bottom: 10px; }
-.filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.filter-chips { display: flex; flex-wrap: nowrap; gap: 6px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.filter-chips::-webkit-scrollbar { display: none; }
 .filter-chip {
     padding: 7px 14px; border: 1px solid var(--border); border-radius: 50px;
     background: rgba(255,255,255,0.02); color: var(--text-muted); font-size: 12px; font-weight: 500;
     cursor: pointer; transition: all 0.25s ease; font-family: var(--font);
-    white-space: nowrap; position: relative; overflow: hidden;
+    white-space: nowrap; position: relative; overflow: hidden; flex-shrink: 0;
 }
 .filter-chip::after {
     content: ''; position: absolute; inset: 0; border-radius: inherit;
@@ -1364,21 +1374,23 @@ textarea::placeholder { color: var(--text-dim); }
     box-shadow: 0 0 30px rgba(201,160,255,0.2);
 }
 .tarot-front-content {
-    padding: 24px 16px; text-align: center; height: 100%;
+    padding: 20px 12px; text-align: center; height: 100%;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
+    overflow-y: auto;
 }
 .tarot-front-content.reversed .tarot-emoji { transform: rotate(180deg); }
 .tarot-front-content .tarot-position {
     font-size: 11px; font-weight: 700; text-transform: uppercase;
     letter-spacing: 2px; color: var(--text-muted); margin-bottom: 12px;
 }
-.tarot-front-content .tarot-emoji { font-size: 52px; margin-bottom: 12px; transition: transform 0.3s; }
+.tarot-front-content .tarot-emoji { font-size: clamp(32px, 6vw, 52px); margin-bottom: 8px; transition: transform 0.3s; flex-shrink: 0; }
 .tarot-front-content .tarot-name {
-    font-family: var(--font-display); font-size: 18px; font-weight: 700;
-    color: var(--accent-light); margin-bottom: 10px;
+    font-family: var(--font-display); font-size: clamp(13px, 2vw, 18px); font-weight: 700;
+    color: var(--accent-light); margin-bottom: 6px; flex-shrink: 0;
 }
 .tarot-front-content .tarot-meaning {
-    font-size: 12px; color: var(--text-muted); line-height: 1.6;
+    font-size: clamp(10px, 1.4vw, 12px); color: var(--text-muted); line-height: 1.5;
+    flex-shrink: 1; overflow-y: auto;
 }
 
 /* Slot label */
