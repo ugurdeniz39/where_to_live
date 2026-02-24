@@ -46,26 +46,26 @@
 <body>
 
 <!-- ══════════════════ NAVBAR ══════════════════ -->
-<nav class="navbar" id="navbar">
+<nav class="navbar" id="navbar" role="navigation">
     <div class="nav-inner">
-        <a class="nav-brand" onclick="navigateTo('home')">✦ AstroMap</a>
-        <div class="nav-links" id="nav-links">
-            <a class="nav-link active" data-page="home" onclick="navigateTo('home')">Ana Sayfa</a>
-            <a class="nav-link" data-page="daily" onclick="navigateTo('daily')">Günlük Yorum</a>
-            <a class="nav-link" data-page="compatibility" onclick="navigateTo('compatibility')">Uyum Testi</a>
-            <a class="nav-link" data-page="moon" onclick="navigateTo('moon')">Ay Takvimi</a>
-            <a class="nav-link" data-page="tarot" onclick="navigateTo('tarot')">🃏 Tarot</a>
-            <a class="nav-link" data-page="crystal" onclick="navigateTo('crystal')">💎 Kristal</a>
-            <a class="nav-link" data-page="dream" onclick="navigateTo('dream')">💭 Rüya</a>
-            <a class="nav-link" data-page="fortune" onclick="navigateTo('fortune')">☕ Fal</a>
-            <a class="nav-link" data-page="about" onclick="navigateTo('about')">Hakkında</a>
-            <a class="nav-link" data-page="pricing" onclick="navigateTo('pricing')">Premium ✨</a>
+        <a class="nav-brand" href="javascript:void(0)" data-nav="home" role="button">✦ AstroMap</a>
+        <div class="nav-links" id="nav-links" role="menubar">
+            <a class="nav-link active" href="javascript:void(0)" data-page="home" data-nav="home" role="menuitem" tabindex="0">Ana Sayfa</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="daily" data-nav="daily" role="menuitem" tabindex="0">Günlük Yorum</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="compatibility" data-nav="compatibility" role="menuitem" tabindex="0">Uyum Testi</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="moon" data-nav="moon" role="menuitem" tabindex="0">Ay Takvimi</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="tarot" data-nav="tarot" role="menuitem" tabindex="0">🃏 Tarot</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="crystal" data-nav="crystal" role="menuitem" tabindex="0">💎 Kristal</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="dream" data-nav="dream" role="menuitem" tabindex="0">💭 Rüya</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="fortune" data-nav="fortune" role="menuitem" tabindex="0">☕ Fal</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="about" data-nav="about" role="menuitem" tabindex="0">Hakkında</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="pricing" data-nav="pricing" role="menuitem" tabindex="0">Premium ✨</a>
         </div>
         <div class="nav-actions">
-            <button class="btn-ghost" onclick="openModal('login-modal')">Giriş Yap</button>
-            <button class="btn-nav-primary" onclick="openModal('signup-modal')">Ücretsiz Başla</button>
+            <button class="btn-ghost" data-modal="login-modal" type="button">Giriş Yap</button>
+            <button class="btn-nav-primary" data-modal="signup-modal" type="button">Ücretsiz Başla</button>
         </div>
-        <button class="nav-hamburger" onclick="toggleMobileNav()">☰</button>
+        <button class="nav-hamburger" id="nav-hamburger" type="button">☰</button>
     </div>
 </nav>
 
@@ -588,18 +588,21 @@
 
         <div class="lifestyle-group">
             <h3>🌡️ İklim Tercihin</h3>
+            <p class="lifestyle-hint">Yıllık ortalama sıcaklık aralığını seç</p>
             <div class="option-row">
-                <button class="option-btn" data-group="climate" data-value="warm" onclick="selectOption(this)">☀️ Sıcak</button>
-                <button class="option-btn selected" data-group="climate" data-value="moderate" onclick="selectOption(this)">🌤️ Ilıman</button>
-                <button class="option-btn" data-group="climate" data-value="cold" onclick="selectOption(this)">❄️ Soğuk</button>
+                <button class="option-btn" data-group="climate" data-value="warm" onclick="selectOption(this)">☀️ Sıcak<span class="option-detail">20°C – 35°C</span></button>
+                <button class="option-btn selected" data-group="climate" data-value="moderate" onclick="selectOption(this)">🌤️ Ilıman<span class="option-detail">10°C – 22°C</span></button>
+                <button class="option-btn" data-group="climate" data-value="cold" onclick="selectOption(this)">❄️ Soğuk<span class="option-detail">-10°C – 10°C</span></button>
+                <button class="option-btn" data-group="climate" data-value="any" onclick="selectOption(this)">🌍 Farketmez</button>
             </div>
         </div>
         <div class="lifestyle-group">
             <h3>🏙️ Şehir Boyutu</h3>
             <div class="option-row">
-                <button class="option-btn" data-group="size" data-value="mega" onclick="selectOption(this)">🏙️ Metropol</button>
-                <button class="option-btn selected" data-group="size" data-value="medium" onclick="selectOption(this)">🌆 Orta</button>
-                <button class="option-btn" data-group="size" data-value="small" onclick="selectOption(this)">🏘️ Küçük</button>
+                <button class="option-btn" data-group="size" data-value="mega" onclick="selectOption(this)">🏙️ Metropol<span class="option-detail">1M+ nüfus</span></button>
+                <button class="option-btn selected" data-group="size" data-value="medium" onclick="selectOption(this)">🌆 Orta<span class="option-detail">100K – 1M</span></button>
+                <button class="option-btn" data-group="size" data-value="small" onclick="selectOption(this)">🏘️ Küçük<span class="option-detail">&lt;100K</span></button>
+                <button class="option-btn" data-group="size" data-value="any" onclick="selectOption(this)">🌍 Farketmez</button>
             </div>
         </div>
         <div class="lifestyle-group">
@@ -608,6 +611,17 @@
                 <button class="option-btn" data-group="nature" data-value="coastal" onclick="selectOption(this)">🏖️ Deniz</button>
                 <button class="option-btn" data-group="nature" data-value="mountain" onclick="selectOption(this)">🏔️ Dağ</button>
                 <button class="option-btn selected" data-group="nature" data-value="urban" onclick="selectOption(this)">🌃 Şehir</button>
+                <button class="option-btn" data-group="nature" data-value="any" onclick="selectOption(this)">🌍 Farketmez</button>
+            </div>
+        </div>
+        <div class="lifestyle-group">
+            <h3>🗺️ Bölge Tercihin</h3>
+            <div class="option-row">
+                <button class="option-btn" data-group="region" data-value="tr" onclick="selectOption(this)">🇹🇷 Türkiye</button>
+                <button class="option-btn" data-group="region" data-value="europe" onclick="selectOption(this)">🇪🇺 Avrupa</button>
+                <button class="option-btn" data-group="region" data-value="asia" onclick="selectOption(this)">🌏 Asya</button>
+                <button class="option-btn" data-group="region" data-value="americas" onclick="selectOption(this)">🌎 Amerika</button>
+                <button class="option-btn selected" data-group="region" data-value="any" onclick="selectOption(this)">🌍 Tüm Dünya</button>
             </div>
         </div>
 
@@ -889,6 +903,11 @@
 
 <!-- ══════════════════ TOAST ══════════════════ -->
 <div id="toast" class="toast hidden">Mesaj</div>
+
+<!-- ══════════════════ SHOOTING STAR CURSOR TOGGLE ══════════════════ -->
+<button id="shooting-star-toggle" class="shooting-star-toggle" onclick="toggleShootingStarCursor()" title="Kayan Yıldız Efekti">
+    <span class="shooting-star-icon">☄️</span>
+</button>
 
 <!-- ══════════════════ SCRIPTS ══════════════════ -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

@@ -80,36 +80,116 @@ const AstroEngine = (function () {
 
     function calculatePlanetPositions(jd) {
         const T = (jd - 2451545.0) / 36525;
+        const deg2rad = Math.PI / 180;
+        const rad2deg = 180 / Math.PI;
         function normDeg(d) { return ((d % 360) + 360) % 360; }
 
-        // Sun
-        const M_sun = normDeg(357.5291 + 35999.0503 * T);
-        const Mrad = M_sun * Math.PI / 180;
-        const C = 1.9146 * Math.sin(Mrad) + 0.02 * Math.sin(2 * Mrad);
-        const sunLon = normDeg(280.4665 + 36000.7698 * T + C);
+        // Solve Kepler's equation: M = E - e*sin(E) via Newton-Raphson
+        function solveKepler(M_deg, e) {
+            let M = normDeg(M_deg) * deg2rad;
+            let E = M;
+            for (let i = 0; i < 20; i++) {
+                const dE = (M - (E - e * Math.sin(E))) / (1 - e * Math.cos(E));
+                E += dE;
+                if (Math.abs(dE) < 1e-12) break;
+            }
+            return E;
+        }
 
-        // Mean motions for other planets (simplified)
-        const meanMotions = {
-            moon: { L0: 218.3165, rate: 481267.8813, offset: 0 },
-            mercury: { L0: 252.2509, rate: 149472.6746, offset: 0 },
-            venus: { L0: 181.9798, rate: 58517.8157, offset: 0 },
-            mars: { L0: 355.4330, rate: 19140.2993, offset: 0 },
-            jupiter: { L0: 34.3515, rate: 3034.9057, offset: 0 },
-            saturn: { L0: 50.0774, rate: 1222.1138, offset: 0 },
-            uranus: { L0: 314.0550, rate: 428.4677, offset: 0 },
-            neptune: { L0: 304.8800, rate: 218.4862, offset: 0 },
-            pluto: { L0: 238.9290, rate: 145.2078, offset: 0 }
+        // Get heliocentric ecliptic cartesian coordinates from orbital elements
+        function getHeliocentricXYZ(L_deg, wbar_deg, e, a, I_deg, Omega_deg) {
+            const M = normDeg(L_deg - wbar_deg);
+            const E = solveKepler(M, e);
+            const sinE = Math.sin(E), cosE = Math.cos(E);
+            const denom = 1 - e * cosE;
+            const sinv = Math.sqrt(1 - e * e) * sinE / denom;
+            const cosv = (cosE - e) / denom;
+            const v = Math.atan2(sinv, cosv);
+            const r = a * denom; // distance from Sun
+            const omega = (wbar_deg - Omega_deg) * deg2rad;
+            const I = I_deg * deg2rad;
+            const Omega = Omega_deg * deg2rad;
+            const cosO = Math.cos(Omega), sinO = Math.sin(Omega);
+            const cosI = Math.cos(I);
+            const cos_vw = Math.cos(v + omega), sin_vw = Math.sin(v + omega);
+            const x = r * (cosO * cos_vw - sinO * sin_vw * cosI);
+            const y = r * (sinO * cos_vw + cosO * sin_vw * cosI);
+            return { x, y, r };
+        }
+
+        // NASA/JPL Keplerian orbital elements at J2000 + rates per Julian century
+        const orbitalElements = {
+            mercury: { a: 0.38709927, e0: 0.20563593, eR: 0.00001906, I0: 7.00497902, IR: -0.00594749, L0: 252.25032350, LR: 149472.67411175, w0: 77.45779628, wR: 0.16047689, O0: 48.33076593, OR: -0.12534081 },
+            venus:   { a: 0.72333566, e0: 0.00677672, eR: -0.00004107, I0: 3.39467605, IR: -0.00078890, L0: 181.97909950, LR: 58517.81538729, w0: 131.60246718, wR: 0.00268329, O0: 76.67984255, OR: -0.27769418 },
+            earth:   { a: 1.00000261, e0: 0.01671123, eR: -0.00004392, I0: 0, IR: 0, L0: 100.46457166, LR: 35999.37244981, w0: 102.93768193, wR: 0.32327364, O0: 0, OR: 0 },
+            mars:    { a: 1.52371034, e0: 0.09339410, eR: 0.00007882, I0: 1.84969142, IR: -0.00813131, L0: 355.45332267, LR: 19140.30268499, w0: 336.05637041, wR: 0.44441088, O0: 49.55953891, OR: -0.29257343 },
+            jupiter: { a: 5.20288700, e0: 0.04838624, eR: -0.00013253, I0: 1.30439695, IR: -0.00183714, L0: 34.39644051, LR: 3034.74612775, w0: 14.72847983, wR: 0.21252668, O0: 100.47390909, OR: 0.20469106 },
+            saturn:  { a: 9.53667594, e0: 0.05386179, eR: -0.00050991, I0: 2.48599187, IR: 0.00193609, L0: 49.95424423, LR: 1222.49362201, w0: 92.59887831, wR: -0.41897216, O0: 113.66242448, OR: -0.28867794 },
+            uranus:  { a: 19.18916464, e0: 0.04725744, eR: -0.00004397, I0: 0.77263783, IR: -0.00242939, L0: 313.23810451, LR: 428.48202785, w0: 170.95427630, wR: 0.40805281, O0: 74.01692503, OR: 0.04240589 },
+            neptune: { a: 30.06992276, e0: 0.00859048, eR: 0.00005105, I0: 1.77004347, IR: 0.00035372, L0: 304.87997031, LR: 218.45945325, w0: 44.96476227, wR: -0.32241464, O0: 131.78422574, OR: -0.00508664 },
+            pluto:   { a: 39.48211675, e0: 0.24882730, eR: 0.00005170, I0: 17.14001206, IR: 0.00004818, L0: 238.92903833, LR: 145.20780515, w0: 224.06891629, wR: -0.04062942, O0: 110.30393684, OR: -0.01183482 }
         };
 
-        const positions = {};
-        const sunDeg = normDeg(sunLon);
-        const sunSign = SIGNS[Math.floor(sunDeg / 30)];
-        positions.sun = { longitude: sunDeg, sign: sunSign.name, signSymbol: sunSign.symbol, degree: sunDeg % 30, element: sunSign.element };
+        // ── Earth's heliocentric position (needed for geocentric conversion) ──
+        const eE = orbitalElements.earth;
+        const earthXYZ = getHeliocentricXYZ(
+            eE.L0 + eE.LR * T, eE.w0 + eE.wR * T,
+            eE.e0 + eE.eR * T, eE.a, 0, 0
+        );
 
-        for (const [planet, mm] of Object.entries(meanMotions)) {
-            const lon = normDeg(mm.L0 + mm.rate * T + mm.offset);
-            const sign = SIGNS[Math.floor(lon / 30)];
-            positions[planet] = { longitude: lon, sign: sign.name, signSymbol: sign.symbol, degree: lon % 30, element: sign.element };
+        // ── Sun (geocentric = opposite of Earth's heliocentric) ──
+        const sunLon = normDeg(Math.atan2(-earthXYZ.y, -earthXYZ.x) * rad2deg);
+
+        // ── Moon (Meeus simplified lunar longitude — ~1° accuracy) ──
+        const Lp = normDeg(218.3164477 + 481267.88123421 * T);
+        const D  = normDeg(297.8501921 + 445267.11140340 * T);
+        const Ms = normDeg(357.5291092 + 35999.05029090 * T);
+        const Mp = normDeg(134.9633964 + 477198.86750550 * T);
+        const F  = normDeg(93.2720950 + 483202.01752330 * T);
+        const moonLon = normDeg(Lp
+            + 6.289 * Math.sin(Mp * deg2rad)
+            + 1.274 * Math.sin((2 * D - Mp) * deg2rad)
+            + 0.658 * Math.sin(2 * D * deg2rad)
+            + 0.214 * Math.sin(2 * Mp * deg2rad)
+            - 0.186 * Math.sin(Ms * deg2rad)
+            - 0.114 * Math.sin(2 * F * deg2rad)
+            + 0.059 * Math.sin((2 * D - 2 * Mp) * deg2rad)
+            + 0.057 * Math.sin((2 * D - Ms - Mp) * deg2rad)
+            + 0.053 * Math.sin((2 * D + Mp) * deg2rad)
+            + 0.046 * Math.sin((2 * D - Ms) * deg2rad)
+            - 0.041 * Math.sin((Mp - Ms) * deg2rad)
+            - 0.035 * Math.sin(D * deg2rad)
+            - 0.031 * Math.sin((Ms + Mp) * deg2rad)
+            + 0.015 * Math.sin((2 * D - 2 * F) * deg2rad)
+            - 0.013 * Math.sin((Mp + 2 * F) * deg2rad)
+            + 0.011 * Math.sin((4 * D - Mp) * deg2rad)
+            + 0.010 * Math.sin(3 * Mp * deg2rad)
+        );
+
+        // ── Build positions ──
+        const positions = {};
+        const sunSign = SIGNS[Math.floor(sunLon / 30)];
+        positions.sun = { longitude: sunLon, sign: sunSign.name, signSymbol: sunSign.symbol, degree: sunLon % 30, element: sunSign.element };
+
+        const moonSign = SIGNS[Math.floor(moonLon / 30)];
+        positions.moon = { longitude: moonLon, sign: moonSign.name, signSymbol: moonSign.symbol, degree: moonLon % 30, element: moonSign.element };
+
+        // ── Planets: heliocentric → geocentric conversion ──
+        const planetKeys = ['mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto'];
+        for (const key of planetKeys) {
+            const el = orbitalElements[key];
+            const L = el.L0 + el.LR * T;
+            const e = el.e0 + el.eR * T;
+            const I = el.I0 + el.IR * T;
+            const wbar = el.w0 + el.wR * T;
+            const Om = el.O0 + el.OR * T;
+            const helio = getHeliocentricXYZ(L, wbar, e, el.a, I, Om);
+            // Geocentric = planet heliocentric - Earth heliocentric
+            const xGeo = helio.x - earthXYZ.x;
+            const yGeo = helio.y - earthXYZ.y;
+            const geoLon = normDeg(Math.atan2(yGeo, xGeo) * rad2deg);
+            const sign = SIGNS[Math.floor(geoLon / 30)];
+            positions[key] = { longitude: geoLon, sign: sign.name, signSymbol: sign.symbol, degree: geoLon % 30, element: sign.element };
         }
         return positions;
     }
@@ -199,15 +279,15 @@ const AstroEngine = (function () {
         // Lifestyle bonus (increased values)
         let lifestyleBonus = 0;
         if (lifestyle.climate && lifestyle.climate !== 'any' && city.climate === lifestyle.climate) lifestyleBonus += 12;
-        if (lifestyle['city-size'] && lifestyle['city-size'] !== 'any' && city.size === lifestyle['city-size']) lifestyleBonus += 8;
+        if (lifestyle.size && lifestyle.size !== 'any' && city.size === lifestyle.size) lifestyleBonus += 8;
         if (lifestyle.nature && lifestyle.nature !== 'any' && city.nature === lifestyle.nature) lifestyleBonus += 7;
 
         // Region preference bonus (stronger)
         let regionBonus = 0;
-        if (lifestyle.region === 'tr' && city.region === 'tr') regionBonus = 14;
-        else if (lifestyle.region === 'europe' && city.region === 'europe') regionBonus = 10;
-        else if (lifestyle.region === 'asia' && city.region === 'asia') regionBonus = 10;
-        else if (lifestyle.region === 'americas' && city.region === 'americas') regionBonus = 10;
+        if (lifestyle.region && lifestyle.region !== 'any') {
+            if (lifestyle.region === 'tr' && city.region === 'tr') regionBonus = 14;
+            else if (city.region === lifestyle.region) regionBonus = 10;
+        }
 
         // Vibe match (stronger)
         const vibeKeywords = {

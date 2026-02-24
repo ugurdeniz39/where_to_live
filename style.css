@@ -56,13 +56,17 @@ a:hover { color: var(--accent-light); }
 .navbar {
     position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
     background: rgba(7,7,26,0.85); backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
     transition: var(--transition);
+    pointer-events: auto; /* Ensure navbar always receives clicks */
+    touch-action: manipulation; /* Prevent double-tap zoom on mobile */
 }
 .navbar.scrolled { background: rgba(7,7,26,0.95); }
 .nav-inner {
     max-width: 1280px; margin: 0 auto; padding: 0 24px;
     display: flex; align-items: center; height: 64px; gap: 32px;
+    position: relative; z-index: 1; pointer-events: auto;
 }
 .nav-brand {
     font-family: var(--font-display); font-size: 22px; font-weight: 700;
@@ -71,11 +75,16 @@ a:hover { color: var(--accent-light); }
     transition: var(--transition);
 }
 .nav-brand:hover { filter: brightness(1.2) drop-shadow(0 0 8px rgba(201,160,255,0.4)); }
+.nav-brand { touch-action: manipulation; pointer-events: auto; -webkit-tap-highlight-color: rgba(201,160,255,0.15); user-select: none; -webkit-user-select: none; }
 .nav-links { display: flex; gap: 8px; flex: 1; }
 .nav-link {
     padding: 8px 14px; border-radius: var(--radius-xs);
     font-size: 13.5px; font-weight: 500; color: var(--text-muted);
     transition: var(--transition); cursor: pointer; white-space: nowrap;
+    touch-action: manipulation; pointer-events: auto;
+    display: inline-flex; align-items: center;
+    -webkit-tap-highlight-color: rgba(201,160,255,0.15);
+    user-select: none; -webkit-user-select: none;
 }
 .nav-link:hover { color: var(--text); background: var(--bg-card); }
 .nav-link.active { color: var(--accent); background: rgba(201,160,255,0.1); }
@@ -85,12 +94,14 @@ a:hover { color: var(--accent-light); }
     padding: 8px 16px; border-radius: var(--radius-xs); border: 1px solid var(--border);
     background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 500;
     cursor: pointer; transition: var(--transition); font-family: var(--font);
+    touch-action: manipulation; pointer-events: auto;
 }
 .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
 .btn-nav-primary {
     padding: 8px 18px; border-radius: var(--radius-xs); border: none;
     background: var(--gradient-main); color: white; font-size: 13px; font-weight: 600;
     cursor: pointer; transition: var(--transition); font-family: var(--font);
+    touch-action: manipulation; pointer-events: auto;
 }
 .btn-nav-primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-glow); }
 
@@ -117,17 +128,21 @@ a:hover { color: var(--accent-light); }
 .nav-hamburger {
     display: none; background: none; border: none; color: var(--text);
     font-size: 24px; cursor: pointer;
+    touch-action: manipulation; pointer-events: auto;
+    -webkit-tap-highlight-color: rgba(201,160,255,0.15);
 }
 
 @media (max-width: 768px) {
-    .nav-links { display: none; position: absolute; top: 64px; left: 0; right: 0; flex-direction: column; background: rgba(7,7,26,0.98); backdrop-filter: blur(20px); padding: 16px; gap: 4px; border-bottom: 1px solid var(--border); max-height: 70vh; overflow-y: auto; z-index: 999; }
-    .nav-links.open { display: flex; }
-    .nav-link { padding: 14px 16px !important; font-size: 15px !important; border-radius: var(--radius-sm); }
-    .nav-link:hover, .nav-link.active { background: rgba(201,160,255,0.08); }
+    .nav-links { display: none; position: fixed; top: 64px; left: 0; right: 0; flex-direction: column; background: rgba(7,7,26,0.98); backdrop-filter: blur(20px); padding: 16px; gap: 4px; border-bottom: 1px solid var(--border); max-height: 70vh; overflow-y: auto; z-index: 9999; }
+    .nav-links.open { display: flex !important; }
+    .nav-link { padding: 14px 16px !important; font-size: 15px !important; border-radius: var(--radius-sm); min-height: 48px; display: flex; align-items: center; -webkit-tap-highlight-color: rgba(201,160,255,0.15); }
+    .nav-link:hover, .nav-link:active, .nav-link.active { background: rgba(201,160,255,0.12); }
     .nav-actions { display: none; }
-    .nav-hamburger { display: block; margin-left: auto; font-size: 28px; padding: 8px; }
+    .nav-hamburger { display: flex; align-items: center; justify-content: center; margin-left: auto; font-size: 28px; padding: 8px; min-width: 48px; min-height: 48px; -webkit-tap-highlight-color: rgba(201,160,255,0.15); z-index: 10000; position: relative; }
     .nav-inner { padding: 0 16px; }
     .nav-brand { font-size: 18px; }
+    /* Prevent navbar hiding when mobile menu is open */
+    .navbar.nav-hidden.menu-open { transform: translateY(0) !important; }
     
     /* Hero mobile */
     .hero { min-height: calc(100svh - 64px); }
@@ -170,8 +185,10 @@ a:hover { color: var(--accent-light); }
     
     /* Results mobile */
     .results-layout { flex-direction: column-reverse; height: auto; }
-    .results-sidebar { width: 100%; max-height: none; border-right: none; border-top: 1px solid var(--border); }
+    .results-sidebar { width: 100%; max-height: 50vh; border-right: none; border-top: 1px solid var(--border); overflow-y: auto; }
     .results-map-wrap { height: 45vh; min-height: 280px; }
+    .map-controls { top: 8px; right: 8px; gap: 4px; flex-wrap: wrap; }
+    .map-ctrl { padding: 6px 10px; font-size: 11px; }
     .results-header { padding: 72px 16px 0; }
     .results-header h2 { font-size: 18px; }
     .tab-btn { padding: 10px 6px; font-size: 11px; }
@@ -929,7 +946,10 @@ a:hover { color: var(--accent-light); }
 .page-title em { font-style: italic; background: var(--gradient-main); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .page-subtitle { text-align: center; color: var(--text-muted); font-size: 15px; margin-bottom: 32px; }
 .lifestyle-group { margin-bottom: 24px; }
-.lifestyle-group h3 { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--text); }
+.lifestyle-group h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+.lifestyle-hint { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+.option-detail { display: block; font-size: 11px; color: var(--text-muted); margin-top: 2px; font-weight: 400; }
+.option-btn.selected .option-detail { color: var(--accent-light); opacity: 0.8; }
 
 /* ════════════ DAILY HOROSCOPE ════════════ */
 .daily-hero, .compat-hero, .moon-hero { text-align: center; padding-top: 80px; padding-bottom: 20px; }
@@ -1971,6 +1991,20 @@ a, button, .nav-link, .feature-card, .pref-card, .option-btn, .tarot-card-slot, 
     pointer-events: none;
 }
 
+/* ════════════ SHOOTING STAR CURSOR ════════════ */
+.shooting-star-toggle {
+    position: fixed; bottom: 80px; right: 20px; z-index: 9998;
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(20, 15, 40, 0.8); border: 1px solid rgba(201,160,255,0.3);
+    color: var(--text); cursor: pointer; font-size: 20px;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px); transition: all 0.3s ease;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+.shooting-star-toggle:hover { border-color: var(--accent); transform: scale(1.1); }
+.shooting-star-toggle.active { background: rgba(201,160,255,0.2); border-color: var(--accent-light); box-shadow: 0 0 16px rgba(201,160,255,0.3); }
+.shooting-star-canvas { pointer-events: none; position: fixed; inset: 0; z-index: 99998; }
+
 /* ════════════ SCROLL PROGRESS BAR ════════════ */
 .scroll-progress-bar {
     position: fixed; top: 0; left: 0; height: 3px; width: 0%;
@@ -2002,6 +2036,7 @@ a, button, .nav-link, .feature-card, .pref-card, .option-btn, .tarot-card-slot, 
 /* ════════════ SMART NAVBAR ════════════ */
 .navbar { transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s; }
 .navbar.nav-hidden { transform: translateY(-100%); }
+.navbar.nav-hidden.menu-open { transform: translateY(0) !important; }
 .navbar.nav-scrolled {
     background: rgba(7,7,26,0.95); backdrop-filter: blur(16px);
     box-shadow: 0 4px 30px rgba(0,0,0,0.3), 0 0 60px rgba(201,160,255,0.05);
@@ -2103,6 +2138,8 @@ a, button, .nav-link, .feature-card, .pref-card, .option-btn, .tarot-card-slot, 
     .footer-bottom { flex-direction: column; text-align: center; }
     .back-to-top { bottom: 20px; right: 20px; width: 42px; height: 42px; }
     .cursor-trail-container { display: none; }
+    .shooting-star-toggle { display: none; }
+    .shooting-star-canvas { display: none; }
 }
 @media (max-width: 480px) {
     .footer-inner { grid-template-columns: 1fr; }

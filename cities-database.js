@@ -311,6 +311,8 @@ const CITY_DATABASE = (() => {
         { city: 'Punta Cana', country: 'Dominik Cum.', region: 'americas', lat: 18.58, lon: -68.40, climate: 'warm', size: 'small', nature: 'coastal', vibe: ['love', 'peace'] },
         { city: 'Nassau', country: 'Bahamalar', region: 'americas', lat: 25.06, lon: -77.35, climate: 'warm', size: 'small', nature: 'coastal', vibe: ['love', 'peace', 'luck'] },
         { city: 'Kingston', country: 'Jamaika', region: 'americas', lat: 18.00, lon: -76.79, climate: 'warm', size: 'medium', nature: 'coastal', vibe: ['creativity', 'adventure'] },
+        { city: 'Ushuaia', country: 'Arjantin', region: 'americas', lat: -54.80, lon: -68.30, climate: 'cold', size: 'small', nature: 'coastal', vibe: ['adventure', 'peace', 'growth'] },
+        { city: 'Punta Arenas', country: 'Şili', region: 'americas', lat: -53.16, lon: -70.91, climate: 'cold', size: 'medium', nature: 'coastal', vibe: ['adventure', 'peace'] },
     ];
 
     // =============================================
@@ -373,20 +375,10 @@ const CITY_DATABASE = (() => {
     // =============================================
     // TÜM ŞEHİRLERİ BİRLEŞTİR
     // =============================================
-    // ANTARKTİKA
-    // =============================================
-    const ANTARCTICA = [
-        { city: 'McMurdo Station', country: 'Antarktika', region: 'antarctica', lat: -77.85, lon: 166.67, climate: 'cold', size: 'small', nature: 'coastal', vibe: ['adventure', 'growth', 'learning'] },
-        { city: 'Ushuaia', country: 'Arjantin', region: 'antarctica', lat: -54.80, lon: -68.30, climate: 'cold', size: 'small', nature: 'coastal', vibe: ['adventure', 'peace', 'growth'] },
-        { city: 'Punta Arenas', country: 'Şili', region: 'antarctica', lat: -53.16, lon: -70.91, climate: 'cold', size: 'medium', nature: 'coastal', vibe: ['adventure', 'peace'] },
-        { city: 'South Pole Station', country: 'Antarktika', region: 'antarctica', lat: -90.00, lon: 0.00, climate: 'cold', size: 'small', nature: 'mountain', vibe: ['adventure', 'growth', 'learning'] },
-        { city: 'Villa Las Estrellas', country: 'Şili', region: 'antarctica', lat: -62.20, lon: -58.96, climate: 'cold', size: 'small', nature: 'coastal', vibe: ['adventure', 'peace', 'growth'] },
-    ];
+    // Ushuaia & Punta Arenas are real livable cities — included in AMERICAS above.
+    // Removed: McMurdo Station, South Pole Station, Villa Las Estrellas (research stations, not livable).
 
-    // =============================================
-    // TÜM ŞEHİRLERİ BİRLEŞTİR
-    // =============================================
-    const ALL_CITIES = [...TURKEY, ...EUROPE, ...ASIA, ...AMERICAS, ...AFRICA, ...OCEANIA, ...ANTARCTICA];
+    const ALL_CITIES = [...TURKEY, ...EUROPE, ...ASIA, ...AMERICAS, ...AFRICA, ...OCEANIA];
 
     // Bölge isimleri
     const REGION_NAMES = {
@@ -395,8 +387,7 @@ const CITY_DATABASE = (() => {
         asia: 'Asya',
         americas: 'Amerika',
         africa: 'Afrika',
-        oceania: 'Okyanusya',
-        antarctica: 'Antarktika'
+        oceania: 'Okyanusya'
     };
 
     return {
@@ -407,7 +398,6 @@ const CITY_DATABASE = (() => {
         AMERICAS,
         AFRICA,
         OCEANIA,
-        ANTARCTICA,
         REGION_NAMES,
         getCitiesByRegion(region) {
             if (region === 'all') return ALL_CITIES;

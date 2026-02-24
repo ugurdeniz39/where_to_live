@@ -121,7 +121,7 @@ const KeyboardShortcuts = {
 // STATE
 // ═══════════════════════════════════════
 let selectedPreferences = [];
-let lifestyleChoices = {};
+let lifestyleChoices = { climate: 'moderate', size: 'medium', nature: 'urban', region: 'any' };
 let map = null;
 let mapMarkers = [];
 let mapLines = [];
@@ -160,7 +160,12 @@ function navigateTo(pageId) {
     if (activeLink) activeLink.classList.add('active');
 
     // Close mobile nav
-    document.getElementById('nav-links').classList.remove('open');
+    const navLinksEl = document.getElementById('nav-links');
+    navLinksEl.classList.remove('open');
+    document.getElementById('navbar').classList.remove('menu-open');
+    const hamburger = document.querySelector('.nav-hamburger');
+    if (hamburger) hamburger.textContent = '☰';
+    document.removeEventListener('click', closeMobileNavOutside);
 
     currentPage = pageId;
     window.scrollTo(0, 0);
@@ -274,7 +279,34 @@ function getSunSignFromDate(dateStr) {
 }
 
 function toggleMobileNav() {
-    document.getElementById('nav-links').classList.toggle('open');
+    const navLinks = document.getElementById('nav-links');
+    const navbar = document.getElementById('navbar');
+    const hamburger = document.querySelector('.nav-hamburger');
+    const isOpen = navLinks.classList.toggle('open');
+    // Prevent navbar from hiding when mobile menu is open
+    if (isOpen) {
+        navbar.classList.add('menu-open');
+        hamburger.textContent = '✕';
+        // Close menu when clicking outside
+        setTimeout(() => {
+            document.addEventListener('click', closeMobileNavOutside);
+        }, 10);
+    } else {
+        navbar.classList.remove('menu-open');
+        hamburger.textContent = '☰';
+        document.removeEventListener('click', closeMobileNavOutside);
+    }
+}
+
+function closeMobileNavOutside(e) {
+    const navLinks = document.getElementById('nav-links');
+    const hamburger = document.querySelector('.nav-hamburger');
+    if (!navLinks.contains(e.target) && !hamburger.contains(e.target)) {
+        navLinks.classList.remove('open');
+        document.getElementById('navbar').classList.remove('menu-open');
+        hamburger.textContent = '☰';
+        document.removeEventListener('click', closeMobileNavOutside);
+    }
 }
 
 // Astro app step navigation
@@ -292,7 +324,7 @@ function navigateToStep(stepId) {
 
 function resetApp() {
     selectedPreferences = [];
-    lifestyleChoices = {};
+    lifestyleChoices = { climate: 'moderate', size: 'medium', nature: 'urban', region: 'any' };
     results = null;
     compareSlots = [null, null];
     document.querySelectorAll('.pref-card').forEach(c => c.classList.remove('selected'));
@@ -379,6 +411,74 @@ window.addEventListener('scroll', () => {
     const nav = document.getElementById('navbar');
     if (nav) nav.classList.toggle('scrolled', window.scrollY > 30);
 });
+
+// ═══════════════════════════════════════
+// NAVBAR EVENT DELEGATION (robust click handling)
+// ═══════════════════════════════════════
+// Uses event delegation on the navbar — catches clicks on all nav children regardless of inline onclick
+(function initNavbarDelegation() {
+    function setupNavbar() {
+        const navbar = document.getElementById('navbar');
+        if (!navbar) return;
+        
+        let lastTouchTime = 0; // Prevent double-fire from touch + click
+        
+        function handleNavAction(e) {
+            // Debounce: skip if this fires too close to a previous touch/click
+            const now = Date.now();
+            if (now - lastTouchTime < 300 && e.type === 'click') return;
+            if (e.type === 'touchend') lastTouchTime = now;
+            
+            const target = e.target.closest('[data-nav]');
+            const modalBtn = e.target.closest('[data-modal]');
+            const hamburger = e.target.closest('.nav-hamburger, #nav-hamburger');
+            
+            if (target) {
+                e.preventDefault();
+                e.stopPropagation();
+                const pageId = target.getAttribute('data-nav');
+                if (pageId && typeof navigateTo === 'function') {
+                    navigateTo(pageId);
+                }
+                return;
+            }
+            
+            if (modalBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const modalId = modalBtn.getAttribute('data-modal');
+                if (modalId && typeof openModal === 'function') {
+                    openModal(modalId);
+                }
+                return;
+            }
+            
+            if (hamburger) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof toggleMobileNav === 'function') {
+                    toggleMobileNav();
+                }
+                return;
+            }
+        }
+        
+        // Capture phase click handler — maximum reliability
+        navbar.addEventListener('click', handleNavAction, true);
+        
+        // Touch handler for mobile — prevent 300ms delay
+        navbar.addEventListener('touchend', handleNavAction, { passive: false, capture: true });
+    }
+    
+    // Try immediately (scripts at bottom of body, DOM likely ready)
+    if (document.getElementById('navbar')) {
+        setupNavbar();
+    }
+    // Also try after DOMContentLoaded as safety net
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupNavbar);
+    }
+})();
 
 // ═══════════════════════════════════════
 // MODALS
@@ -1341,14 +1441,27 @@ function downloadReport() {
 // ═══════════════════════════════════════
 function initMap() {
     if (map) { map.remove(); map = null; }
-    map = L.map('map', { center: [30, 20], zoom: 2, minZoom: 2, maxZoom: 10, zoomControl: true, attributionControl: false });
+    map = L.map('map', {
+        center: [30, 20], zoom: 2, minZoom: 2, maxZoom: 12,
+        zoomControl: false, attributionControl: false,
+        worldCopyJump: true
+    });
+    // Zoom control in top-right
+    L.control.zoom({ position: 'topright' }).addTo(map);
+    // Dark tile layer with better contrast
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19 }).addTo(map);
 
     drawPlanetaryLines();
     addCityMarkers();
 
-    const topCity = allRenderedCities[0];
-    if (topCity) setTimeout(() => map.flyTo([topCity.lat, topCity.lon], 4, { duration: 1.5 }), 500);
+    // Fit bounds to top 5 cities for a better initial view
+    const topCities = allRenderedCities.slice(0, 5);
+    if (topCities.length > 1) {
+        const bounds = L.latLngBounds(topCities.map(c => [c.lat, c.lon]));
+        setTimeout(() => map.fitBounds(bounds, { padding: [50, 50], maxZoom: 6, duration: 1.5 }), 500);
+    } else if (topCities.length === 1) {
+        setTimeout(() => map.flyTo([topCities[0].lat, topCities[0].lon], 4, { duration: 1.5 }), 500);
+    }
 }
 
 function drawPlanetaryLines() {
@@ -1392,7 +1505,7 @@ function addCityMarkers() {
         });
         const marker = L.marker([city.lat, city.lon], { icon })
             .addTo(map)
-            .bindPopup(createPopupContent(city, index));
+            .bindPopup(createPopupContent(city, index), { autoClose: false, closeOnClick: false });
         if (index === 0) marker.openPopup();
         marker.on('click', () => highlightCard(allRenderedCities.indexOf(city)));
         mapMarkers.push(marker);
@@ -1763,7 +1876,7 @@ let fortuneImageBase64 = null;
 function handleFortuneImage(input) {
     const file = input.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { showToast('Dosya 5MB'den büyük olamaz'); input.value = ''; return; }
+    if (file.size > 5 * 1024 * 1024) { showToast("Dosya 5MB'den büyük olamaz"); input.value = ''; return; }
     if (!file.type.startsWith('image/')) { showToast('Sadece resim dosyası yükleyebilirsin'); input.value = ''; return; }
 
     const reader = new FileReader();
@@ -2097,6 +2210,126 @@ function initCursorTrail() {
 }
 
 // ═══════════════════════════════════════
+// SHOOTING STAR CURSOR EFFECT (TOGGLEABLE)
+// ═══════════════════════════════════════
+let shootingStarCursorEnabled = false;
+let shootingStarCanvas = null;
+let shootingStarCtx = null;
+let shootingStarParticles = [];
+let shootingStarMouseX = 0, shootingStarMouseY = 0;
+let shootingStarPrevX = 0, shootingStarPrevY = 0;
+let shootingStarAnimId = null;
+
+function toggleShootingStarCursor() {
+    shootingStarCursorEnabled = !shootingStarCursorEnabled;
+    const btn = document.getElementById('shooting-star-toggle');
+    if (btn) btn.classList.toggle('active', shootingStarCursorEnabled);
+    
+    if (shootingStarCursorEnabled) {
+        if (!shootingStarCanvas) {
+            shootingStarCanvas = document.createElement('canvas');
+            shootingStarCanvas.className = 'shooting-star-canvas';
+            document.body.appendChild(shootingStarCanvas);
+            shootingStarCtx = shootingStarCanvas.getContext('2d');
+            function resizeSSCanvas() {
+                shootingStarCanvas.width = window.innerWidth;
+                shootingStarCanvas.height = window.innerHeight;
+            }
+            resizeSSCanvas();
+            window.addEventListener('resize', resizeSSCanvas);
+            document.addEventListener('mousemove', e => {
+                shootingStarMouseX = e.clientX;
+                shootingStarMouseY = e.clientY;
+            }, { passive: true });
+        }
+        shootingStarCanvas.style.display = 'block';
+        shootingStarPrevX = shootingStarMouseX;
+        shootingStarPrevY = shootingStarMouseY;
+        animateShootingStarCursor();
+        showToast('☄️ Kayan yıldız efekti açıldı');
+    } else {
+        if (shootingStarCanvas) shootingStarCanvas.style.display = 'none';
+        if (shootingStarAnimId) { cancelAnimationFrame(shootingStarAnimId); shootingStarAnimId = null; }
+        shootingStarParticles = [];
+        showToast('☄️ Kayan yıldız efekti kapatıldı');
+    }
+}
+
+function animateShootingStarCursor() {
+    if (!shootingStarCursorEnabled) return;
+    const ctx = shootingStarCtx;
+    ctx.clearRect(0, 0, shootingStarCanvas.width, shootingStarCanvas.height);
+    
+    // Generate new particles based on mouse movement speed
+    const dx = shootingStarMouseX - shootingStarPrevX;
+    const dy = shootingStarMouseY - shootingStarPrevY;
+    const speed = Math.sqrt(dx * dx + dy * dy);
+    
+    if (speed > 2) {
+        const count = Math.min(3, Math.floor(speed / 8) + 1);
+        for (let i = 0; i < count; i++) {
+            shootingStarParticles.push({
+                x: shootingStarMouseX + (Math.random() - 0.5) * 6,
+                y: shootingStarMouseY + (Math.random() - 0.5) * 6,
+                vx: -dx * 0.05 + (Math.random() - 0.5) * 1.5,
+                vy: -dy * 0.05 + (Math.random() - 0.5) * 1.5 + 0.3,
+                life: 1.0,
+                size: Math.random() * 2.5 + 1,
+                hue: 250 + Math.random() * 60 // purple to gold range
+            });
+        }
+    }
+    
+    // Draw and update particles
+    for (let i = shootingStarParticles.length - 1; i >= 0; i--) {
+        const p = shootingStarParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.025;
+        p.size *= 0.97;
+        
+        if (p.life <= 0) {
+            shootingStarParticles.splice(i, 1);
+            continue;
+        }
+        
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        const alpha = p.life * 0.8;
+        ctx.fillStyle = `hsla(${p.hue}, 80%, 75%, ${alpha})`;
+        ctx.fill();
+        
+        // Glow effect
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${p.hue}, 80%, 75%, ${alpha * 0.2})`;
+        ctx.fill();
+    }
+    
+    // Draw a small bright point at cursor
+    if (speed > 1) {
+        ctx.beginPath();
+        ctx.arc(shootingStarMouseX, shootingStarMouseY, 3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(shootingStarMouseX, shootingStarMouseY, 6, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(201,160,255,0.15)';
+        ctx.fill();
+    }
+    
+    shootingStarPrevX = shootingStarMouseX;
+    shootingStarPrevY = shootingStarMouseY;
+    
+    // Cap particles for performance
+    if (shootingStarParticles.length > 150) {
+        shootingStarParticles.splice(0, shootingStarParticles.length - 150);
+    }
+    
+    shootingStarAnimId = requestAnimationFrame(animateShootingStarCursor);
+}
+
+// ═══════════════════════════════════════
 // SCROLL PROGRESS BAR
 // ═══════════════════════════════════════
 function initScrollProgress() {
@@ -2148,6 +2381,8 @@ function initSmartNavbar() {
     let lastScroll = 0;
     const threshold = 80;
     const onScroll = throttle(() => {
+        // Don't hide navbar when mobile menu is open
+        if (navbar.classList.contains('menu-open')) return;
         const currentScroll = window.scrollY;
         if (currentScroll > threshold) {
             navbar.classList.add('nav-scrolled');
@@ -2621,16 +2856,13 @@ function initNotificationBadges() {
 // ACCESSIBILITY IMPROVEMENTS
 // ═══════════════════════════════════════
 function initAccessibility() {
-    // Add ARIA roles
-    document.querySelector('.navbar')?.setAttribute('role', 'navigation');
-    document.querySelector('.nav-links')?.setAttribute('role', 'menubar');
+    // Keyboard navigation for nav-links (ARIA roles already in HTML)
     document.querySelectorAll('.nav-link').forEach(link => {
-        link.setAttribute('role', 'menuitem');
-        link.setAttribute('tabindex', '0');
         link.addEventListener('keydown', e => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                link.click();
+                const pageId = link.getAttribute('data-nav') || link.getAttribute('data-page');
+                if (pageId) navigateTo(pageId);
             }
         });
     });
