@@ -183,27 +183,42 @@ a:hover { color: var(--accent-light); }
     .step-actions { gap: 10px; }
     .step-actions .btn-primary, .step-actions .btn-ghost { flex: 1; font-size: 14px; padding: 12px; text-align: center; }
     
-    /* Results mobile */
-    .results-layout { flex-direction: column-reverse; height: auto; }
+    /* Results mobile — full screen layout */
+    .results-header { padding: 8px 16px; }
+    .results-header h2 { font-size: 16px; }
+    .results-header p { font-size: 12px; }
+    .results-layout { flex-direction: column; height: calc(100vh - 120px); }
+    .results-map-wrap { height: 35vh; min-height: 200px; flex-shrink: 0; touch-action: pan-x pan-y; }
     .results-sidebar {
-        width: 100%; max-height: 55vh; border-right: none;
+        width: 100%; flex: 1; min-height: 0; border-right: none;
         border-top: 1px solid var(--border); overflow-y: auto;
-        -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;
+        display: flex; flex-direction: column;
     }
-    .results-map-wrap { height: 40vh; min-height: 240px; touch-action: pan-x pan-y; }
+    .results-sidebar .tab-content { overflow-y: auto; flex: 1; min-height: 0; }
     .map-controls { top: 8px; right: 8px; gap: 4px; flex-wrap: wrap; }
     .map-ctrl { padding: 6px 10px; font-size: 11px; touch-action: manipulation; }
-    .results-header { padding: 72px 16px 0; }
-    .results-header h2 { font-size: 18px; }
-    .tab-bar { touch-action: manipulation; }
+    .tab-bar { touch-action: manipulation; flex-shrink: 0; }
     .tab-btn { padding: 10px 6px; font-size: 11px; touch-action: manipulation; min-height: 44px; }
+    .search-container {
+        position: sticky; top: 0; z-index: 10;
+        background: var(--surface); margin: -20px -20px 12px; padding: 12px 14px 10px;
+    }
+    .search-input-wrap { margin-bottom: 8px; }
+    .search-input-wrap input { padding: 10px 36px 10px 36px; font-size: 13px; }
     .filter-chips { gap: 4px; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; touch-action: pan-x; }
-    .filter-chip { padding: 6px 10px; font-size: 11px; flex-shrink: 0; touch-action: manipulation; min-height: 36px; }
+    .filter-chip { padding: 5px 10px; font-size: 11px; flex-shrink: 0; touch-action: manipulation; min-height: 32px; }
+    .search-sort-row { margin-top: 6px; }
+    .results-meta { font-size: 11px; }
+    .sort-select { font-size: 11px; padding: 4px 24px 4px 8px; }
+    .results-stats { margin-top: 6px; padding: 6px 10px; font-size: 10px; }
     .result-card { padding: 12px; touch-action: manipulation; }
     .result-city { font-size: 15px; }
-    .result-reason { font-size: 11px; }
-    .results-list { overscroll-behavior: contain; }
-    .sidebar-actions { padding: 12px; gap: 8px; }
+    .result-reason { font-size: 11px; line-height: 1.4; }
+    .result-tags { gap: 3px; margin-bottom: 4px; }
+    .result-tag { font-size: 10px; padding: 2px 6px; }
+    .results-list { overscroll-behavior: contain; gap: 8px; padding-bottom: 16px; }
+    .sidebar-actions { padding: 10px; gap: 6px; flex-shrink: 0; }
     .sidebar-actions .btn-primary, .sidebar-actions .btn-ghost { font-size: 13px; padding: 10px; }
     .natal-grid .natal-row { padding: 6px 10px; }
     .natal-sign { font-size: 12px; }
@@ -237,6 +252,18 @@ a:hover { color: var(--accent-light); }
     .compat-categories { grid-template-columns: 1fr; }
     
     /* Tarot/Crystal/Dream/Fortune mobile */
+    .tarot-deck { gap: 8px; padding: 0 4px; }
+    .tarot-card-slot { width: min(160px, 28vw); }
+    .tarot-front-content { padding: 12px 8px; }
+    .tarot-front-content .tarot-emoji { font-size: 32px; margin-bottom: 8px; }
+    .tarot-front-content .tarot-name { font-size: 13px; margin-bottom: 6px; }
+    .tarot-front-content .tarot-meaning { font-size: 10px; line-height: 1.4; }
+    .tarot-front-content .tarot-position { font-size: 9px; letter-spacing: 1px; margin-bottom: 8px; }
+    .tarot-slot-label { font-size: 10px; letter-spacing: 1px; }
+    .tarot-back-symbol { font-size: 28px; }
+    .tarot-overall { padding: 20px 16px; margin: 20px auto 0; }
+    .tarot-overall h3 { font-size: 18px; }
+    .tarot-overall p { font-size: 13px; }
     .tarot-spread { flex-direction: column; align-items: center; }
     .wellness-grid { grid-template-columns: 1fr; }
     .crystal-support-grid { grid-template-columns: 1fr; }
@@ -731,11 +758,11 @@ a:hover { color: var(--accent-light); }
 .btn-icon:hover { border-color: var(--accent); }
 
 /* ════════════ RESULTS LAYOUT ════════════ */
-.results-layout { display: flex; height: calc(100vh - 64px); }
+.results-layout { display: flex; height: calc(100vh - 140px); overflow: hidden; }
 .results-sidebar {
     width: 420px; flex-shrink: 0; background: var(--surface);
     border-right: 1px solid var(--border); display: flex; flex-direction: column;
-    overflow-y: auto;
+    overflow: hidden;
 }
 .results-map { flex: 1; position: relative; }
 .results-map-wrap { flex: 1; position: relative; }
@@ -751,11 +778,11 @@ a:hover { color: var(--accent-light); }
 }
 .tab-btn:hover { color: var(--text); }
 .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-.tab-content { display: none; padding: 20px; flex: 1; overflow-y: auto; }
-.tab-content.active { display: block; }
+.tab-content { display: none; padding: 20px; flex: 1; overflow-y: auto; min-height: 0; }
+.tab-content.active { display: flex; flex-direction: column; }
 
 /* Results list */
-.results-header { margin-bottom: 16px; padding: 80px 20px 0; }
+.results-header { margin-bottom: 0; padding: 12px 20px; }
 .results-header h2 { font-family: var(--font-display); font-size: 20px; }
 .results-intro { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
 
@@ -954,7 +981,7 @@ a:hover { color: var(--accent-light); }
 .map-ctrl-btn.active, .map-ctrl.active { background: rgba(201,160,255,0.15); border-color: var(--accent); }
 
 /* Sidebar footer */
-.sidebar-footer, .sidebar-actions { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: center; }
+.sidebar-footer, .sidebar-actions { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 
 /* ════════════ PAGE CONTAINER / TITLE ════════════ */
 .page-container { max-width: 800px; margin: 0 auto; padding: 100px 24px 80px; }
@@ -1149,9 +1176,9 @@ a:hover { color: var(--accent-light); }
 
 /* ════════════ RESPONSIVE ════════════ */
 @media (max-width: 900px) {
-    .results-layout { flex-direction: column-reverse; }
-    .results-sidebar { width: 100%; height: 55vh; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-    .results-map, .results-map-wrap { height: 40vh; min-height: 240px; }
+    .results-layout { flex-direction: column; }
+    .results-sidebar { width: 100%; flex: 1; min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+    .results-map, .results-map-wrap { height: 35vh; min-height: 200px; flex-shrink: 0; }
     .page-container { padding: 80px 16px 60px; }
     .page-title { font-size: 28px; }
 }
@@ -1236,22 +1263,24 @@ textarea::placeholder { color: var(--text-dim); }
 }
 
 .tarot-deck {
-    display: flex; justify-content: center; gap: 32px; flex-wrap: wrap;
+    display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;
     position: relative; z-index: 2; perspective: 1200px;
+    padding: 0 8px;
 }
 
 /* Card slot */
 .tarot-card-slot {
-    width: 200px; position: relative; cursor: pointer;
+    width: min(200px, 28vw); position: relative; cursor: pointer;
     opacity: 0; transform: translateY(60px) scale(0.7);
     transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    flex-shrink: 0;
 }
 .tarot-card-slot.dealt { opacity: 1; transform: translateY(0) scale(1); }
 .tarot-card-slot:hover:not(.flipped) { transform: translateY(-8px) scale(1.03); }
 
 /* 3D card flip */
 .tarot-card-3d {
-    width: 200px; height: 310px; position: relative;
+    width: 100%; aspect-ratio: 2/3.1; position: relative;
     transform-style: preserve-3d; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .tarot-card-slot.flipped .tarot-card-3d { transform: rotateY(180deg); }
