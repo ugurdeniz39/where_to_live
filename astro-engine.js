@@ -819,6 +819,133 @@ const AstroEngine = (function () {
     }
 
     // ────────────────────────────────────────
+    // HOUSE CALCULATION — Placidus System
+    // ────────────────────────────────────────
+    function calculateHouses(jd, lat, lon) {
+        const T = (jd - 2451545.0) / 36525;
+        const deg2rad = Math.PI / 180;
+        const rad2deg = 180 / Math.PI;
+        function normDeg(d) { return ((d % 360) + 360) % 360; }
+
+        // Obliquity of ecliptic (Meeus eq. 22.2)
+        const eps = (23.4392911 - 0.0130042 * T - 1.64e-7 * T * T + 5.04e-7 * T * T * T) * deg2rad;
+
+        // Greenwich Mean Sidereal Time (Meeus eq. 12.4)
+        const jd0 = Math.floor(jd - 0.5) + 0.5;
+        const T0 = (jd0 - 2451545.0) / 36525;
+        const theta0 = normDeg(280.46061837 + 360.98564736629 * (jd - 2451545.0)
+            + 0.000387933 * T * T - T * T * T / 38710000.0);
+
+        // Local Sidereal Time
+        const LST = normDeg(theta0 + lon);
+        const RAMC = LST * deg2rad; // in radians
+
+        // MC (Medium Coeli) - Meeus
+        const MC = normDeg(Math.atan2(Math.sin(RAMC), Math.cos(RAMC) * Math.cos(eps)) * rad2deg);
+
+        // ASC (Ascendant)
+        const latRad = lat * deg2rad;
+        const ASC = normDeg(Math.atan2(-Math.cos(RAMC),
+            Math.sin(eps) * Math.tan(latRad) + Math.cos(eps) * Math.sin(RAMC)) * rad2deg);
+
+        // Placidus house cusps — iterative method
+        function placidusCusp(F, latR, epsR) {
+            // F = fraction for semi-arc division
+            // cusp2: F=1/3 above horizon, cusp3: F=2/3 above
+            // cusp11: F=2/3 below horizon, cusp12: F=1/3 below
+            let RA = RAMC + F * Math.PI;
+            for (let i = 0; i < 20; i++) {
+                const tanD = Math.sin(RA) * Math.tan(epsR);
+                const D = Math.atan(tanD);
+                const AD = Math.asin(Math.tan(latR) * Math.tan(D));
+                const RAn = RAMC + F * (Math.PI / 2 + AD) * 2;
+                if (Math.abs(RAn - RA) < 1e-8) { RA = RAn; break; }
+                RA = RAn;
+            }
+            return normDeg(Math.atan2(Math.sin(RA), Math.cos(RA) * Math.cos(epsR)) * rad2deg);
+        }
+
+        // Calculate intermediate cusps using Placidus
+        const cusps = new Array(13); // cusps[1]-cusps[12]
+        cusps[1] = ASC;
+        cusps[10] = MC;
+        cusps[7] = normDeg(ASC + 180);
+        cusps[4] = normDeg(MC + 180);
+
+        // Check if Placidus is possible at this latitude
+        const absLat = Math.abs(lat);
+        if (absLat < 66.5) {
+            // Placidus cusps
+            cusps[11] = placidusCusp(1/3, latRad, eps);
+            cusps[12] = placidusCusp(2/3, latRad, eps);
+            cusps[2] = placidusCusp(4/3, latRad, eps);
+            cusps[3] = placidusCusp(5/3, latRad, eps);
+        } else {
+            // Equal house fallback for extreme latitudes
+            cusps[11] = normDeg(MC + 30);
+            cusps[12] = normDeg(MC + 60);
+            cusps[2] = normDeg(ASC + 30);
+            cusps[3] = normDeg(ASC + 60);
+        }
+
+        // Opposite cusps
+        cusps[5] = normDeg(cusps[11] + 180);
+        cusps[6] = normDeg(cusps[12] + 180);
+        cusps[8] = normDeg(cusps[2] + 180);
+        cusps[9] = normDeg(cusps[3] + 180);
+
+        return {
+            cusps: cusps.slice(1), // cusps[0..11] for houses 1-12
+            ascendant: ASC,
+            midheaven: MC,
+            descendant: normDeg(ASC + 180),
+            ic: normDeg(MC + 180)
+        };
+    }
+
+    // ────────────────────────────────────────
+    // NATAL ASPECTS — between planet pairs
+    // ────────────────────────────────────────
+    function calculateNatalAspects(positions) {
+        const ASPECT_TYPES = [
+            { name: 'Kavuşum',  symbol: '☌', angle: 0,   orb: 8, color: '#C9A0FF', harmony: 'neutral' },
+            { name: 'Sekstil',  symbol: '⚹', angle: 60,  orb: 5, color: '#4ade80', harmony: 'harmonious' },
+            { name: 'Kare',     symbol: '□', angle: 90,  orb: 7, color: '#FF4444', harmony: 'tense' },
+            { name: 'Trigon',   symbol: '△', angle: 120, orb: 7, color: '#4ade80', harmony: 'harmonious' },
+            { name: 'Karşıt',  symbol: '☍', angle: 180, orb: 8, color: '#FF4444', harmony: 'tense' }
+        ];
+
+        const planetKeys = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto'];
+        const aspects = [];
+
+        for (let i = 0; i < planetKeys.length; i++) {
+            for (let j = i + 1; j < planetKeys.length; j++) {
+                const key1 = planetKeys[i], key2 = planetKeys[j];
+                const lon1 = positions[key1].longitude;
+                const lon2 = positions[key2].longitude;
+                let diff = Math.abs(lon1 - lon2);
+                if (diff > 180) diff = 360 - diff;
+
+                for (const asp of ASPECT_TYPES) {
+                    const orbDiff = Math.abs(diff - asp.angle);
+                    if (orbDiff <= asp.orb) {
+                        aspects.push({
+                            planet1: key1, planet2: key2,
+                            type: asp.name, symbol: asp.symbol,
+                            angle: asp.angle, orb: orbDiff,
+                            color: asp.color, harmony: asp.harmony
+                        });
+                        break; // Only one aspect per pair
+                    }
+                }
+            }
+        }
+
+        aspects.sort((a, b) => a.orb - b.orb);
+        return aspects;
+    }
+
+    // ────────────────────────────────────────
     // CORE: Main Calculate (Astrocartography)
     // ────────────────────────────────────────
     function calculate(birthDate, birthTime, birthCity, preferences, lifestyle) {
@@ -827,6 +954,10 @@ const AstroEngine = (function () {
 
         const birthLocation = BIRTH_LOCATIONS[birthCity] || BIRTH_LOCATIONS.istanbul;
         const allPlanetaryLines = calculatePlanetaryLines(natalChart, birthLocation.lat);
+
+        // Calculate houses & aspects for natal chart display
+        const houses = calculateHouses(jd, birthLocation.lat, birthLocation.lon);
+        const natalAspects = calculateNatalAspects(natalChart);
 
         const cities = CITY_DATABASE.ALL_CITIES;
 
@@ -904,7 +1035,9 @@ const AstroEngine = (function () {
             planetaryLines: allPlanetaryLines,
             recommendations: scoredCities,
             birthLocation,
-            transits
+            transits,
+            houses,
+            natalAspects
         };
     }
 
@@ -919,6 +1052,8 @@ const AstroEngine = (function () {
         calculatePlanetaryLines,
         calculateTransits,
         toJulianDay,
+        calculateHouses,
+        calculateNatalAspects,
         // v3 new features
         generateDailyHoroscope,
         calculateCompatibility,

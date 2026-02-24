@@ -223,8 +223,10 @@ a:hover { color: var(--accent-light); }
     .results-list { overscroll-behavior: contain; gap: 6px; padding-bottom: 16px; }
     .sidebar-actions { padding: 8px 10px; gap: 6px; flex-shrink: 0; border-top: 1px solid var(--border); }
     .sidebar-actions .btn-primary, .sidebar-actions .btn-ghost { font-size: 12px; padding: 8px; }
+    .natal-wheel-wrap { max-width: 320px; }
     .natal-grid .natal-row { padding: 6px 10px; }
     .natal-sign { font-size: 12px; }
+    .natal-section-title { font-size: 13px; }
     
     /* Forms mobile */
     .page-container { padding: 72px 16px 60px; }
@@ -939,6 +941,25 @@ a:hover { color: var(--accent-light); }
 /* Natal & Line toggles */
 .natal-summary { display: flex; flex-direction: column; gap: 2px; }
 .natal-summary h3 { font-family: var(--font-display); font-size: 16px; margin-bottom: 12px; text-align: center; }
+
+/* Zodiac Wheel */
+.natal-wheel-wrap {
+    width: 100%; max-width: 420px; margin: 0 auto 16px; aspect-ratio: 1;
+    position: relative;
+}
+.natal-wheel-svg {
+    width: 100%; height: 100%;
+    filter: drop-shadow(0 0 20px rgba(201,160,255,0.12));
+}
+.natal-section { margin-bottom: 14px; }
+.natal-section-title {
+    font-family: var(--font-display); font-size: 14px; margin-bottom: 8px;
+    color: var(--accent-light); font-weight: 600; letter-spacing: 0.3px;
+    padding-bottom: 6px; border-bottom: 1px solid rgba(201,160,255,0.1);
+}
+.natal-house-row .natal-planet { color: var(--text-muted); font-size: 13px; }
+.natal-aspect-row .natal-planet { font-size: 16px; letter-spacing: 2px; }
+
 .natal-dominant {
     text-align: center; padding: 10px 16px; margin-bottom: 14px;
     background: linear-gradient(135deg, rgba(201,160,255,0.08), rgba(255,215,110,0.08));

@@ -1324,12 +1324,19 @@ function sortResults(sortBy) {
 }
 
 // ═══════════════════════════════════════
-// NATAL SUMMARY
+// NATAL SUMMARY — Zodiac Wheel (astro.com style)
 // ═══════════════════════════════════════
 function renderNatalSummary() {
     const natal = results.natalChart;
+    const houses = results.houses;
+    const aspects = results.natalAspects || [];
     const el = document.getElementById('natal-summary');
     const planetOrder = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto'];
+
+    // ── Build SVG Zodiac Wheel ──
+    const svgHtml = buildZodiacWheel(natal, houses, aspects, planetOrder);
+
+    // ── Build planet positions table ──
     let rows = '';
     for (const key of planetOrder) {
         const pos = natal[key];
@@ -1340,15 +1347,245 @@ function renderNatalSummary() {
             <span class="natal-sign">${pos.signSymbol} ${pos.sign} ${dmsStr}</span>
         </div>`;
     }
+
+    // House cusps table
+    let houseRows = '';
+    if (houses && houses.cusps) {
+        const romanNums = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+        for (let i = 0; i < 12; i++) {
+            const lon = houses.cusps[i];
+            const signIdx = Math.floor(lon / 30);
+            const deg = lon % 30;
+            const sign = AstroEngine.SIGNS[signIdx];
+            const totalSec = Math.round(deg * 3600);
+            const s = totalSec % 60;
+            const m = Math.floor(totalSec / 60) % 60;
+            const d = Math.floor(totalSec / 3600);
+            const dmsStr = `${d}°${String(m).padStart(2,'0')}'${String(s).padStart(2,'0')}"`;
+            houseRows += `<div class="natal-row natal-house-row">
+                <span class="natal-planet">${romanNums[i]}. Ev</span>
+                <span class="natal-sign">${sign.symbol} ${sign.name} ${dmsStr}</span>
+            </div>`;
+        }
+    }
+
+    // Aspects table
+    let aspectRows = '';
+    for (const asp of aspects.slice(0, 12)) {
+        const p1 = AstroEngine.PLANETS[asp.planet1];
+        const p2 = AstroEngine.PLANETS[asp.planet2];
+        const orbStr = asp.orb.toFixed(1) + '°';
+        aspectRows += `<div class="natal-row natal-aspect-row">
+            <span class="natal-planet">
+                <span style="color:${p1.color}">${p1.symbol}</span>
+                <span style="color:${asp.color};margin:0 4px">${asp.symbol}</span>
+                <span style="color:${p2.color}">${p2.symbol}</span>
+            </span>
+            <span class="natal-sign" style="color:${asp.color}">${asp.type} ${orbStr}</span>
+        </div>`;
+    }
+
     // Dominant element
     const domElem = AstroEngine.getDominantElement(natal);
     const elemEmoji = { fire: '🔥', earth: '🌍', air: '💨', water: '💧' };
     const elemName = { fire: 'Ateş', earth: 'Toprak', air: 'Hava', water: 'Su' };
+
     el.innerHTML = `
-        <h3>🌌 Doğum Haritanız</h3>
+        <div class="natal-wheel-wrap">${svgHtml}</div>
         <div class="natal-dominant">Baskın Element: ${elemEmoji[domElem] || ''} ${elemName[domElem] || domElem}</div>
-        <div class="natal-grid">${rows}</div>
+        <div class="natal-section">
+            <h4 class="natal-section-title">☉ Gezegen Pozisyonları</h4>
+            <div class="natal-grid">${rows}</div>
+        </div>
+        ${houseRows ? `<div class="natal-section">
+            <h4 class="natal-section-title">🏠 Ev Başlangıçları</h4>
+            <div class="natal-grid">${houseRows}</div>
+        </div>` : ''}
+        ${aspectRows ? `<div class="natal-section">
+            <h4 class="natal-section-title">✦ Açılar (Aspektler)</h4>
+            <div class="natal-grid">${aspectRows}</div>
+        </div>` : ''}
     `;
+}
+
+function buildZodiacWheel(natal, houses, aspects, planetOrder) {
+    const CX = 250, CY = 250; // Center
+    const R_OUTER = 240;       // Outer zodiac ring
+    const R_SIGN_IN = 200;     // Inner edge of zodiac signs
+    const R_HOUSE = 195;       // House cusp lines outer
+    const R_PLANET = 165;      // Planet placement radius
+    const R_ASPECT = 130;      // Aspect line area
+    const R_INNER = 60;        // Inner circle
+
+    const SIGN_COLORS = [
+        '#FF4444', '#8B7355', '#87CEEB', '#C0C0C0', '#FFD700', '#8B7355',
+        '#FF69B4', '#800020', '#9B59B6', '#8B7355', '#00CED1', '#4169E1'
+    ];
+    const SIGN_SYMBOLS = ['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
+
+    // ASC is placed at 9 o'clock (180° in SVG angle)
+    // In astrology, ASC is at the left — zodiac goes counterclockwise
+    const ascLon = houses ? houses.ascendant : 0;
+
+    function lonToAngle(lon) {
+        // Convert ecliptic longitude to SVG angle
+        // ASC should be at 180° (left/9 o'clock), zodiac runs counterclockwise
+        return (180 - (lon - ascLon)) * Math.PI / 180;
+    }
+
+    function polarToXY(angle, r) {
+        return { x: CX + r * Math.cos(angle), y: CY - r * Math.sin(angle) };
+    }
+
+    let svg = `<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg" class="natal-wheel-svg">`;
+
+    // ── Background ──
+    svg += `<circle cx="${CX}" cy="${CY}" r="${R_OUTER}" fill="rgba(7,7,26,0.9)" stroke="rgba(201,160,255,0.2)" stroke-width="1"/>`;
+
+    // ── Zodiac sign segments ──
+    for (let i = 0; i < 12; i++) {
+        const startLon = i * 30;
+        const endLon = (i + 1) * 30;
+        const a1 = lonToAngle(startLon);
+        const a2 = lonToAngle(endLon);
+
+        // Draw sign arc segment
+        const p1o = polarToXY(a1, R_OUTER);
+        const p2o = polarToXY(a2, R_OUTER);
+        const p1i = polarToXY(a1, R_SIGN_IN);
+        const p2i = polarToXY(a2, R_SIGN_IN);
+
+        // Alternating subtle background
+        const fillOpacity = i % 2 === 0 ? 0.06 : 0.03;
+        svg += `<path d="M${p1o.x},${p1o.y} A${R_OUTER},${R_OUTER} 0 0,1 ${p2o.x},${p2o.y} L${p2i.x},${p2i.y} A${R_SIGN_IN},${R_SIGN_IN} 0 0,0 ${p1i.x},${p1i.y} Z" fill="${SIGN_COLORS[i]}" fill-opacity="${fillOpacity}" stroke="rgba(201,160,255,0.15)" stroke-width="0.5"/>`;
+
+        // Sign divider line
+        svg += `<line x1="${p1o.x}" y1="${p1o.y}" x2="${p1i.x}" y2="${p1i.y}" stroke="rgba(201,160,255,0.25)" stroke-width="0.8"/>`;
+
+        // Sign symbol in middle of segment
+        const midAngle = lonToAngle(startLon + 15);
+        const midR = (R_OUTER + R_SIGN_IN) / 2;
+        const midPt = polarToXY(midAngle, midR);
+        svg += `<text x="${midPt.x}" y="${midPt.y}" text-anchor="middle" dominant-baseline="central" font-size="16" fill="${SIGN_COLORS[i]}" opacity="0.85">${SIGN_SYMBOLS[i]}</text>`;
+
+        // Degree ticks every 10°
+        for (let d = 0; d < 30; d += 10) {
+            if (d === 0) continue;
+            const tickAngle = lonToAngle(startLon + d);
+            const t1 = polarToXY(tickAngle, R_OUTER);
+            const t2 = polarToXY(tickAngle, R_OUTER - 5);
+            svg += `<line x1="${t1.x}" y1="${t1.y}" x2="${t2.x}" y2="${t2.y}" stroke="rgba(201,160,255,0.2)" stroke-width="0.5"/>`;
+        }
+    }
+
+    // ── Inner zodiac ring ──
+    svg += `<circle cx="${CX}" cy="${CY}" r="${R_SIGN_IN}" fill="none" stroke="rgba(201,160,255,0.25)" stroke-width="0.8"/>`;
+
+    // ── House cusps ──
+    if (houses && houses.cusps) {
+        const houseNums = ['1','2','3','4','5','6','7','8','9','10','11','12'];
+        for (let i = 0; i < 12; i++) {
+            const cuspLon = houses.cusps[i];
+            const angle = lonToAngle(cuspLon);
+            const pOuter = polarToXY(angle, R_HOUSE);
+            const pInner = polarToXY(angle, R_INNER);
+
+            // Cusp line (angular cusps thicker)
+            const isAngular = (i === 0 || i === 3 || i === 6 || i === 9);
+            const strokeW = isAngular ? 1.5 : 0.6;
+            const strokeColor = isAngular ? 'rgba(201,160,255,0.6)' : 'rgba(201,160,255,0.15)';
+            svg += `<line x1="${pOuter.x}" y1="${pOuter.y}" x2="${pInner.x}" y2="${pInner.y}" stroke="${strokeColor}" stroke-width="${strokeW}"/>`;
+
+            // House number
+            const nextCusp = houses.cusps[(i + 1) % 12];
+            let midHouseLon = cuspLon + ((nextCusp - cuspLon + 360) % 360) / 2;
+            const hNumAngle = lonToAngle(midHouseLon);
+            const hNumPt = polarToXY(hNumAngle, R_INNER + 22);
+            svg += `<text x="${hNumPt.x}" y="${hNumPt.y}" text-anchor="middle" dominant-baseline="central" font-size="10" fill="rgba(201,160,255,0.4)" font-weight="500">${houseNums[i]}</text>`;
+        }
+
+        // Angular labels (ASC, MC, DSC, IC)
+        const angLabels = [
+            { lon: houses.ascendant, label: 'ASC', color: '#FF4444' },
+            { lon: houses.midheaven, label: 'MC', color: '#FFD700' },
+            { lon: houses.descendant, label: 'DSC', color: '#4169E1' },
+            { lon: houses.ic, label: 'IC', color: '#4ade80' }
+        ];
+        for (const al of angLabels) {
+            const a = lonToAngle(al.lon);
+            const pt = polarToXY(a, R_OUTER + 2);
+            // Arrow head at outer ring
+            const ptIn = polarToXY(a, R_HOUSE);
+            svg += `<circle cx="${ptIn.x}" cy="${ptIn.y}" r="3" fill="${al.color}"/>`;
+            // Label outside
+            const labelPt = polarToXY(a, R_OUTER + 16);
+            svg += `<text x="${labelPt.x}" y="${labelPt.y}" text-anchor="middle" dominant-baseline="central" font-size="10" fill="${al.color}" font-weight="700">${al.label}</text>`;
+        }
+    }
+
+    // ── Inner circle ──
+    svg += `<circle cx="${CX}" cy="${CY}" r="${R_INNER}" fill="rgba(7,7,26,0.95)" stroke="rgba(201,160,255,0.2)" stroke-width="0.8"/>`;
+
+    // ── Aspect lines between planets ──
+    for (const asp of aspects) {
+        const lon1 = natal[asp.planet1].longitude;
+        const lon2 = natal[asp.planet2].longitude;
+        const a1 = lonToAngle(lon1);
+        const a2 = lonToAngle(lon2);
+        const p1 = polarToXY(a1, R_ASPECT);
+        const p2 = polarToXY(a2, R_ASPECT);
+
+        const dashArray = asp.harmony === 'harmonious' ? '' : asp.harmony === 'tense' ? '4,3' : '2,2';
+        const opacity = Math.max(0.15, 0.5 - asp.orb * 0.05);
+        svg += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="${asp.color}" stroke-width="0.8" stroke-dasharray="${dashArray}" opacity="${opacity}"/>`;
+    }
+
+    // ── Planets ──
+    // Avoid overlapping — nudge planets that are too close
+    const planetAngles = planetOrder.map(key => ({
+        key, lon: natal[key].longitude, angle: lonToAngle(natal[key].longitude)
+    }));
+    // Sort by angle for overlap detection
+    const sortedPlanets = [...planetAngles].sort((a, b) => a.lon - b.lon);
+    const MIN_ANGLE_SEP = 0.14; // ~8° minimum visual separation
+    for (let pass = 0; pass < 3; pass++) {
+        for (let i = 0; i < sortedPlanets.length; i++) {
+            for (let j = i + 1; j < sortedPlanets.length; j++) {
+                let diff = Math.abs(sortedPlanets[i].angle - sortedPlanets[j].angle);
+                if (diff > Math.PI) diff = 2 * Math.PI - diff;
+                if (diff < MIN_ANGLE_SEP) {
+                    sortedPlanets[i].angle -= MIN_ANGLE_SEP * 0.3;
+                    sortedPlanets[j].angle += MIN_ANGLE_SEP * 0.3;
+                }
+            }
+        }
+    }
+
+    for (const sp of sortedPlanets) {
+        const planet = AstroEngine.PLANETS[sp.key];
+        const pos = natal[sp.key];
+        const pt = polarToXY(sp.angle, R_PLANET);
+
+        // Connector line from exact position to displayed position
+        const exactAngle = lonToAngle(pos.longitude);
+        const exactPt = polarToXY(exactAngle, R_SIGN_IN - 4);
+        svg += `<line x1="${exactPt.x}" y1="${exactPt.y}" x2="${pt.x}" y2="${pt.y}" stroke="${planet.color}" stroke-width="0.5" opacity="0.4"/>`;
+        // Tick on inner zodiac ring
+        const tickOut = polarToXY(exactAngle, R_SIGN_IN + 3);
+        const tickIn = polarToXY(exactAngle, R_SIGN_IN - 3);
+        svg += `<line x1="${tickOut.x}" y1="${tickOut.y}" x2="${tickIn.x}" y2="${tickIn.y}" stroke="${planet.color}" stroke-width="1.2"/>`;
+
+        // Planet circle + symbol
+        svg += `<circle cx="${pt.x}" cy="${pt.y}" r="14" fill="rgba(7,7,26,0.85)" stroke="${planet.color}" stroke-width="1.5"/>`;
+        svg += `<text x="${pt.x}" y="${pt.y}" text-anchor="middle" dominant-baseline="central" font-size="14" fill="${planet.color}" font-weight="600">${planet.symbol}</text>`;
+    }
+
+    // ── Center label ──
+    svg += `<text x="${CX}" y="${CY - 8}" text-anchor="middle" dominant-baseline="central" font-size="10" fill="rgba(201,160,255,0.5)" font-weight="600">DOĞUM</text>`;
+    svg += `<text x="${CX}" y="${CY + 8}" text-anchor="middle" dominant-baseline="central" font-size="10" fill="rgba(201,160,255,0.5)" font-weight="600">HARİTASI</text>`;
+
+    svg += `</svg>`;
+    return svg;
 }
 
 // ═══════════════════════════════════════
