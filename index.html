@@ -138,6 +138,12 @@
                 <p>Fincanındaki şekilleri anlat ya da fotoğrafını çek, AI yorumlasın.</p>
                 <span class="lock-badge ai-badge">AI ✦</span>
             </div>
+            <div class="feature-card energy-feature-card" onclick="showQuickEnergy()">
+                <span class="feature-icon">⚡</span>
+                <h3>Günün Enerjisi</h3>
+                <p>Bugünün kozmik enerji seviyesi, gezegen etkisi ve enerji tavsiyesi.</p>
+                <div id="quick-energy-badge" class="energy-quick-badge"></div>
+            </div>
             <div class="feature-card glass-locked" onclick="navigateTo('pricing')">
                 <span class="feature-icon">📊</span>
                 <h3>Transit Rapor</h3>
@@ -664,7 +670,6 @@
                             <button class="filter-chip" data-region="americas" onclick="filterByRegion(this)">🌎 Amerika</button>
                             <button class="filter-chip" data-region="africa" onclick="filterByRegion(this)">🌍 Afrika</button>
                             <button class="filter-chip" data-region="oceania" onclick="filterByRegion(this)">🌊 Okyanusya</button>
-                            <button class="filter-chip" data-region="antarctica" onclick="filterByRegion(this)">🧊 Antarktika</button>
                         </div>
                     </div>
                     <div class="search-sort-row">

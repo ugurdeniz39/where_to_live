@@ -167,12 +167,28 @@ const AstroEngine = (function () {
         );
 
         // ── Build positions ──
+        // Helper: convert decimal degrees to { deg, min, sec }
+        function toDMS(decimalDeg) {
+            const d = Math.floor(decimalDeg);
+            const mFull = (decimalDeg - d) * 60;
+            const m = Math.floor(mFull);
+            const s = Math.round((mFull - m) * 60);
+            return { deg: d, min: m, sec: s };
+        }
+
+        function formatDMS(decimalDeg) {
+            const { deg, min, sec } = toDMS(decimalDeg);
+            return `${deg}°${String(min).padStart(2,'0')}'${String(sec).padStart(2,'0')}"`;
+        }
+
         const positions = {};
         const sunSign = SIGNS[Math.floor(sunLon / 30)];
-        positions.sun = { longitude: sunLon, sign: sunSign.name, signSymbol: sunSign.symbol, degree: sunLon % 30, element: sunSign.element };
+        const sunDeg = sunLon % 30;
+        positions.sun = { longitude: sunLon, sign: sunSign.name, signSymbol: sunSign.symbol, degree: sunDeg, dms: toDMS(sunDeg), dmsStr: formatDMS(sunDeg), element: sunSign.element };
 
         const moonSign = SIGNS[Math.floor(moonLon / 30)];
-        positions.moon = { longitude: moonLon, sign: moonSign.name, signSymbol: moonSign.symbol, degree: moonLon % 30, element: moonSign.element };
+        const moonDeg = moonLon % 30;
+        positions.moon = { longitude: moonLon, sign: moonSign.name, signSymbol: moonSign.symbol, degree: moonDeg, dms: toDMS(moonDeg), dmsStr: formatDMS(moonDeg), element: moonSign.element };
 
         // ── Planets: heliocentric → geocentric conversion ──
         const planetKeys = ['mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto'];
@@ -189,7 +205,8 @@ const AstroEngine = (function () {
             const yGeo = helio.y - earthXYZ.y;
             const geoLon = normDeg(Math.atan2(yGeo, xGeo) * rad2deg);
             const sign = SIGNS[Math.floor(geoLon / 30)];
-            positions[key] = { longitude: geoLon, sign: sign.name, signSymbol: sign.symbol, degree: geoLon % 30, element: sign.element };
+            const pDeg = geoLon % 30;
+            positions[key] = { longitude: geoLon, sign: sign.name, signSymbol: sign.symbol, degree: pDeg, dms: toDMS(pDeg), dmsStr: formatDMS(pDeg), element: sign.element };
         }
         return positions;
     }

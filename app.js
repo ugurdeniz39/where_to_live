@@ -687,6 +687,91 @@ window.addEventListener('message', (e) => {
 });
 
 // ═══════════════════════════════════════
+// QUICK COSMIC ENERGY DISPLAY
+// ═══════════════════════════════════════
+function showQuickEnergy() {
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const positions = AstroEngine.calculatePlanetPositions(
+        AstroEngine.toJulianDay(dateStr, timeStr)
+    );
+
+    // Calculate cosmic energy score from planetary aspects
+    const planets = ['sun','moon','mercury','venus','mars','jupiter','saturn'];
+    let harmonyScore = 50;
+    const aspects = [];
+    for (let i = 0; i < planets.length; i++) {
+        for (let j = i + 1; j < planets.length; j++) {
+            let diff = Math.abs(positions[planets[i]].degree - positions[planets[j]].degree);
+            if (diff > 180) diff = 360 - diff;
+            if (Math.abs(diff - 120) < 8) { harmonyScore += 8; aspects.push({ p1: planets[i], p2: planets[j], type: 'Trigon ✦', good: true }); }
+            else if (Math.abs(diff - 60) < 6) { harmonyScore += 5; aspects.push({ p1: planets[i], p2: planets[j], type: 'Sekstil ✧', good: true }); }
+            else if (Math.abs(diff) < 8) { harmonyScore += 3; aspects.push({ p1: planets[i], p2: planets[j], type: 'Kavuşum ●', good: true }); }
+            else if (Math.abs(diff - 90) < 6) { harmonyScore -= 4; aspects.push({ p1: planets[i], p2: planets[j], type: 'Kare ■', good: false }); }
+            else if (Math.abs(diff - 180) < 7) { harmonyScore -= 3; aspects.push({ p1: planets[i], p2: planets[j], type: 'Karşıt ◆', good: false }); }
+        }
+    }
+    harmonyScore = Math.max(10, Math.min(100, harmonyScore));
+
+    const moonSign = positions.moon.sign;
+    const moonDms = positions.moon.dmsStr || positions.moon.degree.toFixed(1) + '°';
+    const energyLevel = harmonyScore > 75 ? 'Yüksek ⚡⚡⚡' : harmonyScore > 50 ? 'Orta ⚡⚡' : 'Düşük ⚡';
+    const energyColor = harmonyScore > 75 ? '#6ee7c8' : harmonyScore > 50 ? '#ffd76e' : '#ff6b9d';
+    const goodAspects = aspects.filter(a => a.good).slice(0, 3);
+    const badAspects = aspects.filter(a => !a.good).slice(0, 2);
+
+    const popup = document.createElement('div');
+    popup.className = 'popup-overlay energy-popup';
+    popup.innerHTML = `
+        <div class="popup-content energy-content" style="max-width:440px">
+            <button class="popup-close" onclick="this.closest('.popup-overlay').remove()">✕</button>
+            <h2 style="text-align:center;margin-bottom:8px">⚡ Günün Kozmik Enerjisi</h2>
+            <p style="text-align:center;color:var(--text-muted);font-size:13px;margin-bottom:20px">
+                ${now.toLocaleDateString('tr-TR', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}
+            </p>
+            <div style="text-align:center;margin-bottom:20px">
+                <div style="font-size:48px;font-weight:800;color:${energyColor}">${harmonyScore}</div>
+                <div style="font-size:16px;color:${energyColor};font-weight:600">${energyLevel}</div>
+            </div>
+            <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px">
+                <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">🌙 Ay Pozisyonu</div>
+                <div style="font-size:15px;font-weight:600">${positions.moon.signSymbol} ${moonSign} ${moonDms}</div>
+            </div>
+            ${goodAspects.length ? `
+            <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px">
+                <div style="font-size:13px;color:var(--teal,#6ee7c8);margin-bottom:8px">✦ Uyumlu Açılar</div>
+                ${goodAspects.map(a => `<div style="font-size:13px;padding:3px 0">${AstroEngine.PLANETS[a.p1].symbol} ${AstroEngine.PLANETS[a.p1].name} — ${AstroEngine.PLANETS[a.p2].symbol} ${AstroEngine.PLANETS[a.p2].name} <span style="color:var(--teal,#6ee7c8)">${a.type}</span></div>`).join('')}
+            </div>` : ''}
+            ${badAspects.length ? `
+            <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:14px">
+                <div style="font-size:13px;color:var(--rose,#ff6b9d);margin-bottom:8px">⚠️ Gerilimli Açılar</div>
+                ${badAspects.map(a => `<div style="font-size:13px;padding:3px 0">${AstroEngine.PLANETS[a.p1].symbol} ${AstroEngine.PLANETS[a.p1].name} — ${AstroEngine.PLANETS[a.p2].symbol} ${AstroEngine.PLANETS[a.p2].name} <span style="color:var(--rose,#ff6b9d)">${a.type}</span></div>`).join('')}
+            </div>` : ''}
+            <button class="btn-primary" style="width:100%" onclick="this.closest('.popup-overlay').remove();navigateTo('daily')">🌟 Detaylı Günlük Yorum</button>
+        </div>
+    `;
+    popup.addEventListener('click', e => { if (e.target === popup) popup.remove(); });
+    document.body.appendChild(popup);
+    SoundFX.play('reveal');
+}
+
+// Initialize energy badge on home page
+function updateQuickEnergyBadge() {
+    const badge = document.getElementById('quick-energy-badge');
+    if (!badge || typeof AstroEngine === 'undefined') return;
+    try {
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+        const positions = AstroEngine.calculatePlanetPositions(AstroEngine.toJulianDay(dateStr, '12:00'));
+        const moonPhaseIcon = ['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'][Math.floor((positions.moon.degree / 360) * 8) % 8];
+        badge.textContent = `${moonPhaseIcon} ${positions.moon.signSymbol} ${positions.moon.sign}`;
+        badge.style.display = 'block';
+    } catch(e) { /* silent */ }
+}
+document.addEventListener('DOMContentLoaded', () => setTimeout(updateQuickEnergyBadge, 500));
+
+// ═══════════════════════════════════════
 // DAILY HOROSCOPE — AI POWERED
 // ═══════════════════════════════════════
 async function showDailyHoroscope() {
@@ -1099,65 +1184,100 @@ function renderCityList(cities) {
         `;
     }
 
-    const toShow = filtered.slice(0, 50);
+    const isMobile = window.innerWidth <= 768;
+    const initialBatch = isMobile ? 15 : 50;
+    const toShow = filtered.slice(0, initialBatch);
+
+    // Use DocumentFragment for batch DOM insertion (prevents reflow per card)
+    const fragment = document.createDocumentFragment();
 
     toShow.forEach((city, idx) => {
         const globalRank = allRenderedCities.indexOf(city) + 1;
-        const card = document.createElement('div');
-        card.className = 'result-card';
-        card.dataset.cityIndex = allRenderedCities.indexOf(city);
-        card.onclick = () => focusCity(city, allRenderedCities.indexOf(city));
-        card.ondblclick = () => addToComparison(city);
-
-        // Better color gradient: green for high, yellow for mid, red for low
-        const hue = Math.min(120, (city.score / 100) * 140);
-        const sat = city.score >= 80 ? 75 : city.score >= 60 ? 65 : 55;
-        const gradient = `linear-gradient(90deg, hsl(${hue}, ${sat}%, 50%), hsl(${hue + 20}, ${sat + 10}%, 55%))`;
-
-        const tagMap = {
-            love: { label: '♀ Aşk', cls: 'love' }, career: { label: '☉ Kariyer', cls: 'career' },
-            peace: { label: '☽ Huzur', cls: 'peace' }, luck: { label: '♃ Şans', cls: 'luck' },
-            creativity: { label: '♆ Yaratıcılık', cls: 'creativity' }, adventure: { label: '♂ Macera', cls: 'energy' },
-            growth: { label: '♇ Dönüşüm', cls: 'creativity' }, learning: { label: '☿ Öğrenme', cls: 'career' }
-        };
-
-        const tags = city.influences.slice(0, 3).map(inf => {
-            const prefForPlanet = findPreferenceForPlanet(inf.planetKey);
-            return prefForPlanet && tagMap[prefForPlanet]
-                ? `<span class="result-tag ${tagMap[prefForPlanet].cls}">${tagMap[prefForPlanet].label}</span>`
-                : `<span class="result-tag">${inf.symbol} ${inf.planet}</span>`;
-        }).join('');
-
-        const regionFlag = { tr: '🇹🇷', europe: '🇪🇺', asia: '🌏', americas: '🌎', africa: '🌍', oceania: '🌊' };
-        const flag = regionFlag[city.region] || '';
-
-        // Medal for top 3 within current view
-        const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '';
-        const rankDisplay = medal ? `${medal} #${globalRank}` : `#${globalRank}`;
-        
-        // Score tier styling
-        const scoreTier = city.score >= 85 ? 'score-excellent' : city.score >= 70 ? 'score-good' : city.score >= 55 ? 'score-medium' : 'score-low';
-
-        card.innerHTML = `
-            <span class="result-rank">${rankDisplay}</span>
-            <div class="result-city">${flag} ${city.city}</div>
-            <div class="result-country">${city.country}</div>
-            <div class="result-score">
-                <div class="score-bar"><div class="score-fill" style="width:${city.score}%;background:${gradient};"></div></div>
-                <span class="score-value ${scoreTier}">${city.score}%</span>
-            </div>
-            <div class="result-tags">${tags}</div>
-            <div class="result-reason">${city.reason}</div>
-        `;
-        listEl.appendChild(card);
+        const card = createCityCard(city, idx, globalRank);
+        fragment.appendChild(card);
     });
 
-    if (filtered.length > 50) {
-        const more = document.createElement('div');
-        more.style.cssText = 'text-align:center;padding:16px;color:var(--text-muted);font-size:12px;';
-        more.textContent = `+ ${filtered.length - 50} şehir daha... (Arama veya filtre ile daralt)`;
-        listEl.appendChild(more);
+    listEl.appendChild(fragment);
+
+    // Lazy-load more cards on scroll (mobile optimization)
+    if (filtered.length > initialBatch) {
+        const loadMore = document.createElement('button');
+        loadMore.className = 'btn-ghost load-more-btn';
+        loadMore.style.cssText = 'width:100%;margin:12px 0;padding:12px;font-size:13px;';
+        loadMore.textContent = `+ ${filtered.length - initialBatch} şehir daha göster`;
+        loadMore.onclick = function() {
+            loadMore.textContent = 'Yükleniyor...';
+            // Render remaining in small batches to prevent freeze
+            const remaining = filtered.slice(initialBatch);
+            let batchIdx = 0;
+            const batchSize = isMobile ? 10 : 30;
+            function renderBatch() {
+                const batch = remaining.slice(batchIdx, batchIdx + batchSize);
+                if (batch.length === 0) { loadMore.remove(); return; }
+                const frag = document.createDocumentFragment();
+                batch.forEach((city, i) => {
+                    const idx = initialBatch + batchIdx + i;
+                    const globalRank = allRenderedCities.indexOf(city) + 1;
+                    const card = createCityCard(city, idx, globalRank);
+                    frag.appendChild(card);
+                });
+                listEl.insertBefore(frag, loadMore);
+                batchIdx += batchSize;
+                if (batchIdx >= remaining.length) { loadMore.remove(); }
+                else {
+                    loadMore.textContent = `+ ${remaining.length - batchIdx} şehir daha göster`;
+                    if (!isMobile) requestAnimationFrame(renderBatch);
+                }
+            }
+            renderBatch();
+        };
+        listEl.appendChild(loadMore);
     }
+}
+
+const _tagMap = {
+    love: { label: '♀ Aşk', cls: 'love' }, career: { label: '☉ Kariyer', cls: 'career' },
+    peace: { label: '☽ Huzur', cls: 'peace' }, luck: { label: '♃ Şans', cls: 'luck' },
+    creativity: { label: '♆ Yaratıcılık', cls: 'creativity' }, adventure: { label: '♂ Macera', cls: 'energy' },
+    growth: { label: '♇ Dönüşüm', cls: 'creativity' }, learning: { label: '☿ Öğrenme', cls: 'career' }
+};
+const _regionFlag = { tr: '🇹🇷', europe: '🇪🇺', asia: '🌏', americas: '🌎', africa: '🌍', oceania: '🌊' };
+
+function createCityCard(city, idx, globalRank) {
+    const card = document.createElement('div');
+    card.className = 'result-card';
+    card.dataset.cityIndex = allRenderedCities.indexOf(city);
+    card.onclick = () => focusCity(city, allRenderedCities.indexOf(city));
+    card.ondblclick = () => addToComparison(city);
+
+    const hue = Math.min(120, (city.score / 100) * 140);
+    const sat = city.score >= 80 ? 75 : city.score >= 60 ? 65 : 55;
+    const gradient = `linear-gradient(90deg, hsl(${hue}, ${sat}%, 50%), hsl(${hue + 20}, ${sat + 10}%, 55%))`;
+
+    const tags = city.influences.slice(0, 3).map(inf => {
+        const prefForPlanet = findPreferenceForPlanet(inf.planetKey);
+        return prefForPlanet && _tagMap[prefForPlanet]
+            ? `<span class="result-tag ${_tagMap[prefForPlanet].cls}">${_tagMap[prefForPlanet].label}</span>`
+            : `<span class="result-tag">${inf.symbol} ${inf.planet}</span>`;
+    }).join('');
+
+    const flag = _regionFlag[city.region] || '';
+    const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '';
+    const rankDisplay = medal ? `${medal} #${globalRank}` : `#${globalRank}`;
+    const scoreTier = city.score >= 85 ? 'score-excellent' : city.score >= 70 ? 'score-good' : city.score >= 55 ? 'score-medium' : 'score-low';
+
+    card.innerHTML = `
+        <span class="result-rank">${rankDisplay}</span>
+        <div class="result-city">${flag} ${city.city}</div>
+        <div class="result-country">${city.country}</div>
+        <div class="result-score">
+            <div class="score-bar"><div class="score-fill" style="width:${city.score}%;background:${gradient};"></div></div>
+            <span class="score-value ${scoreTier}">${city.score}%</span>
+        </div>
+        <div class="result-tags">${tags}</div>
+        <div class="result-reason">${city.reason}</div>
+    `;
+    return card;
 }
 
 function findPreferenceForPlanet(planetKey) {
@@ -1212,9 +1332,21 @@ function renderNatalSummary() {
     for (const key of planetOrder) {
         const pos = natal[key];
         const planet = AstroEngine.PLANETS[key];
-        rows += `<div class="natal-row"><span class="natal-planet">${planet.symbol} ${planet.name}</span><span class="natal-sign">${pos.sign} ${pos.degree.toFixed(1)}°</span></div>`;
+        const dmsStr = pos.dmsStr || pos.degree.toFixed(1) + '°';
+        rows += `<div class="natal-row">
+            <span class="natal-planet"><span style="color:${planet.color}">${planet.symbol}</span> ${planet.name}</span>
+            <span class="natal-sign">${pos.signSymbol} ${pos.sign} ${dmsStr}</span>
+        </div>`;
     }
-    el.innerHTML = `<h3>Gezegen Pozisyonların</h3>${rows}`;
+    // Dominant element
+    const domElem = AstroEngine.getDominantElement(natal);
+    const elemEmoji = { fire: '🔥', earth: '🌍', air: '💨', water: '💧' };
+    const elemName = { fire: 'Ateş', earth: 'Toprak', air: 'Hava', water: 'Su' };
+    el.innerHTML = `
+        <h3>🌌 Doğum Haritanız</h3>
+        <div class="natal-dominant">Baskın Element: ${elemEmoji[domElem] || ''} ${elemName[domElem] || domElem}</div>
+        <div class="natal-grid">${rows}</div>
+    `;
 }
 
 // ═══════════════════════════════════════
@@ -1441,13 +1573,18 @@ function downloadReport() {
 // ═══════════════════════════════════════
 function initMap() {
     if (map) { map.remove(); map = null; }
+    const isMobileMap = window.innerWidth <= 768;
     map = L.map('map', {
-        center: [30, 20], zoom: 2, minZoom: 2, maxZoom: 12,
+        center: [30, 20], zoom: isMobileMap ? 1 : 2, minZoom: 2, maxZoom: 12,
         zoomControl: false, attributionControl: false,
-        worldCopyJump: true
+        worldCopyJump: true,
+        tap: true,
+        dragging: true,
+        touchZoom: true,
+        bounceAtZoomLimits: false
     });
-    // Zoom control in top-right
-    L.control.zoom({ position: 'topright' }).addTo(map);
+    // Zoom control — bottom-right on mobile, top-right on desktop
+    L.control.zoom({ position: isMobileMap ? 'bottomright' : 'topright' }).addTo(map);
     // Dark tile layer with better contrast
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19 }).addTo(map);
 
@@ -1456,12 +1593,16 @@ function initMap() {
 
     // Fit bounds to top 5 cities for a better initial view
     const topCities = allRenderedCities.slice(0, 5);
+    const fitPad = isMobileMap ? [20, 20] : [50, 50];
     if (topCities.length > 1) {
         const bounds = L.latLngBounds(topCities.map(c => [c.lat, c.lon]));
-        setTimeout(() => map.fitBounds(bounds, { padding: [50, 50], maxZoom: 6, duration: 1.5 }), 500);
+        setTimeout(() => map.fitBounds(bounds, { padding: fitPad, maxZoom: 5, duration: 1.5 }), 500);
     } else if (topCities.length === 1) {
         setTimeout(() => map.flyTo([topCities[0].lat, topCities[0].lon], 4, { duration: 1.5 }), 500);
     }
+    // Force resize after layout settles
+    setTimeout(() => map.invalidateSize(), 300);
+    setTimeout(() => map.invalidateSize(), 800);
 }
 
 function drawPlanetaryLines() {
@@ -1653,7 +1794,7 @@ async function showTarot() {
     });
 
     try {
-        const data = await callAI('tarot', { birthDate, sunSign, question });
+        const data = await callAI('tarot', { birthDate, sunSign, question, _t: Date.now() }, false);
         const cards = data.cards || [];
         const posEmojis = { 'Geçmiş': '⏳', 'Şimdi': '✨', 'Gelecek': '🔮' };
 
@@ -1794,7 +1935,7 @@ async function showCrystalGuide() {
     `;
 
     try {
-        const data = await callAI('crystal-guide', { birthDate, sunSign, mood });
+        const data = await callAI('crystal-guide', { birthDate, sunSign, mood, _t: Date.now() }, false);
         SoundFX.play('mystic');
         const mc = data.mainCrystal || {};
         const support = data.supportCrystals || [];
