@@ -4,7 +4,7 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY?.trim()
 });
 
-async function askGPT(systemPrompt, userPrompt, maxTokens = 1000) {
+async function askGPT(systemPrompt, userPrompt, maxTokens = 1000, temperature = 0.85) {
     try {
         const response = await openai.chat.completions.create({
             model: 'gpt-4o-mini',
@@ -13,7 +13,7 @@ async function askGPT(systemPrompt, userPrompt, maxTokens = 1000) {
                 { role: 'user', content: userPrompt }
             ],
             max_tokens: maxTokens,
-            temperature: 0.85
+            temperature
         });
         return response.choices[0].message.content;
     } catch (err) {

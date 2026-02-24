@@ -31,10 +31,12 @@ Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma
   "tarotMeaning": "Bu kartın bugün senin için anlamı, 1-2 cümle"
 }`;
 
-        const userPrompt = `Bugün ${today}. 
+        const userPrompt = `Bugün ${today}.
 Kişi bilgileri: Doğum tarihi ${birthDate}, doğum saati ${birthTime || 'bilinmiyor'}.
+
+⚠️ Bu kişinin burcu KESİNLİKLE ${sunSign || 'bilinmiyor'}. Başka burç yazma!
 Güneş burcu: ${sunSign || 'bilinmiyor'}, Ay burcu: ${moonSign || 'bilinmiyor'}, Yükselen: ${risingSign || 'bilinmiyor'}.
-Bu kişi için bugünün detaylı astroloji yorumunu yaz.`;
+Bu ${sunSign} burcu kişi için bugünün detaylı astroloji yorumunu yaz. Yorumun ${sunSign} burcuna özgü olmalı.`;
 
         const raw = await askGPT(systemPrompt, userPrompt, 800);
         const result = parseJSON(raw);

@@ -260,22 +260,24 @@ function resetAIPage(formId, resultId) {
 
 function getSunSignFromDate(dateStr) {
     if (!dateStr) return null;
-    const d = new Date(dateStr);
-    const month = d.getMonth() + 1;
-    const day = d.getDate();
+    // Parse YYYY-MM-DD directly to avoid timezone issues
+    const parts = dateStr.split('-');
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
+    if (!month || !day) return null;
     const signs = [
-        { sign: 'Oğlak', end: [1, 19] }, { sign: 'Kova', end: [2, 18] },
-        { sign: 'Balık', end: [3, 20] }, { sign: 'Koç', end: [4, 19] },
-        { sign: 'Boğa', end: [5, 20] }, { sign: 'İkizler', end: [6, 20] },
-        { sign: 'Yengeç', end: [7, 22] }, { sign: 'Aslan', end: [8, 22] },
-        { sign: 'Başak', end: [9, 22] }, { sign: 'Terazi', end: [10, 22] },
-        { sign: 'Akrep', end: [11, 21] }, { sign: 'Yay', end: [12, 21] },
-        { sign: 'Oğlak', end: [12, 31] }
+        [1, 20, 'Kova'],    [2, 19, 'Balık'],   [3, 21, 'Koç'],
+        [4, 20, 'Boğa'],    [5, 21, 'İkizler'], [6, 21, 'Yengeç'],
+        [7, 23, 'Aslan'],   [8, 23, 'Başak'],    [9, 23, 'Terazi'],
+        [10, 23, 'Akrep'],  [11, 22, 'Yay'],     [12, 22, 'Oğlak']
     ];
-    for (const s of signs) {
-        if (month < s.end[0] || (month === s.end[0] && day <= s.end[1])) return s.sign;
+    // Each entry: [startMonth, startDay, signName]
+    // e.g. Kova starts Jan 20, Balık starts Feb 19, etc.
+    for (let i = signs.length - 1; i >= 0; i--) {
+        const [sm, sd] = signs[i];
+        if (month > sm || (month === sm && day >= sd)) return signs[i][2];
     }
-    return 'Oğlak';
+    return 'Oğlak'; // Dec 22 - Jan 19
 }
 
 function toggleMobileNav() {

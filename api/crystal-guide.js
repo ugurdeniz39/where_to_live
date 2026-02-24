@@ -9,14 +9,29 @@ module.exports = async (req, res) => {
         const { birthDate, sunSign, moonSign, mood } = req.body;
         if (!birthDate) return res.status(400).json({ error: 'Doğum tarihi gerekli' });
 
+        // Pick a random crystal pool to force variety
+        const crystalPools = [
+            ['Sitrin', 'Akuamarin', 'Karneol', 'Labradorit', 'Turkuaz'],
+            ['Lapis Lazuli', 'Aventurin', 'Rodonit', 'Obsidyen', 'Ay Taşı'],
+            ['Kuvars (Dumanlı)', 'Yeşim', 'Florit', 'Hematit', 'Amazonit'],
+            ['Kaplan Gözü', 'Selenit', 'Rodokrozit', 'Aragonit', 'Kunzit'],
+            ['Apatit', 'Akik', 'Celestit', 'Prehnit', 'Moldavit'],
+            ['Mercan', 'Serpantin', 'İyolit', 'Morganit', 'Krizokol'],
+            ['Kehribar', 'Topaz', 'Zümrüt', 'Peridot', 'Tanzanit'],
+            ['Sunstone', 'Larimar', 'Howlit', 'Granat', 'Sodalit']
+        ];
+        const pool = crystalPools[Math.floor(Math.random() * crystalPools.length)];
+        const suggestedCrystal = pool[Math.floor(Math.random() * pool.length)];
+
         const systemPrompt = `Sen kristal terapi, çakra dengeleme ve wellness konusunda uzman bir spiritüel rehbersin. Türkçe yaz.
 Nazik, şefkatli ve bilge bir ton kullan. Kadınlara hitap ediyorsun — onları güçlendiren, rahatlatıcı bir dil kullan.
 
-ÖNEMLİ KURALLAR:
-- Her seferinde FARKLI kristaller ve tavsiyeler ver. Tekrara düşme.
+KRİTİK KURALLAR:
+- Ana kristal olarak MUTLAKA "${suggestedCrystal}" öner. Ametist ÖNERİLMEYECEK.
+- Destek kristallerinde de Ametist KULLANMA. Her seferinde farklı kristaller seç.
 - Kişinin ruh haline (mood) göre özel, kişiselleştirilmiş öneriler sun.
-- Kristal, çakra, renk, meditasyon, çay ve yağ önerilerini çeşitle — hep aynı şeyleri önerme.
-- Günün tarih ve enerjisinne göre farklılaştır.
+- Kristal, çakra, renk, meditasyon, çay ve yağ önerilerini çeşitle.
+- Günün tarih ve enerjisine göre farklılaştır.
 
 Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
 {
@@ -40,7 +55,7 @@ Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma
 Tarih: ${new Date().toISOString()}.
 Bu kişi için bugüne ÖZEL, BENZERSİZ kristal, wellness ve spiritüel rehberlik ver. Daha önce verdiğin önerilerden farklı ol.`;
 
-        const raw = await askGPT(systemPrompt, userPrompt, 800);
+        const raw = await askGPT(systemPrompt, userPrompt, 800, 1.0);
         const result = parseJSON(raw);
         res.json({ success: true, data: result });
     } catch (err) {
