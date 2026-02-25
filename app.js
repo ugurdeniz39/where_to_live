@@ -1295,11 +1295,14 @@ function selectOption(el) {
 // TAB NAVIGATION
 // ═══════════════════════════════════════
 function switchTab(btn) {
+    if (!btn) return;
     const tabId = btn.dataset.tab;
+    if (!tabId) return;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById(tabId).classList.add('active');
+    const tabEl = document.getElementById(tabId);
+    if (tabEl) tabEl.classList.add('active');
 }
 
 // ═══════════════════════════════════════
@@ -1871,12 +1874,12 @@ function getMoveAdvice(transit) {
 // ═══════════════════════════════════════
 function addToComparison(city) {
     const compareBtn = document.querySelector('[data-tab="compare-tab"]');
-    switchTab(compareBtn);
+    if (compareBtn) switchTab(compareBtn);
     if (!compareSlots[0]) compareSlots[0] = city;
     else if (!compareSlots[1]) compareSlots[1] = city;
     else { compareSlots[0] = compareSlots[1]; compareSlots[1] = city; }
     renderComparison();
-    showToast(`${city.city} karşılaştırmaya eklendi`);
+    showToast(`${city.city} karşılaştırmaya eklendi ⚖️`);
 }
 
 function clearComparison() {
@@ -1887,10 +1890,11 @@ function clearComparison() {
 function renderComparison() {
     for (let i = 0; i < 2; i++) {
         const slot = document.getElementById(`compare-slot-${i}`);
+        if (!slot) continue;
         const city = compareSlots[i];
         if (city) {
             slot.className = 'compare-slot filled';
-            slot.innerHTML = `<div class="slot-city">${city.city}</div><div class="slot-country">${city.country}</div><div class="slot-score">${city.score}%</div>`;
+            slot.innerHTML = `<div class="slot-city">${sanitize(city.city)}</div><div class="slot-country">${sanitize(city.country)}</div><div class="slot-score">${city.score}%</div>`;
         } else {
             slot.className = 'compare-slot empty';
             slot.innerHTML = '<span>+ Şehir Ekle</span><small>Sonuç kartına çift tıkla</small>';
@@ -1898,11 +1902,12 @@ function renderComparison() {
     }
 
     const resultEl = document.getElementById('compare-result');
+    if (!resultEl) return;
     if (compareSlots[0] && compareSlots[1]) {
         const a = compareSlots[0], b = compareSlots[1];
         const categories = [
-            { label: 'Genel Uyum', aVal: a.score, bVal: b.score },
-            { label: 'Astro Etki', aVal: Math.min(99, a.influences.length * 22), bVal: Math.min(99, b.influences.length * 22) },
+            { label: 'Genel Uyum', aVal: a.score || 0, bVal: b.score || 0 },
+            { label: 'Astro Etki', aVal: Math.min(99, (a.influences?.length || 0) * 22), bVal: Math.min(99, (b.influences?.length || 0) * 22) },
             { label: 'Yaşam Tarzı', aVal: a.lifestyleMatch ? 88 : 45, bVal: b.lifestyleMatch ? 88 : 45 },
             { label: 'Vibe Uyumu', aVal: a.vibeMatch ? 85 : 40, bVal: b.vibeMatch ? 85 : 40 }
         ];
