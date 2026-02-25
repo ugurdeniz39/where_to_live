@@ -972,7 +972,7 @@ async function showDailyHoroscope() {
     if (!birthDate) { showToast('Lütfen doğum tarihini gir'); return; }
 
     const period = selectedHoroscopePeriod || 'daily';
-    const periodLabel = { daily: 'Günlük', weekly: 'Haftalık', monthly: 'Aylık' }[period] || 'Günlük';
+    const periodLabel = { daily: 'Günlük', weekly: 'Haftalık', monthly: 'Aylık', yearly: 'Yıllık' }[period] || 'Günlük';
     const sunSign = getSunSignFromDate(birthDate);
     const signSymbols = { 'Koç':'♈','Boğa':'♉','İkizler':'♊','Yengeç':'♋','Aslan':'♌','Başak':'♍','Terazi':'♎','Akrep':'♏','Yay':'♐','Oğlak':'♑','Kova':'♒','Balık':'♓' };
     const signEmoji = signSymbols[sunSign] || '✦';

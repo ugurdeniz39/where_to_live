@@ -224,8 +224,8 @@ app.post('/api/daily-horoscope', async (req, res) => {
         if (!birthDate) return res.status(400).json({ error: 'Doğum tarihi gerekli' });
 
         const today = new Date().toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        const periodLabel = { weekly: 'Haftalık', monthly: 'Aylık' }[period] || 'Günlük';
-        const periodScope = { weekly: 'Bu hafta', monthly: 'Bu ay' }[period] || 'Bugün';
+        const periodLabel = { weekly: 'Haftalık', monthly: 'Aylık', yearly: 'Yıllık' }[period] || 'Günlük';
+        const periodScope = { weekly: 'Bu hafta', monthly: 'Bu ay', yearly: 'Bu yıl' }[period] || 'Bugün';
 
         const systemPrompt = `Sen deneyimli, sıcak ve empatik bir astrologsun. Türkçe yaz. 
 Yanıtlarını samimi, ilham verici ve motive edici tut. Kadın kullanıcılara hitap ediyorsun — zarif, şefkatli ve güçlendirici bir ton kullan.
