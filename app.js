@@ -89,6 +89,154 @@ const AICache = {
 };
 
 // ═══════════════════════════════════════
+// XSS SANITIZATION (DOMPurify)
+// ═══════════════════════════════════════
+function sanitize(html) {
+    if (typeof DOMPurify !== 'undefined') return DOMPurify.sanitize(html, { ALLOWED_TAGS: ['b','i','em','strong','br','p','span','div','ul','ol','li','h1','h2','h3','h4','small','a'], ALLOWED_ATTR: ['style','class','href'] });
+    // Fallback: strip all HTML tags
+    const div = document.createElement('div');
+    div.textContent = html;
+    return div.innerHTML;
+}
+
+// Safe innerHTML setter - always sanitizes AI content
+function safeHTML(el, html) {
+    if (typeof el === 'string') el = document.getElementById(el);
+    if (!el) return;
+    el.innerHTML = sanitize(html);
+}
+
+// Recursively sanitize all string fields in an AI response object
+function sanitizeData(obj) {
+    if (!obj) return obj;
+    if (typeof obj === 'string') return sanitize(obj);
+    if (Array.isArray(obj)) return obj.map(sanitizeData);
+    if (typeof obj === 'object') {
+        const out = {};
+        for (const [k, v] of Object.entries(obj)) out[k] = sanitizeData(v);
+        return out;
+    }
+    return obj;
+}
+
+// ═══════════════════════════════════════
+// REDUCED MOTION SUPPORT (JS)
+// ═══════════════════════════════════════
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+let reducedMotion = prefersReducedMotion.matches;
+prefersReducedMotion.addEventListener('change', (e) => {
+    reducedMotion = e.matches;
+    document.documentElement.classList.toggle('reduced-motion', reducedMotion);
+});
+
+// ═══════════════════════════════════════
+// LOCAL STORAGE AUTH SYSTEM
+// ═══════════════════════════════════════
+const AuthSystem = {
+    _key: 'astromap_user',
+    _historyKey: 'astromap_history',
+    _favKey: 'astromap_favorites',
+
+    getUser() {
+        try { return JSON.parse(localStorage.getItem(this._key)); } catch { return null; }
+    },
+
+    isLoggedIn() { return !!this.getUser(); },
+
+    login(email, password) {
+        const users = this._getAllUsers();
+        const user = users.find(u => u.email === email);
+        if (!user) throw new Error('Bu e-posta ile kayıtlı hesap bulunamadı');
+        if (user.password !== this._hash(password)) throw new Error('Yanlış şifre');
+        const session = { ...user, password: undefined, loginAt: Date.now() };
+        localStorage.setItem(this._key, JSON.stringify(session));
+        return session;
+    },
+
+    signup(name, email, password, birthDate) {
+        const users = this._getAllUsers();
+        if (users.find(u => u.email === email)) throw new Error('Bu e-posta zaten kayıtlı');
+        const user = { id: 'u_' + Date.now(), name, email, password: this._hash(password), birthDate, createdAt: Date.now(), plan: 'free' };
+        users.push(user);
+        localStorage.setItem('astromap_users', JSON.stringify(users));
+        const session = { ...user, password: undefined, loginAt: Date.now() };
+        localStorage.setItem(this._key, JSON.stringify(session));
+        return session;
+    },
+
+    logout() {
+        localStorage.removeItem(this._key);
+        this.updateUI();
+    },
+
+    updateUI() {
+        const user = this.getUser();
+        const navActions = document.querySelector('.nav-actions');
+        if (!navActions) return;
+        if (user) {
+            navActions.innerHTML = `
+                <span class="nav-user-name" title="${user.email}">✦ ${user.name?.split(' ')[0] || 'Kullanıcı'}</span>
+                <button class="btn-ghost" onclick="navigateTo('dashboard')" type="button">📊 Dashboard</button>
+                <button class="btn-ghost" onclick="AuthSystem.logout();showToast('\u00c7ıkış yapıldı')" type="button">Çıkış</button>
+            `;
+        } else {
+            navActions.innerHTML = `
+                <button class="btn-ghost" data-modal="login-modal" type="button">Giriş Yap</button>
+                <button class="btn-nav-primary" data-modal="signup-modal" type="button">Ücretsiz Başla</button>
+            `;
+        }
+    },
+
+    // AI history tracking
+    addToHistory(type, data) {
+        try {
+            const history = JSON.parse(localStorage.getItem(this._historyKey) || '[]');
+            history.unshift({ type, data: typeof data === 'string' ? data : JSON.stringify(data).slice(0, 200), date: new Date().toISOString() });
+            if (history.length > 50) history.length = 50;  // Keep last 50
+            localStorage.setItem(this._historyKey, JSON.stringify(history));
+        } catch { /* quota */ }
+    },
+
+    getHistory() {
+        try { return JSON.parse(localStorage.getItem(this._historyKey) || '[]'); } catch { return []; }
+    },
+
+    // Favorite cities
+    toggleFavorite(city) {
+        try {
+            const favs = JSON.parse(localStorage.getItem(this._favKey) || '[]');
+            const idx = favs.findIndex(f => f.city === city.city && f.country === city.country);
+            if (idx >= 0) { favs.splice(idx, 1); } else { favs.push({ city: city.city, country: city.country, score: city.score, region: city.region }); }
+            localStorage.setItem(this._favKey, JSON.stringify(favs));
+            return idx < 0;  // true = added, false = removed
+        } catch { return false; }
+    },
+
+    getFavorites() {
+        try { return JSON.parse(localStorage.getItem(this._favKey) || '[]'); } catch { return []; }
+    },
+
+    isFavorite(cityName) {
+        return this.getFavorites().some(f => f.city === cityName);
+    },
+
+    _getAllUsers() {
+        try { return JSON.parse(localStorage.getItem('astromap_users') || '[]'); } catch { return []; }
+    },
+
+    _hash(str) {
+        // Simple hash for localStorage auth (NOT for production)
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash |= 0;
+        }
+        return 'h_' + Math.abs(hash).toString(36);
+    }
+};
+
+// ═══════════════════════════════════════
 // KEYBOARD SHORTCUTS SYSTEM
 // ═══════════════════════════════════════
 const KeyboardShortcuts = {
@@ -172,6 +320,8 @@ function navigateTo(pageId) {
 
     // Load page data
     if (pageId === 'moon') loadMoonCalendar();
+    if (pageId === 'retrograde') loadRetrogradeCalendar();
+    if (pageId === 'dashboard') loadDashboard();
     
     // Track visited pages (remove "Yeni" badges)
     try {
@@ -225,10 +375,16 @@ async function callAI(endpoint, body, useCache = true) {
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || 'AI isteği başarısız');
     
-    // Cache the response
-    if (useCache) AICache.set(endpoint, body, data.data);
+    // Sanitize all string fields in AI response to prevent XSS
+    const sanitized = sanitizeData(data.data);
     
-    return data.data;
+    // Cache the response
+    if (useCache) AICache.set(endpoint, body, sanitized);
+
+    // Track in history
+    AuthSystem.addToHistory(endpoint, body);
+    
+    return sanitized;
 }
 
 function showAILoading(container, message) {
@@ -347,6 +503,7 @@ function resetApp() {
 // STARS ANIMATION
 // ═══════════════════════════════════════
 function initStars() {
+    if (reducedMotion) return;  // Respect prefers-reduced-motion
     const canvas = document.getElementById('stars-canvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -509,26 +666,48 @@ function showToast(msg, duration = 3000) {
 }
 
 // ═══════════════════════════════════════
-// AUTH (UI only — backend later)
+// AUTH (Real localStorage auth)
 // ═══════════════════════════════════════
 function handleLogin(e) {
     e.preventDefault();
-    showToast('Giriş başarılı! (Demo mod) ✨');
-    closeModal('login-modal');
+    try {
+        const form = e.target;
+        const email = form.querySelector('input[type="email"]').value.trim();
+        const password = form.querySelector('input[type="password"]').value;
+        if (!email || !password) { showToast('Lütfen tüm alanları doldurun'); return; }
+        const user = AuthSystem.login(email, password);
+        showToast(`Hoş geldin, ${user.name}! ✨`);
+        closeModal('login-modal');
+        AuthSystem.updateUI();
+        SoundFX.play('success');
+    } catch (err) {
+        showToast(err.message);
+    }
 }
 
 function handleSignup(e) {
     e.preventDefault();
-    showToast('Hesap oluşturuldu! Hoş geldin ✨');
-    closeModal('signup-modal');
+    try {
+        const form = e.target;
+        const inputs = form.querySelectorAll('input');
+        const name = inputs[0].value.trim();
+        const birthDate = inputs[1].value;
+        const email = inputs[2].value.trim();
+        const password = inputs[3].value;
+        if (!name || !email || !password) { showToast('Lütfen tüm alanları doldurun'); return; }
+        if (password.length < 6) { showToast('Şifre en az 6 karakter olmalı'); return; }
+        const user = AuthSystem.signup(name, email, password, birthDate);
+        showToast(`Hesabın oluşturuldu! Hoş geldin, ${user.name} ✨`);
+        closeModal('signup-modal');
+        AuthSystem.updateUI();
+        SoundFX.play('success');
+    } catch (err) {
+        showToast(err.message);
+    }
 }
 
 function socialLogin(provider) {
-    showToast(`${provider === 'google' ? 'Google' : 'Apple'} ile giriş yapılıyor... (Demo mod)`);
-    setTimeout(() => {
-        closeModal('login-modal');
-        closeModal('signup-modal');
-    }, 1000);
+    showToast(`${provider === 'google' ? 'Google' : 'Apple'} ile giriş yakında aktif olacak ✨`);
 }
 
 // ═══════════════════════════════════════
@@ -696,8 +875,8 @@ window.addEventListener('message', (e) => {
 // ═══════════════════════════════════════
 function showQuickEnergy() {
     const now = new Date();
-    const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const dateStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth()+1).padStart(2,'0')}-${String(now.getUTCDate()).padStart(2,'0')}`;
+    const timeStr = `${String(now.getUTCHours()).padStart(2,'0')}:${String(now.getUTCMinutes()).padStart(2,'0')}`;
     const positions = AstroEngine.calculatePlanetPositions(
         AstroEngine.toJulianDay(dateStr, timeStr)
     );
@@ -777,13 +956,23 @@ function updateQuickEnergyBadge() {
 document.addEventListener('DOMContentLoaded', () => setTimeout(updateQuickEnergyBadge, 500));
 
 // ═══════════════════════════════════════
-// DAILY HOROSCOPE — AI POWERED
+// DAILY HOROSCOPE — AI POWERED (daily / weekly / monthly)
 // ═══════════════════════════════════════
+let selectedHoroscopePeriod = 'daily';
+
+function selectPeriod(btn) {
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedHoroscopePeriod = btn.dataset.period || 'daily';
+}
+
 async function showDailyHoroscope() {
     const birthDate = document.getElementById('daily-birth-date').value;
     const birthTime = document.getElementById('daily-birth-time').value;
     if (!birthDate) { showToast('Lütfen doğum tarihini gir'); return; }
 
+    const period = selectedHoroscopePeriod || 'daily';
+    const periodLabel = { daily: 'Günlük', weekly: 'Haftalık', monthly: 'Aylık' }[period] || 'Günlük';
     const sunSign = getSunSignFromDate(birthDate);
     const signSymbols = { 'Koç':'♈','Boğa':'♉','İkizler':'♊','Yengeç':'♋','Aslan':'♌','Başak':'♍','Terazi':'♎','Akrep':'♏','Yay':'♐','Oğlak':'♑','Kova':'♒','Balık':'♓' };
     const signEmoji = signSymbols[sunSign] || '✦';
@@ -807,7 +996,7 @@ async function showDailyHoroscope() {
     `;
 
     try {
-        const data = await callAI('daily-horoscope', { birthDate, birthTime, sunSign });
+        const data = await callAI('daily-horoscope', { birthDate, birthTime, sunSign, period });
         SoundFX.play('reveal');
         const h = data;
         const scores = h.scores || {};
@@ -819,6 +1008,7 @@ async function showDailyHoroscope() {
                         <div class="daily-sign-aura"></div>
                         <span class="daily-sign-icon">${signEmoji}</span>
                         <div class="daily-sign-name">${sunSign}</div>
+                        <div class="daily-period-badge">${periodLabel} Yorum</div>
                         <div class="daily-date">${new Date().toLocaleDateString('tr-TR', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}</div>
                     </div>
                     <div class="daily-scores">
@@ -2535,11 +2725,242 @@ async function showDreamInterpretation() {
 }
 
 // ═══════════════════════════════════════
+// RETROGRADE CALENDAR
+// ═══════════════════════════════════════
+function loadRetrogradeCalendar() {
+    const el = document.getElementById('retrograde-content');
+    if (!el) return;
+
+    // 2025 retrograde periods (pre-calculated for accuracy)
+    const retrogrades = [
+        { planet: 'Merkür ☿', periods: [
+            { start: '2025-03-15', end: '2025-04-07', sign: 'Balık ♓' },
+            { start: '2025-07-18', end: '2025-08-11', sign: 'Aslan ♌' },
+            { start: '2025-11-09', end: '2025-11-29', sign: 'Yay ♐' }
+        ], effect: 'İletişim, teknoloji, seyahat aksaklıkları. Sözleşme imzalamayın.', color: '#87CEEB' },
+        { planet: 'Venüs ♀', periods: [
+            { start: '2025-03-02', end: '2025-04-13', sign: 'Koç ♈ → Balık ♓' }
+        ], effect: 'Aşk ve ilişkilerde yeniden değerlendirme. Eski aşklar geri dönebilir.', color: '#ff6b9d' },
+        { planet: 'Mars ♂', periods: [
+            { start: '2025-01-06', end: '2025-02-24', sign: 'Yengeç ♋ → İkizler ♊' }
+        ], effect: 'Enerji düşüklüğü, motivasyon kaybı. Büyük eylemleri erteleyin.', color: '#ff4444' },
+        { planet: 'Jüpiter ♃', periods: [
+            { start: '2025-11-11', end: '2026-03-10', sign: 'Yengeç ♋' }
+        ], effect: 'Büyüme ve fırsatların yavaşlaması. İçsel genişleme dönemi.', color: '#ffd76e' },
+        { planet: 'Satürn ♄', periods: [
+            { start: '2025-07-13', end: '2025-11-28', sign: 'Balık ♓' }
+        ], effect: 'Sorumluluklar ve yapı yeniden sorgulanıyor. Sabır gerekli.', color: '#c9a0ff' },
+        { planet: 'Uranüs ♅', periods: [
+            { start: '2025-09-06', end: '2026-02-04', sign: 'Boğa ♉' }
+        ], effect: 'Beklenmedik değişimler yavaşlıyor. İç devrim zamanı.', color: '#00CED1' },
+        { planet: 'Neptün ♆', periods: [
+            { start: '2025-07-04', end: '2025-12-10', sign: 'Balık ♓ → Kova ♒' }
+        ], effect: 'Hayaller ve illüzyonlar netleşiyor. Gerçeklerle yüzleşme.', color: '#4169E1' },
+        { planet: 'Plüton ♇', periods: [
+            { start: '2025-05-04', end: '2025-10-13', sign: 'Kova ♒' }
+        ], effect: 'Derin dönüşümler yavaşlıyor. İç gücü keşfetme zamanı.', color: '#800020' }
+    ];
+
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Check which planets are currently retrograde
+    const activeRetros = [];
+    retrogrades.forEach(r => {
+        r.periods.forEach(p => {
+            if (today >= p.start && today <= p.end) {
+                activeRetros.push({ planet: r.planet, sign: p.sign, end: p.end, color: r.color });
+            }
+        });
+    });
+
+    el.innerHTML = `
+        <div class="retro-dashboard">
+            <div class="retro-status ${activeRetros.length > 0 ? 'retro-active' : 'retro-clear'}">
+                <div class="retro-status-icon">${activeRetros.length > 0 ? '⚠️' : '✅'}</div>
+                <h3>${activeRetros.length > 0 ? `${activeRetros.length} Gezegen Retroda!` : 'Şu an aktif retro yok'}</h3>
+                ${activeRetros.map(a => `
+                    <div class="retro-active-item" style="border-left: 3px solid ${a.color}">
+                        <strong>${a.planet}</strong> ${a.sign} burcunda
+                        <small>Bitiş: ${new Date(a.end).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}</small>
+                    </div>
+                `).join('')}
+            </div>
+
+            <h3 class="retro-section-title">📅 2025 Retro Takvimi</h3>
+            <div class="retro-timeline">
+                ${retrogrades.map(r => `
+                    <div class="retro-planet-row">
+                        <div class="retro-planet-name" style="color:${r.color}">${r.planet}</div>
+                        <div class="retro-periods">
+                            ${r.periods.map(p => {
+                                const isActive = today >= p.start && today <= p.end;
+                                const isPast = today > p.end;
+                                return `<div class="retro-period ${isActive ? 'active' : ''} ${isPast ? 'past' : ''}" style="border-color:${r.color}">
+                                    <span class="retro-dates">${formatRetroDate(p.start)} — ${formatRetroDate(p.end)}</span>
+                                    <span class="retro-sign">${p.sign}</span>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                        <div class="retro-effect">${r.effect}</div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div class="retro-tips">
+                <h3>💡 Retro Döneminde Ne Yapmalı?</h3>
+                <div class="retro-tips-grid">
+                    <div class="retro-tip">✅ Eski projeleri tamamla</div>
+                    <div class="retro-tip">✅ Yedekleme yap</div>
+                    <div class="retro-tip">✅ Eski dostlarla iletişime geç</div>
+                    <div class="retro-tip">✅ İç gözlem & meditasyon</div>
+                    <div class="retro-tip">❌ Yeni sözleşme imzalama</div>
+                    <div class="retro-tip">❌ Büyük satın alım yapma</div>
+                    <div class="retro-tip">❌ Yeni ilişki başlatma</div>
+                    <div class="retro-tip">❌ Teknoloji yatırımı</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function formatRetroDate(dateStr) {
+    return new Date(dateStr).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+}
+
+// ═══════════════════════════════════════
+// SHAREABLE BIRTH CHART LINK
+// ═══════════════════════════════════════
+function generateShareLink() {
+    const birthDate = document.getElementById('birth-date')?.value;
+    const birthTime = document.getElementById('birth-time')?.value || '12:00';
+    const birthCity = document.getElementById('birth-city')?.value || '';
+    if (!birthDate) { showToast('Önce doğum bilgileri gir'); return; }
+
+    const payload = btoa(JSON.stringify({ d: birthDate, t: birthTime, c: birthCity }));
+    const url = `${window.location.origin}${window.location.pathname}?chart=${payload}`;
+
+    navigator.clipboard.writeText(url).then(() => {
+        showToast('Doğum haritası linki kopyalandı! 🔗');
+    }).catch(() => {
+        // Fallback
+        prompt('Linki kopyala:', url);
+    });
+}
+
+function handleShareLink() {
+    const params = new URLSearchParams(window.location.search);
+    const chartParam = params.get('chart');
+    if (!chartParam) return;
+
+    try {
+        const { d, t, c } = JSON.parse(atob(chartParam));
+        if (d) {
+            const dateEl = document.getElementById('birth-date');
+            const timeEl = document.getElementById('birth-time');
+            const cityEl = document.getElementById('birth-city');
+            if (dateEl) dateEl.value = d;
+            if (timeEl) timeEl.value = t;
+            if (cityEl) cityEl.value = c;
+            showToast('Paylaşılan doğum haritası yüklendi ✨');
+            navigateTo('chart');
+        }
+    } catch { /* invalid link */ }
+}
+
+// ═══════════════════════════════════════
+// DASHBOARD — HISTORY & FAVORITES
+// ═══════════════════════════════════════
+function loadDashboard() {
+    const el = document.getElementById('dashboard-content');
+    if (!el) return;
+
+    const user = AuthSystem.getUser();
+    const history = AuthSystem.getHistory();
+    const favorites = AuthSystem.getFavorites();
+
+    const typeLabels = {
+        'daily-horoscope': '🌟 Günlük Yorum',
+        'compatibility': '💕 Uyum Testi',
+        'tarot': '🃏 Tarot',
+        'crystal-guide': '💎 Kristal',
+        'dream': '💭 Rüya',
+        'fortune': '☕ Kahve Falı',
+        'city-insight': '🏙️ Şehir',
+        'health': '🩺 Sağlık'
+    };
+
+    el.innerHTML = `
+        <div class="dashboard-wrap">
+            ${user ? `
+                <div class="dash-user-card">
+                    <div class="dash-avatar">✦</div>
+                    <div class="dash-user-info">
+                        <h3>${sanitize(user.name || 'Kullanıcı')}</h3>
+                        <span>${sanitize(user.email || '')}</span>
+                        ${user.birthDate ? `<span>🎂 ${new Date(user.birthDate).toLocaleDateString('tr-TR')}</span>` : ''}
+                    </div>
+                </div>
+            ` : `
+                <div class="dash-login-prompt">
+                    <p>Geçmişini ve favorilerini görmek için giriş yap.</p>
+                    <button class="btn-hero" data-modal="login-modal" type="button">Giriş Yap</button>
+                </div>
+            `}
+
+            <div class="dash-stats">
+                <div class="dash-stat"><span class="dash-stat-num">${history.length}</span><span class="dash-stat-label">AI Sorgu</span></div>
+                <div class="dash-stat"><span class="dash-stat-num">${favorites.length}</span><span class="dash-stat-label">Favori Şehir</span></div>
+                <div class="dash-stat"><span class="dash-stat-num">${new Set(history.map(h => h.type)).size}</span><span class="dash-stat-label">Kullanılan Özellik</span></div>
+            </div>
+
+            ${favorites.length > 0 ? `
+                <div class="dash-section">
+                    <h3>⭐ Favori Şehirler</h3>
+                    <div class="dash-favorites">
+                        ${favorites.map(f => `
+                            <div class="dash-fav-card">
+                                <strong>${sanitize(f.city)}</strong>
+                                <span>${sanitize(f.country)}</span>
+                                ${f.score ? `<span class="dash-fav-score">${f.score}%</span>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+
+            ${history.length > 0 ? `
+                <div class="dash-section">
+                    <h3>📜 Son Sorgular</h3>
+                    <div class="dash-history">
+                        ${history.slice(0, 20).map(h => `
+                            <div class="dash-history-item">
+                                <span class="dash-history-type">${typeLabels[h.type] || h.type}</span>
+                                <span class="dash-history-date">${new Date(h.date).toLocaleDateString('tr-TR', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : `
+                <div class="dash-empty">
+                    <p>Henüz sorgu geçmişin yok. AI özelliklerini kullanmaya başla! ✨</p>
+                </div>
+            `}
+        </div>
+    `;
+}
+
+// ═══════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
     initStars();
     initBirthCityDropdown();
+
+    // Auth: restore session UI
+    AuthSystem.updateUI();
+
+    // Share link: check URL for shared chart
+    handleShareLink();
 
     // Animate city count on landing
     const countEl = document.getElementById('city-count');
@@ -2564,13 +2985,13 @@ document.addEventListener('DOMContentLoaded', () => {
     initFeatureCardGlow();
 
     // Floating hero particles
-    initHeroParticles();
+    if (!reducedMotion) initHeroParticles();
 
     // Magnetic button effect
-    initMagneticButtons();
+    if (!reducedMotion) initMagneticButtons();
 
     // Smooth cursor trail
-    initCursorTrail();
+    if (!reducedMotion) initCursorTrail();
 
     // Navbar scroll progress
     initScrollProgress();
@@ -2672,6 +3093,7 @@ let shootingStarPrevX = 0, shootingStarPrevY = 0;
 let shootingStarAnimId = null;
 
 function toggleShootingStarCursor() {
+    if (reducedMotion) { showToast('Azaltılmış hareket modu aktif — efekt devre dışı'); return; }
     shootingStarCursorEnabled = !shootingStarCursorEnabled;
     const btn = document.getElementById('shooting-star-toggle');
     if (btn) btn.classList.toggle('active', shootingStarCursorEnabled);
@@ -3116,6 +3538,8 @@ function initKeyboardShortcuts() {
     KeyboardShortcuts.register('5', 'AI Tarot', () => navigateTo('tarot'));
     KeyboardShortcuts.register('6', 'Kristal Rehberi', () => navigateTo('crystal'));
     KeyboardShortcuts.register('7', 'Rüya Yorumu', () => navigateTo('dream'));
+    KeyboardShortcuts.register('8', 'Retro Takvim', () => navigateTo('retrograde'));
+    KeyboardShortcuts.register('9', 'Dashboard', () => navigateTo('dashboard'));
     KeyboardShortcuts.register('escape', 'Modalları Kapat', () => {
         document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
     });

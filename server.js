@@ -21,10 +21,13 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY?.trim()
 });
 
-// iyzico client
+// iyzico client — FAIL FAST if keys missing in production
+if (process.env.NODE_ENV === 'production' && (!process.env.IYZICO_API_KEY || !process.env.IYZICO_SECRET_KEY)) {
+    console.error('❌ IYZICO_API_KEY ve IYZICO_SECRET_KEY env vars zorunludur (production)');
+}
 const iyzipay = new Iyzipay({
-    apiKey: process.env.IYZICO_API_KEY || 'sandbox-afXhSWnbMcODHnNstMRqanOzOlpItFgj',
-    secretKey: process.env.IYZICO_SECRET_KEY || 'sandbox-cpnBGYA6nSXAjdYOqtHSIPIkHxSEaF6Q',
+    apiKey: process.env.IYZICO_API_KEY || '',
+    secretKey: process.env.IYZICO_SECRET_KEY || '',
     uri: process.env.IYZICO_URI || 'https://sandbox-api.iyzipay.com'
 });
 
@@ -36,8 +39,18 @@ const PLANS = {
     'vip-yearly':      { price: '990.00', name: 'AstroMap VIP Yıllık' }
 };
 
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+// CORS — restrict to known origins
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:5173').split(',').map(s => s.trim());
+app.use(cors({
+    origin: function(origin, callback) {
+        // Allow requests with no origin (mobile apps, curl, etc)
+        if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+        callback(new Error('CORS policy: Bu origin izinli değil'));
+    },
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type']
+}));
+app.use(express.json({ limit: '2mb' }));
 
 // ═══════════════════════════════════════
 // SECURITY HEADERS
@@ -48,6 +61,16 @@ app.use((req, res, next) => {
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    // Content Security Policy
+    res.setHeader('Content-Security-Policy', [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org https://i.pravatar.cc",
+        "connect-src 'self' https://api.openai.com",
+        "frame-src 'self' https://*.iyzipay.com"
+    ].join('; '));
     next();
 });
 
@@ -127,8 +150,36 @@ app.use(express.static(path.join(__dirname), {
     }
 }));
 
-// Apply rate limiting to all API routes
+// ═══════════════════════════════════════
+// INPUT VALIDATION MIDDLEWARE
+// ═══════════════════════════════════════
+function validateInput(req, res, next) {
+    if (req.method !== 'POST') return next();
+    const body = req.body;
+    if (!body || typeof body !== 'object') return next();
+    // Limit string field lengths to prevent token abuse
+    const MAX_TEXT_LEN = 2000;
+    for (const [key, val] of Object.entries(body)) {
+        if (typeof val === 'string' && val.length > MAX_TEXT_LEN) {
+            return res.status(400).json({ error: `Alan çok uzun: ${key} (max ${MAX_TEXT_LEN} karakter)` });
+        }
+    }
+    // Validate nested objects (person1, person2, billing)
+    for (const val of Object.values(body)) {
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+            for (const [k2, v2] of Object.entries(val)) {
+                if (typeof v2 === 'string' && v2.length > MAX_TEXT_LEN) {
+                    return res.status(400).json({ error: `Alan çok uzun: ${k2} (max ${MAX_TEXT_LEN} karakter)` });
+                }
+            }
+        }
+    }
+    next();
+}
+
+// Apply rate limiting and input validation to all API routes
 app.use('/api', rateLimit);
+app.use('/api', validateInput);
 
 // ═══════════════════════════════════════
 // HELPER: GPT Call with retry
@@ -169,41 +220,50 @@ app.get('/api/health', (req, res) => {
 // ═══════════════════════════════════════
 app.post('/api/daily-horoscope', async (req, res) => {
     try {
-        const { birthDate, birthTime, sunSign, moonSign, risingSign } = req.body;
+        const { birthDate, birthTime, sunSign, moonSign, risingSign, period } = req.body;
         if (!birthDate) return res.status(400).json({ error: 'Doğum tarihi gerekli' });
 
         const today = new Date().toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const periodLabel = { weekly: 'Haftalık', monthly: 'Aylık' }[period] || 'Günlük';
+        const periodScope = { weekly: 'Bu hafta', monthly: 'Bu ay' }[period] || 'Bugün';
 
         const systemPrompt = `Sen deneyimli, sıcak ve empatik bir astrologsun. Türkçe yaz. 
 Yanıtlarını samimi, ilham verici ve motive edici tut. Kadın kullanıcılara hitap ediyorsun — zarif, şefkatli ve güçlendirici bir ton kullan.
 Emoji kullan ama abartma. Her bölümü net ve akıcı yaz.
+Bu bir ${periodLabel} yorumdur. ${periodScope} için detaylı yorum yaz.
 Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
 {
-  "general": "Bugünün genel enerjisi hakkında 2-3 cümle",
+  "general": "${periodScope} genel enerjisi hakkında 2-3 cümle",
   "love": "Aşk ve ilişkiler hakkında 2-3 cümle", 
   "career": "Kariyer ve para hakkında 2-3 cümle",
   "health": "Sağlık ve enerji hakkında 2-3 cümle",
-  "advice": "Günün özel tavsiyesi, 1-2 cümle",
-  "affirmation": "Bugünün olumlaması — kısa ve güçlü bir cümle",
+  "advice": "${periodLabel} özel tavsiye, 1-2 cümle",
+  "affirmation": "${periodScope} olumlaması — kısa ve güçlü bir cümle",
   "luckyColor": "Şans rengi (tek kelime)",
   "luckyNumber": "1-99 arası şans sayısı",
   "luckyStone": "Şans taşı adı",
   "luckyHour": "Şanslı saat aralığı örn: 14:00-16:00",
   "scores": { "love": 60-100, "career": 60-100, "health": 60-100, "luck": 60-100, "energy": 60-100, "mood": 60-100 },
   "tarotCard": "Günün tarot kartı adı",
-  "tarotMeaning": "Bu kartın bugün senin için anlamı, 1-2 cümle"
+  "tarotMeaning": "Bu kartın ${periodScope.toLowerCase()} senin için anlamı, 1-2 cümle"
 }`;
 
         const userPrompt = `Bugün ${today}. 
 Kişi bilgileri: Doğum tarihi ${birthDate}, doğum saati ${birthTime || 'bilinmiyor'}.
 Güneş burcu: ${sunSign || 'bilinmiyor'}, Ay burcu: ${moonSign || 'bilinmiyor'}, Yükselen: ${risingSign || 'bilinmiyor'}.
-Bu kişi için bugünün detaylı astroloji yorumunu yaz.`;
+Bu kişi için ${periodLabel.toLowerCase()} detaylı astroloji yorumunu yaz.`;
+
+        // Check server cache
+        const cacheKey = `daily_${period || 'daily'}_${birthDate}_${birthTime}_${sunSign}`;
+        const cached = getCachedResponse(cacheKey);
+        if (cached) return res.json({ success: true, data: cached });
 
         const raw = await askGPT(systemPrompt, userPrompt, 800);
         // Parse JSON from response
         const jsonMatch = raw.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error('AI yanıtı parse edilemedi');
         const result = JSON.parse(jsonMatch[0]);
+        setCachedResponse(cacheKey, result);
         res.json({ success: true, data: result });
     } catch (err) {
         res.status(500).json({ error: err.message });

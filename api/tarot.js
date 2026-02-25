@@ -1,4 +1,4 @@
-const { askGPT, parseJSON, corsHeaders } = require('./_lib/openai');
+const { askGPT, parseJSON, corsHeaders, validateTextLength } = require('./_lib/openai');
 
 module.exports = async (req, res) => {
     corsHeaders(res);
@@ -7,6 +7,7 @@ module.exports = async (req, res) => {
 
     try {
         const { birthDate, sunSign, question } = req.body;
+        if (question) validateTextLength(question, 1000);
 
         const systemPrompt = `Sen deneyimli ve gizemli bir tarot okuyucususun. Türkçe yaz.
 Mistik ama sıcak bir ton kullan. Kadın kullanıcılara hitap ediyorsun.

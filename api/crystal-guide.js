@@ -1,4 +1,4 @@
-const { askGPT, parseJSON, corsHeaders } = require('./_lib/openai');
+const { askGPT, parseJSON, corsHeaders, validateTextLength } = require('./_lib/openai');
 
 module.exports = async (req, res) => {
     corsHeaders(res);
@@ -8,6 +8,7 @@ module.exports = async (req, res) => {
     try {
         const { birthDate, sunSign, moonSign, mood } = req.body;
         if (!birthDate) return res.status(400).json({ error: 'Doğum tarihi gerekli' });
+        if (mood) validateTextLength(mood, 200);
 
         // Pick a random crystal pool to force variety
         const crystalPools = [

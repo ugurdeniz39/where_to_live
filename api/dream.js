@@ -1,4 +1,4 @@
-const { askGPT, parseJSON, corsHeaders } = require('./_lib/openai');
+const { askGPT, parseJSON, corsHeaders, validateTextLength } = require('./_lib/openai');
 
 module.exports = async (req, res) => {
     corsHeaders(res);
@@ -8,6 +8,7 @@ module.exports = async (req, res) => {
     try {
         const { dream, sunSign } = req.body;
         if (!dream) return res.status(400).json({ error: 'Rüya açıklaması gerekli' });
+        validateTextLength(dream, 2000);
 
         const systemPrompt = `Sen rüya yorumu ve astroloji konusunda uzman bir spiritüel rehbersin. Türkçe yaz.
 Gizemli, derin ama sıcak bir ton kullan. Kadın kullanıcılara hitap ediyorsun.

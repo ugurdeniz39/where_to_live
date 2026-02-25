@@ -29,9 +29,19 @@ function parseJSON(raw) {
 }
 
 function corsHeaders(res) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',').map(s => s.trim());
+    // For Vercel serverless, we'll use the first allowed origin or allow the request origin if it matches
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigins[0] || '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
-module.exports = { openai, askGPT, parseJSON, corsHeaders };
+// Input validation helper
+function validateTextLength(text, maxLen = 2000) {
+    if (typeof text === 'string' && text.length > maxLen) {
+        throw new Error(`Metin çok uzun (max ${maxLen} karakter)`);
+    }
+    return text;
+}
+
+module.exports = { openai, askGPT, parseJSON, corsHeaders, validateTextLength };

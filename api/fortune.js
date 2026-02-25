@@ -1,4 +1,4 @@
-const { openai, parseJSON, corsHeaders } = require('./_lib/openai');
+const { openai, parseJSON, corsHeaders, validateTextLength } = require('./_lib/openai');
 
 module.exports = async (req, res) => {
     corsHeaders(res);
@@ -8,6 +8,7 @@ module.exports = async (req, res) => {
     try {
         const { image, cup, sunSign, status } = req.body;
         if (!image) return res.status(400).json({ error: 'Fincan fotoğrafı gerekli' });
+        if (cup) validateTextLength(cup, 500);
 
         const systemPrompt = `Sen deneyimli bir Türk kahve falcısısın. Geleneksel Türk kahve falı geleneğine hakimsin.
 Sıcak, samimi, gizemli ama umut verici bir ton kullan. Türkçe yaz.

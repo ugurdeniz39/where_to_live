@@ -50,18 +50,69 @@ const AstroEngine = (function () {
 
     const LINE_TYPE_WEIGHTS = { mc: 1.0, ic: 0.8, asc: 0.9, dsc: 0.7 };
 
-    // ── BIRTH LOCATIONS ──
+    // ── BIRTH LOCATIONS (expanded — 100+ cities) ──
     const BIRTH_LOCATIONS = {
-        istanbul: { lat: 41.01, lon: 28.98 }, ankara: { lat: 39.93, lon: 32.86 },
-        izmir: { lat: 38.42, lon: 27.14 }, antalya: { lat: 36.90, lon: 30.70 },
-        bursa: { lat: 40.19, lon: 29.06 }, london: { lat: 51.51, lon: -0.13 },
-        newyork: { lat: 40.71, lon: -74.01 }, berlin: { lat: 52.52, lon: 13.41 },
-        tokyo: { lat: 35.68, lon: 139.69 }, paris: { lat: 48.86, lon: 2.35 },
-        moscow: { lat: 55.76, lon: 37.62 }, dubai: { lat: 25.20, lon: 55.27 },
-        amsterdam: { lat: 52.37, lon: 4.90 }, barcelona: { lat: 41.39, lon: 2.17 },
-        roma: { lat: 41.90, lon: 12.50 }, mumbai: { lat: 19.08, lon: 72.88 },
-        beijing: { lat: 39.90, lon: 116.40 }, sydney: { lat: -33.87, lon: 151.21 },
-        cairo: { lat: 30.04, lon: 31.24 }, buenosaires: { lat: -34.60, lon: -58.38 }
+        // Turkey
+        istanbul: { lat: 41.01, lon: 28.98, tz: 3 }, ankara: { lat: 39.93, lon: 32.86, tz: 3 },
+        izmir: { lat: 38.42, lon: 27.14, tz: 3 }, antalya: { lat: 36.90, lon: 30.70, tz: 3 },
+        bursa: { lat: 40.19, lon: 29.06, tz: 3 }, adana: { lat: 37.00, lon: 35.32, tz: 3 },
+        gaziantep: { lat: 37.07, lon: 37.38, tz: 3 }, konya: { lat: 37.87, lon: 32.48, tz: 3 },
+        mersin: { lat: 36.80, lon: 34.63, tz: 3 }, diyarbakir: { lat: 37.92, lon: 40.23, tz: 3 },
+        kayseri: { lat: 38.73, lon: 35.49, tz: 3 }, eskisehir: { lat: 39.78, lon: 30.52, tz: 3 },
+        trabzon: { lat: 41.00, lon: 39.72, tz: 3 }, samsun: { lat: 41.29, lon: 36.33, tz: 3 },
+        denizli: { lat: 37.77, lon: 29.09, tz: 3 }, mugla: { lat: 37.22, lon: 28.36, tz: 3 },
+        erzurum: { lat: 39.90, lon: 41.27, tz: 3 }, malatya: { lat: 38.35, lon: 38.31, tz: 3 },
+        bodrum: { lat: 37.04, lon: 27.43, tz: 3 },
+        // Europe
+        london: { lat: 51.51, lon: -0.13, tz: 0 }, berlin: { lat: 52.52, lon: 13.41, tz: 1 },
+        paris: { lat: 48.86, lon: 2.35, tz: 1 }, amsterdam: { lat: 52.37, lon: 4.90, tz: 1 },
+        barcelona: { lat: 41.39, lon: 2.17, tz: 1 }, roma: { lat: 41.90, lon: 12.50, tz: 1 },
+        madrid: { lat: 40.42, lon: -3.70, tz: 1 }, vienna: { lat: 48.21, lon: 16.37, tz: 1 },
+        prague: { lat: 50.08, lon: 14.44, tz: 1 }, budapest: { lat: 47.50, lon: 19.04, tz: 1 },
+        zurich: { lat: 47.38, lon: 8.54, tz: 1 }, munich: { lat: 48.14, lon: 11.58, tz: 1 },
+        brussels: { lat: 50.85, lon: 4.35, tz: 1 }, copenhagen: { lat: 55.68, lon: 12.57, tz: 1 },
+        oslo: { lat: 59.91, lon: 10.75, tz: 1 }, stockholm: { lat: 59.33, lon: 18.07, tz: 1 },
+        helsinki: { lat: 60.17, lon: 24.94, tz: 2 }, athens: { lat: 37.98, lon: 23.73, tz: 2 },
+        bucharest: { lat: 44.43, lon: 26.10, tz: 2 }, warsaw: { lat: 52.23, lon: 21.01, tz: 1 },
+        lisbon: { lat: 38.72, lon: -9.14, tz: 0 }, dublin: { lat: 53.35, lon: -6.26, tz: 0 },
+        edinburgh: { lat: 55.95, lon: -3.19, tz: 0 }, milan: { lat: 45.46, lon: 9.19, tz: 1 },
+        hamburg: { lat: 53.55, lon: 10.00, tz: 1 }, lyon: { lat: 45.76, lon: 4.84, tz: 1 },
+        moscow: { lat: 55.76, lon: 37.62, tz: 3 }, stpetersburg: { lat: 59.93, lon: 30.32, tz: 3 },
+        kyiv: { lat: 50.45, lon: 30.52, tz: 2 }, sofia: { lat: 42.70, lon: 23.32, tz: 2 },
+        belgrade: { lat: 44.79, lon: 20.47, tz: 1 }, zagreb: { lat: 45.81, lon: 15.98, tz: 1 },
+        // Americas
+        newyork: { lat: 40.71, lon: -74.01, tz: -5 }, losangeles: { lat: 34.05, lon: -118.24, tz: -8 },
+        chicago: { lat: 41.88, lon: -87.63, tz: -6 }, houston: { lat: 29.76, lon: -95.37, tz: -6 },
+        miami: { lat: 25.76, lon: -80.19, tz: -5 }, sanfrancisco: { lat: 37.77, lon: -122.42, tz: -8 },
+        seattle: { lat: 47.61, lon: -122.33, tz: -8 }, boston: { lat: 42.36, lon: -71.06, tz: -5 },
+        washington: { lat: 38.91, lon: -77.04, tz: -5 }, toronto: { lat: 43.65, lon: -79.38, tz: -5 },
+        vancouver: { lat: 49.28, lon: -123.12, tz: -8 }, montreal: { lat: 45.50, lon: -73.57, tz: -5 },
+        mexicocity: { lat: 19.43, lon: -99.13, tz: -6 }, buenosaires: { lat: -34.60, lon: -58.38, tz: -3 },
+        saopaulo: { lat: -23.55, lon: -46.63, tz: -3 }, bogota: { lat: 4.71, lon: -74.07, tz: -5 },
+        lima: { lat: -12.05, lon: -77.04, tz: -5 }, santiago: { lat: -33.45, lon: -70.67, tz: -4 },
+        // Asia & Middle East
+        tokyo: { lat: 35.68, lon: 139.69, tz: 9 }, beijing: { lat: 39.90, lon: 116.40, tz: 8 },
+        shanghai: { lat: 31.23, lon: 121.47, tz: 8 }, seoul: { lat: 37.57, lon: 126.98, tz: 9 },
+        mumbai: { lat: 19.08, lon: 72.88, tz: 5.5 }, delhi: { lat: 28.61, lon: 77.21, tz: 5.5 },
+        bangalore: { lat: 12.97, lon: 77.59, tz: 5.5 }, dubai: { lat: 25.20, lon: 55.27, tz: 4 },
+        abudhabi: { lat: 24.45, lon: 54.65, tz: 4 }, riyadh: { lat: 24.69, lon: 46.72, tz: 3 },
+        tehran: { lat: 35.69, lon: 51.39, tz: 3.5 }, baghdad: { lat: 33.31, lon: 44.37, tz: 3 },
+        singapore: { lat: 1.35, lon: 103.82, tz: 8 }, bangkok: { lat: 13.76, lon: 100.50, tz: 7 },
+        jakarta: { lat: -6.21, lon: 106.85, tz: 7 }, kualalumpur: { lat: 3.14, lon: 101.69, tz: 8 },
+        hongkong: { lat: 22.32, lon: 114.17, tz: 8 }, taipei: { lat: 25.03, lon: 121.57, tz: 8 },
+        osaka: { lat: 34.69, lon: 135.50, tz: 9 }, manila: { lat: 14.60, lon: 120.98, tz: 8 },
+        hanoi: { lat: 21.03, lon: 105.85, tz: 7 }, baku: { lat: 40.41, lon: 49.87, tz: 4 },
+        tbilisi: { lat: 41.72, lon: 44.79, tz: 4 }, yerevan: { lat: 40.18, lon: 44.51, tz: 4 },
+        // Africa
+        cairo: { lat: 30.04, lon: 31.24, tz: 2 }, lagos: { lat: 6.52, lon: 3.38, tz: 1 },
+        nairobi: { lat: -1.29, lon: 36.82, tz: 3 }, capetown: { lat: -33.93, lon: 18.42, tz: 2 },
+        johannesburg: { lat: -26.20, lon: 28.05, tz: 2 }, casablanca: { lat: 33.57, lon: -7.59, tz: 1 },
+        tunis: { lat: 36.81, lon: 10.17, tz: 1 }, algiers: { lat: 36.75, lon: 3.04, tz: 1 },
+        addisababa: { lat: 9.02, lon: 38.75, tz: 3 }, accra: { lat: 5.56, lon: -0.20, tz: 0 },
+        // Oceania
+        sydney: { lat: -33.87, lon: 151.21, tz: 10 }, melbourne: { lat: -37.81, lon: 144.96, tz: 10 },
+        auckland: { lat: -36.85, lon: 174.76, tz: 12 }, brisbane: { lat: -27.47, lon: 153.03, tz: 10 },
+        perth: { lat: -31.95, lon: 115.86, tz: 8 }
     };
 
     // ────────────────────────────────────────
@@ -80,6 +131,7 @@ const AstroEngine = (function () {
 
     function calculatePlanetPositions(jd) {
         const T = (jd - 2451545.0) / 36525;
+        const T2 = T * T, T3 = T2 * T, T4 = T3 * T;
         const deg2rad = Math.PI / 180;
         const rad2deg = 180 / Math.PI;
         function normDeg(d) { return ((d % 360) + 360) % 360; }
@@ -190,31 +242,50 @@ const AstroEngine = (function () {
         const omega_nut = normDeg(125.04 - 1934.136 * T) * deg2rad;
         const sunLon = normDeg(sunTrueLon - 0.00569 - 0.00478 * Math.sin(omega_nut));
 
-        // ── Moon (Meeus simplified lunar longitude — ~1° accuracy) ──
-        const Lp = normDeg(218.3164477 + 481267.88123421 * T);
-        const D  = normDeg(297.8501921 + 445267.11140340 * T);
-        const Ms = normDeg(357.5291092 + 35999.05029090 * T);
-        const Mp = normDeg(134.9633964 + 477198.86750550 * T);
-        const F  = normDeg(93.2720950 + 483202.01752330 * T);
-        const moonLon = normDeg(Lp
-            + 6.289 * Math.sin(Mp * deg2rad)
-            + 1.274 * Math.sin((2 * D - Mp) * deg2rad)
-            + 0.658 * Math.sin(2 * D * deg2rad)
-            + 0.214 * Math.sin(2 * Mp * deg2rad)
-            - 0.186 * Math.sin(Ms * deg2rad)
-            - 0.114 * Math.sin(2 * F * deg2rad)
-            + 0.059 * Math.sin((2 * D - 2 * Mp) * deg2rad)
-            + 0.057 * Math.sin((2 * D - Ms - Mp) * deg2rad)
-            + 0.053 * Math.sin((2 * D + Mp) * deg2rad)
-            + 0.046 * Math.sin((2 * D - Ms) * deg2rad)
-            - 0.041 * Math.sin((Mp - Ms) * deg2rad)
-            - 0.035 * Math.sin(D * deg2rad)
-            - 0.031 * Math.sin((Ms + Mp) * deg2rad)
-            + 0.015 * Math.sin((2 * D - 2 * F) * deg2rad)
-            - 0.013 * Math.sin((Mp + 2 * F) * deg2rad)
-            + 0.011 * Math.sin((4 * D - Mp) * deg2rad)
-            + 0.010 * Math.sin(3 * Mp * deg2rad)
-        );
+        // ── Moon — Meeus Ch.47 full ELP2000 computation (~0.01° accuracy) ──
+        // Fundamental arguments with full polynomial terms (Meeus Ch.47)
+        const Lp = normDeg(218.3164477 + 481267.88123421*T - 0.0015786*T2 + T3/538841 - T4/65194000);
+        const D  = normDeg(297.8501921 + 445267.1114034*T - 0.0018819*T2 + T3/545868 - T4/113065000);
+        const Ms = normDeg(357.5291092 + 35999.0502909*T - 0.0001536*T2 + T3/24490000);
+        const Mp = normDeg(134.9633964 + 477198.8675055*T + 0.0087414*T2 + T3/69699 - T4/14712000);
+        const F  = normDeg(93.272095 + 483202.0175233*T - 0.0036539*T2 - T3/3526000 + T4/863310000);
+        // E factor for terms involving Sun's mean anomaly M (Meeus p.338)
+        const Efac = 1 - 0.002516*T - 0.0000074*T2;
+        const Efac2 = Efac * Efac;
+        // Additional Venus & Jupiter perturbation arguments
+        const A1 = normDeg(119.75 + 131.849*T);
+        const A2 = normDeg(53.09 + 479264.290*T);
+        const A3 = normDeg(313.45 + 481266.484*T);
+        // Table 47.A — 60 periodic terms for Moon longitude [D, M, M', F, Σl×10⁻⁶°]
+        const LT = [
+            [0,0,1,0,6288774],[2,0,-1,0,1274027],[2,0,0,0,658314],[0,0,2,0,213618],
+            [0,1,0,0,-185116],[0,0,0,2,-114332],[2,0,-2,0,58793],[2,-1,-1,0,57066],
+            [2,0,1,0,53322],[2,-1,0,0,45758],[0,1,-1,0,-40923],[1,0,0,0,-34720],
+            [0,1,1,0,-30383],[2,0,0,-2,15327],[0,0,1,2,-12528],[0,0,1,-2,10980],
+            [4,0,-1,0,10675],[0,0,3,0,10034],[4,0,-2,0,8548],[2,1,-1,0,-7888],
+            [2,1,0,0,-6766],[1,0,-1,0,-5163],[1,1,0,0,4987],[2,-1,1,0,4036],
+            [2,0,2,0,3994],[4,0,0,0,3861],[2,0,-3,0,3665],[0,1,-2,0,-2689],
+            [2,0,-1,2,-2602],[2,-1,-2,0,2390],[1,0,1,0,-2348],[2,-2,0,0,2236],
+            [0,1,2,0,-2120],[0,2,0,0,-2069],[2,-2,-1,0,2048],[2,0,1,-2,-1773],
+            [2,0,0,2,-1595],[4,-1,-1,0,1215],[0,0,2,2,-1110],[3,0,-1,0,-892],
+            [2,1,1,0,-810],[4,-1,-2,0,759],[0,2,-1,0,-713],[2,2,-1,0,-700],
+            [2,1,-2,0,691],[2,-1,0,-2,596],[4,0,1,0,549],[0,0,4,0,537],
+            [4,-1,0,0,520],[1,0,-2,0,-487],[2,1,0,-2,-399],[0,0,2,-2,-381],
+            [1,1,1,0,351],[3,0,-2,0,-340],[4,0,-3,0,330],[2,-1,2,0,327],
+            [0,2,1,0,-323],[1,1,-1,0,299],[2,0,3,0,294],[2,0,-1,-2,0]
+        ];
+        let sumL = 0;
+        for (const [cD, cM, cMp, cF, lC] of LT) {
+            if (lC === 0) continue;
+            const arg = cD*D + cM*Ms + cMp*Mp + cF*F;
+            let c = lC;
+            if (Math.abs(cM) === 1) c *= Efac;
+            else if (Math.abs(cM) === 2) c *= Efac2;
+            sumL += c * Math.sin(arg * deg2rad);
+        }
+        // Additional corrections for Venus, Jupiter & flattening (Meeus p.338)
+        sumL += 3958*Math.sin(A1*deg2rad) + 1962*Math.sin((Lp - F)*deg2rad) + 318*Math.sin(A2*deg2rad);
+        const moonLon = normDeg(Lp + sumL / 1000000);
 
         // ── Build positions ──
         // Helper: convert decimal degrees to { deg, min, sec } with proper carry
@@ -258,8 +329,11 @@ const AstroEngine = (function () {
             // Geocentric = planet heliocentric - Earth heliocentric
             const xGeo = helio.x - earthXYZ.x;
             const yGeo = helio.y - earthXYZ.y;
-            // Apply precession (J2000→tropical) + nutation correction
-            const geoLon = normDeg(Math.atan2(yGeo, xGeo) * rad2deg + precessionDeg + nutationDeg);
+            // Apply precession (J2000→tropical) + nutation + annual aberration
+            const rawLon = Math.atan2(yGeo, xGeo) * rad2deg + precessionDeg + nutationDeg;
+            // Annual aberration: Δλ ≈ -20.4898" × cos(λ_sun - λ) (Meeus Ch.23)
+            const aberrDeg = -20.4898 / 3600 * Math.cos((sunLon - rawLon) * deg2rad);
+            const geoLon = normDeg(rawLon + aberrDeg);
             const sign = SIGNS[Math.floor(geoLon / 30)];
             const pDeg = geoLon % 30;
             positions[key] = { longitude: geoLon, sign: sign.name, signSymbol: sign.symbol, degree: pDeg, dms: toDMS(pDeg), dmsStr: formatDMS(pDeg), element: sign.element };
@@ -949,10 +1023,12 @@ const AstroEngine = (function () {
     // CORE: Main Calculate (Astrocartography)
     // ────────────────────────────────────────
     function calculate(birthDate, birthTime, birthCity, preferences, lifestyle) {
-        const jd = toJulianDay(birthDate, birthTime);
+        // Look up birth location first for timezone conversion (local → UT)
+        const birthLocation = BIRTH_LOCATIONS[birthCity] || BIRTH_LOCATIONS.istanbul;
+        const tzOffset = birthLocation.tz !== undefined ? birthLocation.tz : Math.round(birthLocation.lon / 15);
+        const jd = toJulianDay(birthDate, birthTime) - tzOffset / 24;
         const natalChart = calculatePlanetPositions(jd);
 
-        const birthLocation = BIRTH_LOCATIONS[birthCity] || BIRTH_LOCATIONS.istanbul;
         const allPlanetaryLines = calculatePlanetaryLines(natalChart, birthLocation.lat);
 
         // Calculate houses & aspects for natal chart display

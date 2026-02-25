@@ -3,8 +3,8 @@ const { corsHeaders } = require('../_lib/openai');
 const { parse } = require('querystring');
 
 const iyzipay = new Iyzipay({
-    apiKey: process.env.IYZICO_API_KEY || 'sandbox-afXhSWnbMcODHnNstMRqanOzOlpItFgj',
-    secretKey: process.env.IYZICO_SECRET_KEY || 'sandbox-cpnBGYA6nSXAjdYOqtHSIPIkHxSEaF6Q',
+    apiKey: process.env.IYZICO_API_KEY || '',
+    secretKey: process.env.IYZICO_SECRET_KEY || '',
     uri: process.env.IYZICO_URI || 'https://sandbox-api.iyzipay.com'
 });
 
