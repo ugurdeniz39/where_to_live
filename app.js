@@ -308,12 +308,7 @@ function navigateTo(pageId) {
     if (activeLink) activeLink.classList.add('active');
 
     // Close mobile nav
-    const navLinksEl = document.getElementById('nav-links');
-    navLinksEl.classList.remove('open');
-    document.getElementById('navbar').classList.remove('menu-open');
-    const hamburger = document.querySelector('.nav-hamburger');
-    if (hamburger) hamburger.textContent = '☰';
-    document.removeEventListener('click', closeMobileNavOutside);
+    closeMobileNav();
 
     currentPage = pageId;
     window.scrollTo(0, 0);
@@ -440,30 +435,43 @@ function toggleMobileNav() {
     const navLinks = document.getElementById('nav-links');
     const navbar = document.getElementById('navbar');
     const hamburger = document.querySelector('.nav-hamburger');
+    const overlay = document.getElementById('nav-overlay');
     const isOpen = navLinks.classList.toggle('open');
-    // Prevent navbar from hiding when mobile menu is open
+    
     if (isOpen) {
         navbar.classList.add('menu-open');
         hamburger.textContent = '✕';
-        // Close menu when clicking outside
-        setTimeout(() => {
-            document.addEventListener('click', closeMobileNavOutside);
-        }, 10);
+        hamburger.classList.add('is-active');
+        if (overlay) overlay.classList.add('visible');
+        document.body.style.overflow = 'hidden'; // Prevent background scroll
+        // Close on overlay click
+        if (overlay) overlay.onclick = closeMobileNav;
     } else {
-        navbar.classList.remove('menu-open');
-        hamburger.textContent = '☰';
-        document.removeEventListener('click', closeMobileNavOutside);
+        closeMobileNav();
     }
+}
+
+function closeMobileNav() {
+    const navLinks = document.getElementById('nav-links');
+    const navbar = document.getElementById('navbar');
+    const hamburger = document.querySelector('.nav-hamburger');
+    const overlay = document.getElementById('nav-overlay');
+    
+    if (navLinks) navLinks.classList.remove('open');
+    if (navbar) navbar.classList.remove('menu-open');
+    if (hamburger) {
+        hamburger.textContent = '☰';
+        hamburger.classList.remove('is-active');
+    }
+    if (overlay) overlay.classList.remove('visible');
+    document.body.style.overflow = '';
 }
 
 function closeMobileNavOutside(e) {
     const navLinks = document.getElementById('nav-links');
     const hamburger = document.querySelector('.nav-hamburger');
     if (!navLinks.contains(e.target) && !hamburger.contains(e.target)) {
-        navLinks.classList.remove('open');
-        document.getElementById('navbar').classList.remove('menu-open');
-        hamburger.textContent = '☰';
-        document.removeEventListener('click', closeMobileNavOutside);
+        closeMobileNav();
     }
 }
 
@@ -572,15 +580,7 @@ function initStars() {
 window.addEventListener('scroll', () => {
     const nav = document.getElementById('navbar');
     if (nav) nav.classList.toggle('scrolled', window.scrollY > 30);
-    // Close mobile menu on scroll
-    const navLinks = document.getElementById('nav-links');
-    if (navLinks?.classList.contains('open')) {
-        navLinks.classList.remove('open');
-        const hamburger = document.querySelector('.nav-hamburger');
-        if (hamburger) hamburger.textContent = '☰';
-        document.getElementById('navbar').classList.remove('menu-open');
-    }
-}, { passive: true });
+});
 
 // ═══════════════════════════════════════
 // NAVBAR EVENT DELEGATION (robust click handling)
@@ -608,14 +608,6 @@ window.addEventListener('scroll', () => {
                 e.stopPropagation();
                 const pageId = target.getAttribute('data-nav');
                 if (pageId && typeof navigateTo === 'function') {
-                    // Close mobile menu when navigating
-                    const navLinks = document.getElementById('nav-links');
-                    if (navLinks?.classList.contains('open')) {
-                        navLinks.classList.remove('open');
-                        const hamburger = document.querySelector('.nav-hamburger');
-                        if (hamburger) hamburger.textContent = '☰';
-                        document.getElementById('navbar').classList.remove('menu-open');
-                    }
                     navigateTo(pageId);
                 }
                 return;
@@ -625,14 +617,6 @@ window.addEventListener('scroll', () => {
                 e.preventDefault();
                 e.stopPropagation();
                 const modalId = modalBtn.getAttribute('data-modal');
-                // Close mobile menu when opening modal
-                const navLinks = document.getElementById('nav-links');
-                if (navLinks?.classList.contains('open')) {
-                    navLinks.classList.remove('open');
-                    const hamburger = document.querySelector('.nav-hamburger');
-                    if (hamburger) hamburger.textContent = '☰';
-                    document.getElementById('navbar').classList.remove('menu-open');
-                }
                 if (modalId && typeof openModal === 'function') {
                     openModal(modalId);
                 }
@@ -2986,6 +2970,12 @@ function loadDashboard() {
 // INIT
 // ═══════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
+    // Remove loading state — prevent FOUC
+    requestAnimationFrame(() => {
+        document.body.classList.remove('is-loading');
+        document.body.classList.add('is-loaded');
+    });
+    
     initStars();
     initBirthCityDropdown();
 

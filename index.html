@@ -45,24 +45,36 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="is-loading">
+<style>body.is-loading{opacity:0}body.is-loaded{opacity:1;transition:opacity .3s ease}</style>
+
+<!-- ══════════════════ MOBILE NAV OVERLAY ══════════════════ -->
+<div class="nav-overlay" id="nav-overlay"></div>
 
 <!-- ══════════════════ NAVBAR ══════════════════ -->
 <nav class="navbar" id="navbar" role="navigation">
     <div class="nav-inner">
         <a class="nav-brand" href="javascript:void(0)" data-nav="home" role="button">✦ AstroMap</a>
         <div class="nav-links" id="nav-links" role="menubar">
-            <a class="nav-link active" href="javascript:void(0)" data-page="home" data-nav="home" role="menuitem" tabindex="0">Ana Sayfa</a>
-            <a class="nav-link" href="javascript:void(0)" data-page="daily" data-nav="daily" role="menuitem" tabindex="0">Günlük Yorum</a>
-            <a class="nav-link" href="javascript:void(0)" data-page="compatibility" data-nav="compatibility" role="menuitem" tabindex="0">Uyum Testi</a>
-            <a class="nav-link" href="javascript:void(0)" data-page="moon" data-nav="moon" role="menuitem" tabindex="0">Ay Takvimi</a>
+            <div class="nav-drawer-header">
+                <span class="nav-drawer-title">✦ Menü</span>
+                <button class="nav-drawer-close" onclick="closeMobileNav()" type="button">✕</button>
+            </div>
+            <a class="nav-link active" href="javascript:void(0)" data-page="home" data-nav="home" role="menuitem" tabindex="0">🏠 Ana Sayfa</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="daily" data-nav="daily" role="menuitem" tabindex="0">🌟 Günlük Yorum</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="compatibility" data-nav="compatibility" role="menuitem" tabindex="0">💕 Uyum Testi</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="moon" data-nav="moon" role="menuitem" tabindex="0">🌙 Ay Takvimi</a>
             <a class="nav-link" href="javascript:void(0)" data-page="tarot" data-nav="tarot" role="menuitem" tabindex="0">🃏 Tarot</a>
             <a class="nav-link" href="javascript:void(0)" data-page="crystal" data-nav="crystal" role="menuitem" tabindex="0">💎 Kristal</a>
             <a class="nav-link" href="javascript:void(0)" data-page="dream" data-nav="dream" role="menuitem" tabindex="0">💭 Rüya</a>
             <a class="nav-link" href="javascript:void(0)" data-page="fortune" data-nav="fortune" role="menuitem" tabindex="0">☕ Fal</a>
             <a class="nav-link" href="javascript:void(0)" data-page="retrograde" data-nav="retrograde" role="menuitem" tabindex="0">⚠️ Retro</a>
-            <a class="nav-link" href="javascript:void(0)" data-page="about" data-nav="about" role="menuitem" tabindex="0">Hakkında</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="about" data-nav="about" role="menuitem" tabindex="0">ℹ️ Hakkında</a>
             <a class="nav-link" href="javascript:void(0)" data-page="pricing" data-nav="pricing" role="menuitem" tabindex="0">Premium ✨</a>
+            <div class="nav-drawer-actions">
+                <button class="btn-ghost" data-modal="login-modal" type="button">Giriş Yap</button>
+                <button class="btn-nav-primary" data-modal="signup-modal" type="button">Ücretsiz Başla</button>
+            </div>
         </div>
         <div class="nav-actions">
             <button class="btn-ghost" data-modal="login-modal" type="button">Giriş Yap</button>
