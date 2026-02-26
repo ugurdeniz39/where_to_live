@@ -967,9 +967,13 @@ function selectPeriod(btn) {
 }
 
 async function showDailyHoroscope() {
+    const name = document.getElementById('daily-name').value;
+    const gender = document.getElementById('daily-gender').value;
     const birthDate = document.getElementById('daily-birth-date').value;
     const birthTime = document.getElementById('daily-birth-time').value;
     if (!birthDate) { showToast('Lütfen doğum tarihini gir'); return; }
+    if (!name) { showToast('Lütfen adını gir'); return; }
+    if (!gender) { showToast('Lütfen cinsiyetini seç'); return; }
 
     const period = selectedHoroscopePeriod || 'daily';
     const periodLabel = { daily: 'Günlük', weekly: 'Haftalık', monthly: 'Aylık', yearly: 'Yıllık' }[period] || 'Günlük';
@@ -996,7 +1000,7 @@ async function showDailyHoroscope() {
     `;
 
     try {
-        const data = await callAI('daily-horoscope', { birthDate, birthTime, sunSign, period });
+        const data = await callAI('daily-horoscope', { name, gender, birthDate, birthTime, sunSign, period });
         SoundFX.play('reveal');
         const h = data;
         const scores = h.scores || {};
@@ -1007,7 +1011,7 @@ async function showDailyHoroscope() {
                     <div class="daily-sign-header">
                         <div class="daily-sign-aura"></div>
                         <span class="daily-sign-icon">${signEmoji}</span>
-                        <div class="daily-sign-name">${sunSign}</div>
+                        <div class="daily-sign-name">${name} • ${sunSign}</div>
                         <div class="daily-period-badge">${periodLabel} Yorum</div>
                         <div class="daily-date">${new Date().toLocaleDateString('tr-TR', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}</div>
                     </div>
