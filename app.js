@@ -572,7 +572,15 @@ function initStars() {
 window.addEventListener('scroll', () => {
     const nav = document.getElementById('navbar');
     if (nav) nav.classList.toggle('scrolled', window.scrollY > 30);
-});
+    // Close mobile menu on scroll
+    const navLinks = document.getElementById('nav-links');
+    if (navLinks?.classList.contains('open')) {
+        navLinks.classList.remove('open');
+        const hamburger = document.querySelector('.nav-hamburger');
+        if (hamburger) hamburger.textContent = '☰';
+        document.getElementById('navbar').classList.remove('menu-open');
+    }
+}, { passive: true });
 
 // ═══════════════════════════════════════
 // NAVBAR EVENT DELEGATION (robust click handling)
@@ -600,6 +608,14 @@ window.addEventListener('scroll', () => {
                 e.stopPropagation();
                 const pageId = target.getAttribute('data-nav');
                 if (pageId && typeof navigateTo === 'function') {
+                    // Close mobile menu when navigating
+                    const navLinks = document.getElementById('nav-links');
+                    if (navLinks?.classList.contains('open')) {
+                        navLinks.classList.remove('open');
+                        const hamburger = document.querySelector('.nav-hamburger');
+                        if (hamburger) hamburger.textContent = '☰';
+                        document.getElementById('navbar').classList.remove('menu-open');
+                    }
                     navigateTo(pageId);
                 }
                 return;
@@ -609,6 +625,14 @@ window.addEventListener('scroll', () => {
                 e.preventDefault();
                 e.stopPropagation();
                 const modalId = modalBtn.getAttribute('data-modal');
+                // Close mobile menu when opening modal
+                const navLinks = document.getElementById('nav-links');
+                if (navLinks?.classList.contains('open')) {
+                    navLinks.classList.remove('open');
+                    const hamburger = document.querySelector('.nav-hamburger');
+                    if (hamburger) hamburger.textContent = '☰';
+                    document.getElementById('navbar').classList.remove('menu-open');
+                }
                 if (modalId && typeof openModal === 'function') {
                     openModal(modalId);
                 }
