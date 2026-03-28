@@ -1,6 +1,26 @@
 node_modules/
 .env
+.env.local
+.env.production
 *.log
 .DS_Store
 Thumbs.db
 .vercel
+*.bak
+*.tmp
+
+# Payment data (sensitive)
+data/
+
+# Capacitor build output
+www/
+
+# Native platform build artifacts (keep platform configs in git)
+android/app/build/
+android/.gradle/
+android/build/
+android/local.properties
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/
+*.xcworkspace/xcuserdata/

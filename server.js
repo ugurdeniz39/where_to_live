@@ -12,6 +12,38 @@ const cors = require('cors');
 const OpenAI = require('openai');
 const Iyzipay = require('iyzipay');
 const path = require('path');
+const fs = require('fs');
+
+// ═══════════════════════════════════════
+// PERSISTENT PAYMENT STORAGE (JSON file)
+// ═══════════════════════════════════════
+const PAYMENTS_FILE = path.join(__dirname, 'data', 'payments.json');
+
+function loadPayments() {
+    try {
+        const dir = path.dirname(PAYMENTS_FILE);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        if (!fs.existsSync(PAYMENTS_FILE)) return [];
+        const data = fs.readFileSync(PAYMENTS_FILE, 'utf-8');
+        return JSON.parse(data);
+    } catch (err) {
+        console.error('Ödeme verisi okunamadı:', err.message);
+        return [];
+    }
+}
+
+function savePayments(payments) {
+    try {
+        const dir = path.dirname(PAYMENTS_FILE);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(PAYMENTS_FILE, JSON.stringify(payments, null, 2), 'utf-8');
+    } catch (err) {
+        console.error('Ödeme verisi kaydedilemedi:', err.message);
+    }
+}
+
+// Load payments into memory on startup
+if (!global.payments) global.payments = loadPayments();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -50,7 +82,7 @@ app.use(cors({
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type']
 }));
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '5mb' })); // 5MB for fortune coffee cup images (base64)
 
 // ═══════════════════════════════════════
 // SECURITY HEADERS
@@ -64,12 +96,14 @@ app.use((req, res, next) => {
     // Content Security Policy
     res.setHeader('Content-Security-Policy', [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
+        "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org https://i.pravatar.cc",
-        "connect-src 'self' https://api.openai.com",
-        "frame-src 'self' https://*.iyzipay.com"
+        "connect-src 'self'",
+        "frame-src 'self' https://*.iyzipay.com",
+        "base-uri 'self'",
+        "form-action 'self' https://*.iyzipay.com"
     ].join('; '));
     next();
 });
@@ -82,7 +116,7 @@ const RATE_WINDOW = 60000; // 1 minute
 const RATE_MAX = 20; // max 20 AI requests per minute
 
 function rateLimit(req, res, next) {
-    const ip = req.ip || req.connection.remoteAddress;
+    const ip = req.ip || req.socket?.remoteAddress;
     const now = Date.now();
     const record = rateLimits.get(ip) || { count: 0, start: now };
     
@@ -115,22 +149,36 @@ setInterval(() => {
 // SERVER-SIDE RESPONSE CACHE
 // ═══════════════════════════════════════
 const responseCache = new Map();
-const CACHE_TTL = 1800000; // 30 minutes
 
-function getCachedResponse(key) {
+// Per-endpoint cache TTLs (ms)
+const CACHE_TTLS = {
+    daily: 3600000,       // 1 hour — daily horoscope changes once per day
+    compatibility: 1800000, // 30 min — same input = same result
+    crystal: 1800000,      // 30 min — mood-dependent
+    city: 7200000,         // 2 hours — city insights are stable
+    dream: 0,              // no cache — every dream is unique
+    tarot: 0,              // no cache — must be unique each draw
+    fortune: 0,            // no cache — each image is unique
+    default: 1800000       // 30 min fallback
+};
+
+function getCachedResponse(key, endpoint) {
     const entry = responseCache.get(key);
     if (!entry) return null;
-    if (Date.now() - entry.ts > CACHE_TTL) {
+    const ttl = CACHE_TTLS[endpoint] || CACHE_TTLS.default;
+    if (ttl === 0 || Date.now() - entry.ts > ttl) {
         responseCache.delete(key);
         return null;
     }
     return entry.data;
 }
 
-function setCachedResponse(key, data) {
+function setCachedResponse(key, data, endpoint) {
+    const ttl = CACHE_TTLS[endpoint] || CACHE_TTLS.default;
+    if (ttl === 0) return; // Don't cache endpoints with TTL=0
     responseCache.set(key, { data, ts: Date.now() });
-    // Keep max 100 entries
-    if (responseCache.size > 100) {
+    // Keep max 200 entries
+    if (responseCache.size > 200) {
         const oldest = responseCache.keys().next().value;
         responseCache.delete(oldest);
     }
@@ -185,20 +233,75 @@ app.use('/api', validateInput);
 // HELPER: GPT Call with retry
 // ═══════════════════════════════════════
 async function askGPT(systemPrompt, userPrompt, maxTokens = 1000) {
-    try {
-        const response = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userPrompt }
-            ],
-            max_tokens: maxTokens,
-            temperature: 0.85
-        });
-        return response.choices[0].message.content;
-    } catch (err) {
-        console.error('OpenAI Error:', err.message);
-        throw new Error('AI servisi şu an yanıt veremiyor. Lütfen tekrar dene.');
+    const MAX_RETRIES = 2;
+    let lastError;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            const response = await openai.chat.completions.create({
+                model: 'gpt-4o-mini',
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ],
+                max_tokens: maxTokens,
+                temperature: attempt === 0 ? 0.85 : 0.7 // Lower temp on retry for more consistent JSON
+            });
+            return response.choices[0].message.content;
+        } catch (err) {
+            lastError = err;
+            console.error(`OpenAI Error (attempt ${attempt + 1}):`, err.message);
+            if (err.status === 429) {
+                // Rate limited — wait before retry
+                await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+                continue;
+            }
+            if (err.status >= 500) {
+                // Server error — retry
+                await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+                continue;
+            }
+            // Client error (400, 401, etc) — don't retry
+            break;
+        }
+    }
+    console.error('OpenAI final error:', lastError?.message);
+    throw new Error('AI servisi şu an yanıt veremiyor. Lütfen tekrar dene.');
+}
+
+/**
+ * Robust JSON extraction from GPT response
+ * Handles markdown code blocks, trailing commas, unescaped newlines
+ */
+function extractJSON(raw) {
+    // Strip markdown code blocks
+    let cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+
+    // Try direct parse first
+    try { return JSON.parse(cleaned.trim()); } catch {}
+
+    // Extract outermost {...}
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    let jsonStr = match[0];
+
+    // Fix common GPT JSON issues:
+    // 1. Trailing commas before } or ]
+    jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1');
+    // 2. Single quotes → double quotes (careful with apostrophes in text)
+    // Only do this if there are no double-quoted strings
+    if (!jsonStr.includes('"')) {
+        jsonStr = jsonStr.replace(/'/g, '"');
+    }
+    // 3. Unquoted keys
+    jsonStr = jsonStr.replace(/(\{|,)\s*([a-zA-Z_]\w*)\s*:/g, '$1"$2":');
+
+    try { return JSON.parse(jsonStr); } catch {}
+
+    // Last resort: try to fix broken strings with newlines
+    jsonStr = jsonStr.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ');
+    try { return JSON.parse(jsonStr); } catch (e) {
+        console.error('JSON extraction failed:', e.message, '\nRaw:', raw.substring(0, 200));
+        return null;
     }
 }
 
@@ -220,15 +323,23 @@ app.get('/api/health', (req, res) => {
 // ═══════════════════════════════════════
 app.post('/api/daily-horoscope', async (req, res) => {
     try {
-        const { birthDate, birthTime, sunSign, moonSign, risingSign, period } = req.body;
+        const { name, gender, birthDate, birthTime, sunSign, moonSign, risingSign, period } = req.body;
         if (!birthDate) return res.status(400).json({ error: 'Doğum tarihi gerekli' });
 
         const today = new Date().toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         const periodLabel = { weekly: 'Haftalık', monthly: 'Aylık', yearly: 'Yıllık' }[period] || 'Günlük';
         const periodScope = { weekly: 'Bu hafta', monthly: 'Bu ay', yearly: 'Bu yıl' }[period] || 'Bugün';
+        const userName = name || 'Sevgili';
 
-        const systemPrompt = `Sen deneyimli, sıcak ve empatik bir astrologsun. Türkçe yaz. 
-Yanıtlarını samimi, ilham verici ve motive edici tut. Kadın kullanıcılara hitap ediyorsun — zarif, şefkatli ve güçlendirici bir ton kullan.
+        const genderText = {
+            'kadın': { tone: 'zarif, şefkatli ve güçlendirici' },
+            'erkek': { tone: 'güçlü, cesur ve ilham verici' },
+            'diğer': { tone: 'dost canlı, saygılı ve ilham verici' }
+        }[gender] || { tone: 'sıcak ve ilham verici' };
+
+        const systemPrompt = `Sen deneyimli, sıcak ve empatik bir astrologsun. Türkçe yaz.
+${userName} adında birine hitap ediyorsun — ${genderText.tone} bir ton kullan.
+Yanıtlarını samimi, ilham verici ve motive edici tut. ${userName}'in adını sık sık kullan.
 Emoji kullan ama abartma. Her bölümü net ve akıcı yaz.
 Bu bir ${periodLabel} yorumdur. ${periodScope} için detaylı yorum yaz.
 Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
@@ -254,16 +365,14 @@ Güneş burcu: ${sunSign || 'bilinmiyor'}, Ay burcu: ${moonSign || 'bilinmiyor'}
 Bu kişi için ${periodLabel.toLowerCase()} detaylı astroloji yorumunu yaz.`;
 
         // Check server cache
-        const cacheKey = `daily_${period || 'daily'}_${birthDate}_${birthTime}_${sunSign}`;
-        const cached = getCachedResponse(cacheKey);
+        const cacheKey = `daily_${period || 'daily'}_${birthDate}_${birthTime}_${sunSign}_${(name || '').slice(0,20)}_${gender || ''}`;
+        const cached = getCachedResponse(cacheKey, 'daily');
         if (cached) return res.json({ success: true, data: cached });
 
         const raw = await askGPT(systemPrompt, userPrompt, 800);
-        // Parse JSON from response
-        const jsonMatch = raw.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('AI yanıtı parse edilemedi');
-        const result = JSON.parse(jsonMatch[0]);
-        setCachedResponse(cacheKey, result);
+        const result = extractJSON(raw);
+        if (!result) throw new Error('AI yanıtı parse edilemedi');
+        setCachedResponse(cacheKey, result, 'daily');
         res.json({ success: true, data: result });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -306,10 +415,15 @@ Kişi 1: Doğum ${person1.birthDate}, saat ${person1.birthTime || 'bilinmiyor'},
 Kişi 2: Doğum ${person2.birthDate}, saat ${person2.birthTime || 'bilinmiyor'}, burç: ${person2.sunSign || 'bilinmiyor'}, ay: ${person2.moonSign || 'bilinmiyor'}
 Detaylı romantik uyum analizi yap.`;
 
+        // Cache compatibility results
+        const cacheKey = `compat_${person1.birthDate}_${person2.birthDate}_${person1.sunSign}_${person2.sunSign}`;
+        const cached = getCachedResponse(cacheKey, 'compatibility');
+        if (cached) return res.json({ success: true, data: cached });
+
         const raw = await askGPT(systemPrompt, userPrompt, 800);
-        const jsonMatch = raw.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('AI yanıtı parse edilemedi');
-        const result = JSON.parse(jsonMatch[0]);
+        const result = extractJSON(raw);
+        if (!result) throw new Error('AI yanıtı parse edilemedi');
+        setCachedResponse(cacheKey, result, 'compatibility');
         res.json({ success: true, data: result });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -346,10 +460,14 @@ Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma
 Şu anki ruh hali: ${mood || 'genel denge arayışı'}.
 Bu kişi için bugün özel kristal, wellness ve spiritüel rehberlik ver.`;
 
+        const cacheKey = `crystal_${birthDate}_${sunSign}_${mood || 'general'}`;
+        const cached = getCachedResponse(cacheKey, 'crystal');
+        if (cached) return res.json({ success: true, data: cached });
+
         const raw = await askGPT(systemPrompt, userPrompt, 800);
-        const jsonMatch = raw.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('AI yanıtı parse edilemedi');
-        const result = JSON.parse(jsonMatch[0]);
+        const result = extractJSON(raw);
+        if (!result) throw new Error('AI yanıtı parse edilemedi');
+        setCachedResponse(cacheKey, result, 'crystal');
         res.json({ success: true, data: result });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -383,9 +501,8 @@ ${question ? `Sorusu: "${question}"` : 'Genel bir okuma isteniyor.'}
 3 kartlık (Geçmiş-Şimdi-Gelecek) tarot okuması yap.`;
 
         const raw = await askGPT(systemPrompt, userPrompt, 800);
-        const jsonMatch = raw.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('AI yanıtı parse edilemedi');
-        const result = JSON.parse(jsonMatch[0]);
+        const result = extractJSON(raw);
+        if (!result) throw new Error('AI yanıtı parse edilemedi');
         res.json({ success: true, data: result });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -420,10 +537,14 @@ Kişi: Güneş ${sunSign || 'bilinmiyor'}, Ay ${moonSign || 'bilinmiyor'}
 Tercihleri: ${preferences?.join(', ') || 'genel'}
 Bu kişi için bu şehrin astrokartografi analizini yap.`;
 
+        const cacheKey = `city_${city}_${country}_${sunSign}`;
+        const cached = getCachedResponse(cacheKey, 'city');
+        if (cached) return res.json({ success: true, data: cached });
+
         const raw = await askGPT(systemPrompt, userPrompt, 600);
-        const jsonMatch = raw.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('AI yanıtı parse edilemedi');
-        const result = JSON.parse(jsonMatch[0]);
+        const result = extractJSON(raw);
+        if (!result) throw new Error('AI yanıtı parse edilemedi');
+        setCachedResponse(cacheKey, result, 'city');
         res.json({ success: true, data: result });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -459,9 +580,8 @@ Gördüğü rüya: "${dream}"
 Bu rüyayı astrolojik ve psikolojik açıdan yorumla.`;
 
         const raw = await askGPT(systemPrompt, userPrompt, 600);
-        const jsonMatch = raw.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('AI yanıtı parse edilemedi');
-        const result = JSON.parse(jsonMatch[0]);
+        const result = extractJSON(raw);
+        if (!result) throw new Error('AI yanıtı parse edilemedi');
         res.json({ success: true, data: result });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -475,6 +595,15 @@ app.post('/api/fortune', async (req, res) => {
     try {
         const { image, cup, sunSign, status } = req.body;
         if (!image) return res.status(400).json({ error: 'Fincan fotoğrafı gerekli' });
+        // Validate base64 image
+        if (!image.startsWith('data:image/')) {
+            return res.status(400).json({ error: 'Geçersiz resim formatı. Lütfen fotoğraf yükleyin.' });
+        }
+        // Check image size (~4MB max for base64 = ~3MB actual image)
+        const base64Size = image.length * 0.75;
+        if (base64Size > 4 * 1024 * 1024) {
+            return res.status(400).json({ error: 'Resim çok büyük. Lütfen daha küçük bir fotoğraf deneyin.' });
+        }
 
         const systemPrompt = `Sen deneyimli bir Türk kahve falcısısın. Geleneksel Türk kahve falı geleneğine hakimsin.
 Sıcak, samimi, gizemli ama umut verici bir ton kullan. Türkçe yaz.
@@ -514,9 +643,8 @@ Bu fincan fotoğrafını detaylı incele ve kahve falı yorumla.`;
             temperature: 0.85
         });
         const raw = response.choices[0].message.content;
-        const jsonMatch = raw.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('AI yanıtı parse edilemedi');
-        const result = JSON.parse(jsonMatch[0]);
+        const result = extractJSON(raw);
+        if (!result) throw new Error('AI yanıtı parse edilemedi');
         res.json({ success: true, data: result });
     } catch (err) {
         console.error('Fortune error:', err.message);
@@ -532,8 +660,16 @@ app.post('/api/checkout/init', async (req, res) => {
         const { plan, billing } = req.body;
         const selected = PLANS[plan];
         if (!selected) return res.status(400).json({ error: 'Geçersiz plan' });
+        if (!billing?.email || !billing?.name) {
+            return res.status(400).json({ error: 'Ad ve e-posta gerekli' });
+        }
+        // E-posta format validasyonu
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(billing.email)) {
+            return res.status(400).json({ error: 'Geçerli bir e-posta adresi girin' });
+        }
 
-        const conversationId = `ASTRO_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const conversationId = `ASTRO_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
         const request = {
             locale: Iyzipay.LOCALE.TR,
@@ -552,10 +688,10 @@ app.post('/api/checkout/init', async (req, res) => {
                 gsmNumber: billing?.phone || '+905000000000',
                 email: billing?.email || 'misafir@astromap.app',
                 identityNumber: '11111111111',
-                lastLoginDate: new Date().toISOString().replace('T', ' ').substr(0, 19),
-                registrationDate: new Date().toISOString().replace('T', ' ').substr(0, 19),
+                lastLoginDate: new Date().toISOString().replace('T', ' ').slice(0, 19),
+                registrationDate: new Date().toISOString().replace('T', ' ').slice(0, 19),
                 registrationAddress: 'İstanbul, Türkiye',
-                ip: req.ip || req.connection?.remoteAddress || '127.0.0.1',
+                ip: req.ip || req.socket?.remoteAddress || '127.0.0.1',
                 city: 'Istanbul',
                 country: 'Turkey',
                 zipCode: '34000'
@@ -590,6 +726,9 @@ app.post('/api/checkout/init', async (req, res) => {
                 return res.status(500).json({ error: 'Ödeme sistemi şu an yanıt veremiyor' });
             }
             if (result.status === 'success') {
+                // Token → conversationId eşleştirmesi sakla (callback doğrulaması için)
+                if (!global.checkoutSessions) global.checkoutSessions = new Map();
+                global.checkoutSessions.set(result.token, { conversationId, plan, email: billing.email, createdAt: Date.now() });
                 res.json({
                     success: true,
                     checkoutFormContent: result.checkoutFormContent,
@@ -615,9 +754,13 @@ app.post('/api/checkout/callback', express.urlencoded({ extended: true }), (req,
     const { token } = req.body;
     if (!token) return res.redirect('/?checkout=fail&msg=Token+bulunamadı');
 
+    // Checkout session doğrulaması
+    const session = global.checkoutSessions?.get(token);
+    const conversationId = session?.conversationId || '';
+
     iyzipay.checkoutForm.retrieve({
         locale: Iyzipay.LOCALE.TR,
-        conversationId: '',
+        conversationId,
         token
     }, (err, result) => {
         if (err) {
@@ -634,12 +777,69 @@ app.post('/api/checkout/callback', express.urlencoded({ extended: true }), (req,
                 cardType: result.cardType,
                 lastFourDigits: result.lastFourDigits
             });
-            // TODO: DB'ye kaydet, premium aktif et
-            res.redirect(`/?checkout=success&amount=${result.paidPrice}`);
+
+            // Store payment in memory (production: use a real DB like PostgreSQL/MongoDB)
+            const planKey = result.basketItems?.[0]?.id || 'premium-monthly';
+            const isYearly = planKey.includes('yearly');
+            const planTier = planKey.includes('vip') ? 'vip' : 'premium';
+            const expiresAt = new Date();
+            expiresAt.setMonth(expiresAt.getMonth() + (isYearly ? 12 : 1));
+
+            // Store payment persistently (JSON file + memory)
+            if (!global.payments) global.payments = loadPayments();
+            global.payments.push({
+                paymentId: result.paymentId,
+                email: result.buyer?.email || 'unknown',
+                plan: planTier,
+                period: isYearly ? 'yearly' : 'monthly',
+                amount: result.paidPrice,
+                currency: result.currency,
+                activatedAt: new Date().toISOString(),
+                expiresAt: expiresAt.toISOString(),
+                status: 'active'
+            });
+            savePayments(global.payments);
+
+            console.log(`✅ Premium aktif: ${planTier} (${isYearly ? 'yıllık' : 'aylık'}) — Bitiş: ${expiresAt.toLocaleDateString('tr-TR')}`);
+
+            // Kullanılmış session'ı temizle
+            global.checkoutSessions?.delete(token);
+
+            res.redirect(`/?checkout=success&amount=${result.paidPrice}&plan=${planTier}`);
         } else {
             console.log('❌ Ödeme başarısız:', result.errorMessage);
             res.redirect(`/?checkout=fail&msg=${encodeURIComponent(result.errorMessage || 'Ödeme tamamlanamadı')}`);
         }
+    });
+});
+
+// ═══════════════════════════════════════
+// API: Premium Status Check
+// ═══════════════════════════════════════
+app.post('/api/premium-status', (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'E-posta gerekli' });
+
+    if (!global.payments) return res.json({ premium: false, plan: 'free' });
+
+    const payment = global.payments
+        .filter(p => p.email === email && p.status === 'active')
+        .sort((a, b) => new Date(b.activatedAt) - new Date(a.activatedAt))[0];
+
+    if (!payment) return res.json({ premium: false, plan: 'free' });
+
+    const isExpired = new Date(payment.expiresAt) < new Date();
+    if (isExpired) {
+        payment.status = 'expired';
+        savePayments(global.payments);
+        return res.json({ premium: false, plan: 'free', expired: true });
+    }
+
+    res.json({
+        premium: true,
+        plan: payment.plan,
+        period: payment.period,
+        expiresAt: payment.expiresAt
     });
 });
 
@@ -669,7 +869,7 @@ app.listen(PORT, () => {
     console.log(`\n✦ AstroMap Server v4.0 — Optimized Edition`);
     console.log(`  → http://localhost:${PORT}`);
     console.log(`  → AI: ${process.env.OPENAI_API_KEY ? '✅ OpenAI bağlı' : '❌ API key yok'}`);
-    console.log(`  → Security: Headers ✅ | Rate Limit: ${RATE_MAX}/min ✅ | Cache: ${CACHE_TTL/1000}s ✅`);
+    console.log(`  → Security: Headers ✅ | Rate Limit: ${RATE_MAX}/min ✅ | Cache: ✅`);
     console.log(`  → iyzico: ${process.env.IYZICO_API_KEY ? '✅ Bağlı' : '⚠️ Sandbox'} (${process.env.IYZICO_URI || 'sandbox'})`);
     console.log(`  → Routes: /api/daily-horoscope, /api/compatibility, /api/crystal-guide, /api/tarot, /api/city-insight, /api/dream, /api/fortune`);
     console.log(`  → Payment: /api/checkout/init, /api/checkout/callback\n`);
