@@ -567,7 +567,7 @@ async function callAI(endpoint, body, useCache = true) {
     if (useCache) {
         const cached = AICache.get(endpoint, body);
         if (cached) {
-            console.log(`✦ AI Cache hit: ${endpoint}`);
+            if (localStorage.getItem('astromap_debug')) console.log(`✦ AI Cache hit: ${endpoint}`);
             return cached;
         }
     }
@@ -585,14 +585,14 @@ async function callAI(endpoint, body, useCache = true) {
         res = await fetch(apiBase + '/api/' + endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
+            body: JSON.stringify({ ...body, lang: i18n?.getLang?.() || 'tr' })
         });
     } catch (networkErr) {
         _pendingRequests.delete(endpoint);
         // Offline fallback: try to serve stale cache
         const staleCache = AICache.get(endpoint, body, true); // true = ignore TTL
         if (staleCache) {
-            console.log(`✦ Offline fallback: ${endpoint} (stale cache)`);
+            if (localStorage.getItem('astromap_debug')) console.log(`✦ Offline fallback: ${endpoint} (stale cache)`);
             staleCache._offline = true;
             return staleCache;
         }
@@ -627,9 +627,18 @@ function showAILoading(container, message) {
     const limitText = remaining === Infinity ? '' : `<p class="ai-loading-sub" style="opacity:0.6;font-size:12px">Kalan hak: ${remaining}/${UsageLimiter.FREE_DAILY_LIMIT}</p>`;
     container.innerHTML = `
         <div class="ai-loading">
-            <div class="ai-loading-spinner"></div>
-            <p class="ai-loading-text">${message || 'AI yanıt hazırlıyor...'}</p>
-            <p class="ai-loading-sub">Bu birkaç saniye sürebilir</p>
+            <div class="skeleton-card skeleton">
+                <div class="skeleton-circle skeleton"></div>
+                <div class="skeleton-title skeleton"></div>
+                <div class="skeleton-text skeleton"></div>
+                <div class="skeleton-text medium skeleton"></div>
+                <div class="skeleton-text short skeleton"></div>
+            </div>
+            <div class="skeleton-card skeleton">
+                <div class="skeleton-text skeleton"></div>
+                <div class="skeleton-text medium skeleton"></div>
+            </div>
+            <p class="ai-loading-text">${message || 'AI hazirlaniyor...'}</p>
             ${limitText}
         </div>
     `;
@@ -3955,7 +3964,7 @@ async function initPushNotifications() {
         await PushNotifications.register();
 
         PushNotifications.addListener('registration', (token) => {
-            console.log('Push token:', token.value);
+            if (localStorage.getItem('astromap_debug')) console.log('Push token:', token.value);
             localStorage.setItem('astromap_push_token', token.value);
             // Send token to backend
             fetch((window.__ASTROMAP_CONFIG?.apiBase || '') + '/api/push/register', {
@@ -4136,6 +4145,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Daily energy card on home
     renderDailyEnergyCard();
+    initPullToRefresh();
 
     // Android back button — go to previous page instead of closing app
     document.addEventListener('backbutton', handleBackButton, false); // Capacitor/Cordova
@@ -4165,6 +4175,36 @@ function initHapticFeedback() {
         const submit = e.target.closest('[onclick*="show"], [onclick*="calculate"]');
         if (submit) Haptics.impact({ style: 'Medium' }).catch(() => {});
     });
+}
+
+// ═══════════════════════════════════════
+// PULL TO REFRESH (Home page)
+// ═══════════════════════════════════════
+function initPullToRefresh() {
+    let startY = 0, pulling = false;
+    const threshold = 80;
+
+    document.addEventListener('touchstart', (e) => {
+        if (currentPage !== 'home' || window.scrollY > 10) return;
+        startY = e.touches[0].clientY;
+        pulling = true;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+        if (!pulling) return;
+        const dy = e.touches[0].clientY - startY;
+        if (dy > threshold && window.scrollY <= 0) {
+            pulling = false;
+            // Refresh daily energy card
+            renderDailyEnergyCard();
+            showToast('Guncellendi ✦');
+            if (window.Capacitor?.Plugins?.Haptics) {
+                window.Capacitor.Plugins.Haptics.impact({ style: 'Medium' }).catch(() => {});
+            }
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => { pulling = false; }, { passive: true });
 }
 
 // ═══════════════════════════════════════

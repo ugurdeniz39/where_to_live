@@ -455,6 +455,9 @@ app.post('/api/daily-horoscope', async (req, res) => {
         const { name, gender, birthDate, birthTime, sunSign, moonSign, risingSign, period } = req.body;
         if (!birthDate) return res.status(400).json({ error: 'Doğum tarihi gerekli' });
 
+        const lang = req.body.lang || 'tr';
+        const langInstruction = lang === 'en' ? 'Write ALL your response in ENGLISH.' : 'Turkce yaz.';
+
         const today = new Date().toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         const periodLabel = { weekly: 'Haftalık', monthly: 'Aylık', yearly: 'Yıllık' }[period] || 'Günlük';
         const periodScope = { weekly: 'Bu hafta', monthly: 'Bu ay', yearly: 'Bu yıl' }[period] || 'Bugün';
@@ -475,7 +478,7 @@ app.post('/api/daily-horoscope', async (req, res) => {
         };
         const pc = periodConfig[period] || periodConfig.daily;
 
-        const systemPrompt = `Sen derin astroloji bilgisine sahip, sezgisel ve empatik bir astrologsun. Türkçe yaz.
+        const systemPrompt = `Sen derin astroloji bilgisine sahip, sezgisel ve empatik bir astrologsun. ${langInstruction}
 ${userName} adında birine hitap ediyorsun — ${genderText.tone} bir ton kullan.
 ${userName}'in adını doğal şekilde kullan (her cümlede değil, anahtar noktalarda).
 Emoji kullan ama abartma. Her bölümü net, akıcı ve BİRBİRİNDEN FARKLI yaz.
@@ -587,9 +590,12 @@ app.post('/api/crystal-guide', async (req, res) => {
         const { birthDate, sunSign, moonSign, mood } = req.body;
         if (!birthDate) return res.status(400).json({ error: 'Doğum tarihi gerekli' });
 
+        const lang = req.body.lang || 'tr';
+        const langInstruction = lang === 'en' ? 'Write ALL your response in ENGLISH.' : 'Turkce yaz.';
+
         const today = new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' });
 
-        const systemPrompt = `Sen kristal terapi, cakra dengeleme, aromaterapi ve butunsel wellness konusunda 20 yillik deneyime sahip bir spirituel rehbersin. Turkce yaz.
+        const systemPrompt = `Sen kristal terapi, cakra dengeleme, aromaterapi ve butunsel wellness konusunda 20 yillik deneyime sahip bir spirituel rehbersin. ${langInstruction}
 Sicak, sefkatli ve bilge bir ton kullan. Kisiyi guclendiren, rahatlatici bir dil kullan.
 
 ONEMLI KURALLAR:
@@ -643,6 +649,9 @@ Her oneri spesifik ve uygulanabilir olsun.`;
 app.post('/api/tarot', async (req, res) => {
     try {
         const { birthDate, sunSign, question, spread } = req.body;
+
+        const lang = req.body.lang || 'tr';
+        const langInstruction = lang === 'en' ? 'Write ALL your response in ENGLISH.' : 'Turkce yaz.';
 
         // ── Spread configurations ──
         const SPREADS = {
@@ -712,7 +721,7 @@ app.post('/api/tarot', async (req, res) => {
             `${i + 1}. ${spreadConfig.positions[i]}: ${card}${reversals[i] ? ' (TERS)' : ''}`
         ).join('\n');
 
-        const systemPrompt = `Sen derin bilgiye sahip, gizemli ve empatik bir tarot ustasısın. Türkçe yaz.
+        const systemPrompt = `Sen derin bilgiye sahip, gizemli ve empatik bir tarot ustasısın. ${langInstruction}
 Mistik, şefkatli ve bilge bir ton kullan. Danışanını derinden anlamaya çalış.
 ${question ? 'Danışanın sana özel bir soru sordu — okumanın HER AŞAMASINI bu soruya bağla.' : ''}
 Bu bir ${spreadConfig.desc}.
@@ -805,7 +814,10 @@ app.post('/api/dream', async (req, res) => {
         const { dream, sunSign } = req.body;
         if (!dream) return res.status(400).json({ error: 'Rüya açıklaması gerekli' });
 
-        const systemPrompt = `Sen Jungcu psikoloji ve astroloji bilgisiyle rüya yorumlayan derin bir spiritüel rehbersin. Türkçe yaz.
+        const lang = req.body.lang || 'tr';
+        const langInstruction = lang === 'en' ? 'Write ALL your response in ENGLISH.' : 'Turkce yaz.';
+
+        const systemPrompt = `Sen Jungcu psikoloji ve astroloji bilgisiyle rüya yorumlayan derin bir spiritüel rehbersin. ${langInstruction}
 Gizemli, derin ama şefkatli bir ton kullan. Rüyayı sadece yüzeysel sembollerle değil,
 bilinçaltı arketipleri, duygusal bağlamlar ve kişisel dönüşüm perspektifinden oku.
 
@@ -855,7 +867,7 @@ app.post('/api/fortune', async (req, res) => {
         // Support both array (new) and single image (backward compat)
         const imageList = images && images.length > 0 ? images : (image ? [image] : []);
         if (imageList.length === 0) return res.status(400).json({ error: 'Fincan fotoğrafı gerekli' });
-        if (imageList.length > 3) return res.status(400).json({ error: 'En fazla 3 fotoğraf gönderilebilir' });
+        if (imageList.length > 6) return res.status(400).json({ error: 'En fazla 6 fotoğraf gönderilebilir' });
         // Validate all images
         for (const img of imageList) {
             if (!img.startsWith('data:image/')) {
