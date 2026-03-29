@@ -15,7 +15,7 @@ const PLANS = {
 };
 
 module.exports = async (req, res) => {
-    corsHeaders(res);
+    corsHeaders(res, req);
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -23,8 +23,11 @@ module.exports = async (req, res) => {
         const { plan, billing } = req.body;
         const selected = PLANS[plan];
         if (!selected) return res.status(400).json({ error: 'Geçersiz plan' });
+        if (!billing?.email || !billing?.name) {
+            return res.status(400).json({ error: 'Ad ve e-posta gerekli' });
+        }
 
-        const conversationId = `ASTRO_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const conversationId = `ASTRO_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
         const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
         const proto = req.headers['x-forwarded-proto'] || 'https';
 
@@ -45,8 +48,8 @@ module.exports = async (req, res) => {
                 gsmNumber: billing?.phone || '+905000000000',
                 email: billing?.email || 'misafir@astromap.app',
                 identityNumber: '11111111111',
-                lastLoginDate: new Date().toISOString().replace('T', ' ').substr(0, 19),
-                registrationDate: new Date().toISOString().replace('T', ' ').substr(0, 19),
+                lastLoginDate: new Date().toISOString().replace('T', ' ').slice(0, 19),
+                registrationDate: new Date().toISOString().replace('T', ' ').slice(0, 19),
                 registrationAddress: 'İstanbul, Türkiye',
                 ip: req.headers['x-forwarded-for'] || req.connection?.remoteAddress || '127.0.0.1',
                 city: 'Istanbul',

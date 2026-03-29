@@ -1,7 +1,7 @@
 const { corsHeaders } = require('./_lib/openai');
 
 module.exports = (req, res) => {
-    corsHeaders(res);
+    corsHeaders(res, req);
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     res.json({

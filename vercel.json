@@ -12,9 +12,10 @@
   "rewrites": [
     { "source": "/api/checkout/init", "destination": "/api/checkout/init" },
     { "source": "/api/checkout/callback", "destination": "/api/checkout/callback" },
-    { "source": "/api/push/register", "destination": "/api/push" },
-    { "source": "/api/push/stats", "destination": "/api/push" },
-    { "source": "/api/analytics/summary", "destination": "/api/analytics" },
+    { "source": "/api/push/:path*", "destination": "/api/extras" },
+    { "source": "/api/analytics/:path*", "destination": "/api/extras" },
+    { "source": "/api/analytics", "destination": "/api/extras" },
+    { "source": "/api/premium-status", "destination": "/api/extras" },
     { "source": "/api/:path", "destination": "/api/:path" },
     { "source": "/((?!api|.*\\..*).*)", "destination": "/index.html" }
   ],

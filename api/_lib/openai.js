@@ -23,17 +23,42 @@ async function askGPT(systemPrompt, userPrompt, maxTokens = 1000, temperature = 
 }
 
 function parseJSON(raw) {
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('AI yanıtı parse edilemedi');
-    return JSON.parse(jsonMatch[0]);
+    // Strip markdown code blocks
+    let cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+
+    // Try direct parse first
+    try { return JSON.parse(cleaned.trim()); } catch {}
+
+    // Extract outermost {...}
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('AI yanıtı parse edilemedi');
+    let jsonStr = match[0];
+
+    // Fix common GPT JSON issues
+    jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1'); // trailing commas
+    jsonStr = jsonStr.replace(/(\{|,)\s*([a-zA-Z_]\w*)\s*:/g, '$1"$2":'); // unquoted keys
+
+    try { return JSON.parse(jsonStr); } catch {}
+
+    // Last resort: flatten newlines
+    jsonStr = jsonStr.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ');
+    try { return JSON.parse(jsonStr); } catch (e) {
+        console.error('JSON parse failed:', e.message, 'Raw:', raw.slice(0, 200));
+        throw new Error('AI yanıtı parse edilemedi');
+    }
 }
 
-function corsHeaders(res) {
+function corsHeaders(res, req) {
     const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',').map(s => s.trim());
-    // For Vercel serverless, we'll use the first allowed origin or allow the request origin if it matches
-    res.setHeader('Access-Control-Allow-Origin', allowedOrigins[0] || '*');
+    const origin = req && req.headers && req.headers.origin;
+    if (origin && allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    } else {
+        res.setHeader('Access-Control-Allow-Origin', allowedOrigins[0] || 'http://localhost:3000');
+    }
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Vary', 'Origin');
 }
 
 // Input validation helper

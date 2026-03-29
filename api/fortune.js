@@ -1,13 +1,17 @@
 const { openai, parseJSON, corsHeaders, validateTextLength } = require('./_lib/openai');
 
 module.exports = async (req, res) => {
-    corsHeaders(res);
+    corsHeaders(res, req);
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     try {
         const { image, cup, sunSign, status } = req.body;
         if (!image) return res.status(400).json({ error: 'Fincan fotoğrafı gerekli' });
+        // Validate image size (max ~1.5MB base64 ≈ ~1MB image)
+        if (typeof image === 'string' && image.length > 2 * 1024 * 1024) {
+            return res.status(400).json({ error: 'Resim çok büyük (çok 1.5MB)' });
+        }
         if (cup) validateTextLength(cup, 500);
 
         const systemPrompt = `Sen deneyimli bir Türk kahve falcısısın. Geleneksel Türk kahve falı geleneğine hakimsin.
