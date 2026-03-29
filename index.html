@@ -525,6 +525,32 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
                     <div class="form-group"><label>Doğum Tarihi</label><input type="date" id="tarot-birth-date" value="1995-06-15"></div>
                 </div>
                 <div class="form-group">
+                    <label>Açılım Türü</label>
+                    <div class="spread-selector">
+                        <button class="spread-btn selected" data-spread="three-card" onclick="selectSpread(this)" type="button">
+                            <span class="spread-icon">🃏🃏🃏</span>
+                            <span class="spread-name">Üç Kart</span>
+                            <span class="spread-desc">Geçmiş · Şimdi · Gelecek</span>
+                        </button>
+                        <button class="spread-btn" data-spread="yes-no" onclick="selectSpread(this)" type="button">
+                            <span class="spread-icon">🃏</span>
+                            <span class="spread-name">Evet/Hayır</span>
+                            <span class="spread-desc">Tek kart · Hızlı cevap</span>
+                        </button>
+                        <button class="spread-btn" data-spread="relationship" onclick="selectSpread(this)" type="button">
+                            <span class="spread-icon">🃏💕🃏</span>
+                            <span class="spread-name">İlişki</span>
+                            <span class="spread-desc">Sen · O · Enerji</span>
+                        </button>
+                        <button class="spread-btn premium-spread" data-spread="celtic-cross" onclick="selectSpread(this)" type="button">
+                            <span class="spread-icon">🔮</span>
+                            <span class="spread-name">Kelt Haçı</span>
+                            <span class="spread-desc">10 kart · Derin analiz</span>
+                            <span class="spread-lock">Premium</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
                     <label>Sorun (opsiyonel)</label>
                     <textarea id="tarot-question" placeholder="Aklındaki soruyu yaz... (boş bırakırsan genel okuma yapılır)" rows="3"></textarea>
                 </div>
@@ -679,8 +705,18 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
 <section id="step-birth" class="page">
     <div class="step-container">
         <div class="step-indicator"><div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div><div class="step-dot"></div></div>
-        <h2>Doğum Bilgilerin</h2>
-        <p class="step-desc">Gezegen pozisyonlarını hesaplamak için doğum bilgilerine ihtiyacımız var.</p>
+        <h2>Seni Tanıyalım</h2>
+        <p class="step-desc">Kişiselleştirilmiş kozmik haritanı oluşturmak için bilgilerine ihtiyacımız var.</p>
+        <div class="form-row">
+            <div class="form-group form-group-half"><label for="wizard-name">Adın</label><input type="text" id="wizard-name" placeholder="Adını yaz..." maxlength="30"></div>
+            <div class="form-group form-group-half"><label for="wizard-gender">Cinsiyet</label>
+                <select id="wizard-gender">
+                    <option value="kadın">Kadın</option>
+                    <option value="erkek">Erkek</option>
+                    <option value="other">Söylemek istemiyorum</option>
+                </select>
+            </div>
+        </div>
         <div class="form-group"><label for="birth-date">Doğum Tarihi</label><input type="date" id="birth-date" value="1995-06-15" aria-required="true"></div>
         <div class="form-group"><label for="birth-time">Doğum Saati</label><input type="time" id="birth-time" value="14:30" aria-describedby="birth-time-hint"><small id="birth-time-hint">Bilmiyorsan 12:00 bırakabilirsin</small></div>
         <div class="form-group">
@@ -703,6 +739,19 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
         <div class="step-indicator"><div class="step-dot completed"></div><div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div></div>
         <h2>Hayattan Ne Bekliyorsun?</h2>
         <p class="step-desc">En az 2 tercih seç — yıldızların sana en uygun yerleri göstersin.</p>
+        <div id="sign-recommendation-banner" class="sign-rec-banner hidden">
+            <div class="sign-rec-content">
+                <span class="sign-rec-icon" id="sign-rec-icon">♊</span>
+                <div class="sign-rec-text">
+                    <strong id="sign-rec-title">İkizler burcuna göre önerilen:</strong>
+                    <span id="sign-rec-prefs">Öğrenme & Yaratıcılık</span>
+                </div>
+            </div>
+            <div class="sign-rec-actions">
+                <button class="btn-primary btn-sm" onclick="applySignRecommendation()">Önerileri Uygula</button>
+                <button class="btn-ghost btn-sm" onclick="dismissSignRecommendation()">Kendim Seçeceğim</button>
+            </div>
+        </div>
         <div class="preference-grid">
             <div class="pref-card" data-pref="love" onclick="togglePref(this)"> <span class="pref-icon">♀</span><span class="pref-label">Aşk & İlişki</span><span class="pref-planet">Venüs çizgileri</span></div>
             <div class="pref-card" data-pref="career" onclick="togglePref(this)"><span class="pref-icon">☉</span><span class="pref-label">Kariyer & Başarı</span><span class="pref-planet">Güneş çizgileri</span></div>

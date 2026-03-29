@@ -50,6 +50,26 @@ const AstroEngine = (function () {
 
     const LINE_TYPE_WEIGHTS = { mc: 1.0, ic: 0.8, asc: 0.9, dsc: 0.7 };
 
+    // ── ZODIAC SIGN RECOMMENDATIONS ──
+    // Returns recommended lifestyle preferences based on sun sign
+    function getSignRecommendations(sunSign) {
+        const map = {
+            'Koç':      { climate: 'warm',     size: 'mega',   nature: 'urban',    prefs: ['adventure', 'career'] },
+            'Boğa':     { climate: 'moderate',  size: 'medium', nature: 'mountain', prefs: ['peace', 'love'] },
+            'İkizler':  { climate: 'moderate',  size: 'mega',   nature: 'urban',    prefs: ['learning', 'creativity'] },
+            'Yengeç':   { climate: 'moderate',  size: 'medium', nature: 'coastal',  prefs: ['peace', 'love'] },
+            'Aslan':    { climate: 'warm',      size: 'mega',   nature: 'urban',    prefs: ['career', 'creativity'] },
+            'Başak':    { climate: 'moderate',  size: 'medium', nature: 'mountain', prefs: ['learning', 'growth'] },
+            'Terazi':   { climate: 'moderate',  size: 'mega',   nature: 'coastal',  prefs: ['love', 'creativity'] },
+            'Akrep':    { climate: 'cold',      size: 'medium', nature: 'mountain', prefs: ['growth', 'adventure'] },
+            'Yay':      { climate: 'warm',      size: 'mega',   nature: 'coastal',  prefs: ['adventure', 'luck'] },
+            'Oğlak':    { climate: 'cold',      size: 'mega',   nature: 'urban',    prefs: ['career', 'growth'] },
+            'Kova':     { climate: 'cold',      size: 'medium', nature: 'urban',    prefs: ['creativity', 'learning'] },
+            'Balık':    { climate: 'moderate',  size: 'small',  nature: 'coastal',  prefs: ['peace', 'creativity'] }
+        };
+        return map[sunSign] || { climate: 'any', size: 'any', nature: 'any', prefs: ['love', 'career'] };
+    }
+
     // ── BIRTH LOCATIONS (expanded — 100+ cities) ──
     const BIRTH_LOCATIONS = {
         // Turkey
@@ -450,15 +470,14 @@ const AstroEngine = (function () {
             else regionBonus = -3;
         }
 
-        // Direct vibe match — capped to prevent broad-vibe cities dominating
+        // Vibe match — minimal, just a tiebreaker (not a major factor)
         let vibeMatch = false;
-        let vibeCount = 0;
         if (city.vibe && preferences.length > 0) {
             for (const pref of preferences) {
-                if (city.vibe.includes(pref)) { vibeMatch = true; vibeCount++; }
+                if (city.vibe.includes(pref)) { vibeMatch = true; break; }
             }
         }
-        const vibeBonus = vibeMatch ? Math.min(6, 2 + vibeCount * 1.5) : 0;
+        const vibeBonus = vibeMatch ? 2 : 0; // Tiny tiebreaker only
 
         // Natal element match — stronger astro tie
         const cityElementMap = { warm: 'fire', cold: 'water', moderate: 'earth' };
@@ -479,8 +498,8 @@ const AstroEngine = (function () {
         if (city.size === 'small') sizeMod = -2;
         // medium and mega both get 0
 
-        // Calculate final score — astro STRONGLY dominates (85 base)
-        const astroBase = maxPossible > 0 ? (totalScore / maxPossible) * 85 : 0;
+        // Calculate final score — astro DOMINATES (90 base), bonuses capped
+        const astroBase = maxPossible > 0 ? (totalScore / maxPossible) * 90 : 0;
         const raw = astroBase + lifestyleBonus - lifestylePenalty + regionBonus + convergenceBonus + harmonicBonus + vibeBonus + elementBonus + sizeMod + uniqueJitter;
         
         // Floor of 12 — distant/unmatched cities should clearly score low
@@ -1117,29 +1136,36 @@ const AstroEngine = (function () {
         }).sort((a, b) => b.score - a.score);
 
         // ── Geographic Diversity Post-processing ──
-        // Ensure top results aren't all clustered in the same geographic area
+        // Ensure top results have geographic AND country diversity
         const diversified = [];
         const remaining = [...scoredCities];
-        const GEO_MIN_DIST = 8; // minimum degrees apart for top results
-        const TOP_N = 20; // apply diversity to top 20
+        const GEO_MIN_DIST = 6; // minimum degrees apart for top results
+        const TOP_N = 25; // apply diversity to top 25
+        const MAX_PER_COUNTRY = 2; // max 2 cities from same country in top 10
 
         while (diversified.length < TOP_N && remaining.length > 0) {
             const candidate = remaining.shift();
-            // Check geographic distance from already-selected cities
+
+            // Geographic proximity check
             const tooClose = diversified.some(sel => {
                 const dLat = candidate.lat - sel.lat;
                 const dLon = (candidate.lon - sel.lon) * Math.cos(candidate.lat * Math.PI / 180);
                 return Math.sqrt(dLat * dLat + dLon * dLon) < GEO_MIN_DIST;
             });
-            if (!tooClose || diversified.length < 3) {
-                // Always allow top 3, then enforce diversity
+
+            // Country diversity check (only for top 10)
+            const countryCount = diversified.filter(c => c.country === candidate.country).length;
+            const tooManyFromCountry = diversified.length < 10 && countryCount >= MAX_PER_COUNTRY;
+
+            if (diversified.length < 1) {
+                // Always allow #1
+                diversified.push(candidate);
+            } else if (!tooClose && !tooManyFromCountry) {
                 diversified.push(candidate);
             } else {
-                // Demote: push to end of diversified
                 remaining.push(candidate);
-                // Avoid infinite loop — if we've checked too many, just add it
                 if (remaining.length <= scoredCities.length - TOP_N) {
-                    diversified.push(candidate);
+                    diversified.push(candidate); // Avoid infinite loop
                 }
             }
         }
@@ -1177,6 +1203,7 @@ const AstroEngine = (function () {
         calculateCompatibility,
         calculateMoonPhase,
         getCrystalRecommendations,
-        getDominantElement
+        getDominantElement,
+        getSignRecommendations
     };
 })();

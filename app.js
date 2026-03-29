@@ -667,7 +667,92 @@ function closeMobileNavOutside(e) {
 
 // Astro app step navigation
 function startApp() { navigateToStep('step-birth'); }
-function goToStep(stepId) { navigateToStep(stepId); }
+
+// ═══════════════════════════════════════
+// SIGN-BASED RECOMMENDATIONS
+// ═══════════════════════════════════════
+const PREF_LABELS = {
+    love: 'Aşk & İlişki', career: 'Kariyer & Başarı', peace: 'Huzur & Yuva',
+    luck: 'Şans & Bolluk', creativity: 'Yaratıcılık & Sanat', growth: 'Dönüşüm & Güç',
+    adventure: 'Macera & Enerji', learning: 'Öğrenme & İletişim'
+};
+
+const SIGN_SYMBOLS = {
+    'Koç': '♈', 'Boğa': '♉', 'İkizler': '♊', 'Yengeç': '♋',
+    'Aslan': '♌', 'Başak': '♍', 'Terazi': '♎', 'Akrep': '♏',
+    'Yay': '♐', 'Oğlak': '♑', 'Kova': '♒', 'Balık': '♓'
+};
+
+function showSignRecommendation() {
+    const birthDate = document.getElementById('birth-date')?.value;
+    if (!birthDate) return;
+    const sunSign = getSunSignFromDate(birthDate);
+    if (!sunSign) return;
+
+    const rec = AstroEngine.getSignRecommendations(sunSign);
+    if (!rec) return;
+
+    const banner = document.getElementById('sign-recommendation-banner');
+    if (!banner) return;
+
+    document.getElementById('sign-rec-icon').textContent = SIGN_SYMBOLS[sunSign] || '✦';
+    document.getElementById('sign-rec-title').textContent = `${sunSign} burcuna göre önerilen:`;
+    document.getElementById('sign-rec-prefs').textContent = rec.prefs.map(p => PREF_LABELS[p] || p).join(' & ');
+    banner.classList.remove('hidden');
+
+    // Store for later use
+    banner.dataset.recPrefs = JSON.stringify(rec.prefs);
+    banner.dataset.recClimate = rec.climate;
+    banner.dataset.recSize = rec.size;
+    banner.dataset.recNature = rec.nature;
+}
+
+function applySignRecommendation() {
+    const banner = document.getElementById('sign-recommendation-banner');
+    if (!banner) return;
+
+    const recPrefs = JSON.parse(banner.dataset.recPrefs || '[]');
+    const recClimate = banner.dataset.recClimate || 'any';
+    const recSize = banner.dataset.recSize || 'any';
+    const recNature = banner.dataset.recNature || 'any';
+
+    // Apply preference selections
+    selectedPreferences = [...recPrefs];
+    document.querySelectorAll('.pref-card').forEach(card => {
+        card.classList.toggle('selected', recPrefs.includes(card.dataset.pref));
+    });
+
+    // Apply lifestyle choices
+    lifestyleChoices = { climate: recClimate, size: recSize, nature: recNature, region: 'any' };
+
+    // Pre-select lifestyle buttons for when user sees that step
+    setTimeout(() => {
+        document.querySelectorAll('.option-btn').forEach(btn => {
+            const group = btn.dataset.group;
+            const value = btn.dataset.value;
+            if (group && lifestyleChoices[group] === value) {
+                document.querySelectorAll(`.option-btn[data-group="${group}"]`).forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+            }
+        });
+    }, 100);
+
+    banner.classList.add('hidden');
+    showToast('Burca göre tercihler uygulandı ✦');
+
+    // Skip to lifestyle step (preferences already set)
+    goToStep('step-lifestyle');
+}
+
+function dismissSignRecommendation() {
+    const banner = document.getElementById('sign-recommendation-banner');
+    if (banner) banner.classList.add('hidden');
+}
+
+function goToStep(stepId) {
+    navigateToStep(stepId);
+    if (stepId === 'step-preferences') showSignRecommendation();
+}
 
 function navigateToStep(stepId) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1662,12 +1747,20 @@ function switchTab(btn) {
 // ═══════════════════════════════════════
 // CALCULATE
 // ═══════════════════════════════════════
+// Wizard user info (shared across wizard)
+let wizardName = '';
+let wizardGender = 'other';
+
 function calculateResults() {
     const birthDate = document.getElementById('birth-date').value;
     const birthTime = document.getElementById('birth-time').value;
     const birthCity = document.getElementById('birth-city').value;
+    wizardName = document.getElementById('wizard-name')?.value?.trim() || '';
+    wizardGender = document.getElementById('wizard-gender')?.value || 'other';
 
     if (!birthDate) { showToast('Lütfen doğum tarihini gir'); return; }
+
+    const displayName = wizardName || 'Sevgili Gezgin';
 
     document.getElementById('loading-overlay').classList.remove('hidden');
     const bar = document.getElementById('loading-bar');
@@ -1675,15 +1768,17 @@ function calculateResults() {
     const loadingSub = document.getElementById('loading-sub');
 
     bar.style.width = '10%';
-    loadingText.textContent = 'Gezegen pozisyonları hesaplanıyor...';
+    loadingText.textContent = `${displayName}, gezegen pozisyonların hesaplanıyor...`;
     loadingSub.textContent = `${CITY_DATABASE.ALL_CITIES.length} şehir analiz ediliyor`;
 
     setTimeout(() => { bar.style.width = '35%'; loadingText.textContent = 'Astrokartografi çizgileri çiziliyor...'; }, 400);
-    setTimeout(() => { bar.style.width = '65%'; loadingText.textContent = 'Şehirler puanlanıyor...'; }, 800);
+    setTimeout(() => { bar.style.width = '65%'; loadingText.textContent = `${displayName}, şehirler puanlanıyor...`; }, 800);
     setTimeout(() => { bar.style.width = '85%'; loadingText.textContent = 'Transit analizleri yapılıyor...'; }, 1200);
 
     setTimeout(() => {
         results = AstroEngine.calculate(birthDate, birthTime, birthCity, selectedPreferences, lifestyleChoices);
+        results.wizardName = wizardName;
+        results.wizardGender = wizardGender;
         allRenderedCities = results.recommendations;
 
         bar.style.width = '100%';
@@ -1707,8 +1802,11 @@ function calculateResults() {
 function renderResults() {
     const sunSign = results.natalChart.sun.sign;
     const moonSign = results.natalChart.moon.sign;
-    document.getElementById('results-intro').textContent =
-        `${sunSign} güneşi ve ${moonSign} ayı ile ${CITY_DATABASE.ALL_CITIES.length} şehri analiz ettik:`;
+    const name = results.wizardName || '';
+    const intro = name
+        ? `${name}, ${sunSign} güneşin ve ${moonSign} ayın ile ${CITY_DATABASE.ALL_CITIES.length} şehri analiz ettik:`
+        : `${sunSign} güneşi ve ${moonSign} ayı ile ${CITY_DATABASE.ALL_CITIES.length} şehri analiz ettik:`;
+    document.getElementById('results-intro').textContent = intro;
     renderCityList(allRenderedCities);
 }
 
@@ -2752,6 +2850,20 @@ function highlightCard(index) {
 // ═══════════════════════════════════════
 // AI TAROT — REAL CARD DRAWING CEREMONY
 // ═══════════════════════════════════════
+let selectedSpread = 'three-card';
+
+function selectSpread(btn) {
+    // Premium check for celtic-cross
+    if (btn.dataset.spread === 'celtic-cross' && !isPremiumUser()) {
+        showToast('Kelt Haçı açılımı Premium kullanıcılara özel');
+        navigateTo('pricing');
+        return;
+    }
+    selectedSpread = btn.dataset.spread;
+    document.querySelectorAll('.spread-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+}
+
 async function showTarot() {
     const birthDate = document.getElementById('tarot-birth-date').value;
     const question = document.getElementById('tarot-question').value;
@@ -2824,7 +2936,7 @@ async function showTarot() {
     });
 
     try {
-        const data = await callAI('tarot', { birthDate, sunSign, question, _t: Date.now() }, false);
+        const data = await callAI('tarot', { birthDate, sunSign, question, spread: selectedSpread, _t: Date.now() }, false);
         const cards = data.cards || [];
         const posEmojis = { 'Geçmiş': '⏳', 'Şimdi': '✨', 'Gelecek': '🔮' };
 
@@ -3045,7 +3157,7 @@ async function showCrystalGuide() {
 // ═══════════════════════════════════════
 // KAHVE FALI — IMAGE UPLOAD
 // ═══════════════════════════════════════
-let fortuneImageBase64 = null;
+let fortuneImages = [];
 
 // Native camera via Capacitor (used in mobile apps)
 async function nativePickPhoto(source) {
@@ -3061,12 +3173,9 @@ async function nativePickPhoto(source) {
             height: 1024
         });
         if (photo?.dataUrl) {
-            fortuneImageBase64 = photo.dataUrl;
-            const preview = document.getElementById('fortune-preview');
-            preview.innerHTML = `
-                <img src="${fortuneImageBase64}" alt="Fincan" class="fortune-preview-img">
-                <button type="button" class="fortune-remove-img" onclick="removeFortuneImage(event)">✕</button>
-            `;
+            if (fortuneImages.length >= 3) { showToast('En fazla 3 fotoğraf yükleyebilirsin'); return false; }
+            fortuneImages.push(photo.dataUrl);
+            renderFortunePreview();
             document.getElementById('fortune-submit-btn').disabled = false;
             return true;
         }
@@ -3092,6 +3201,7 @@ async function pickFortuneImage(source) {
 function handleFortuneImage(input) {
     const file = input.files[0];
     if (!file) return;
+    if (fortuneImages.length >= 3) { showToast('En fazla 3 fotoğraf yükleyebilirsin'); input.value = ''; return; }
     if (file.size > 5 * 1024 * 1024) { showToast("Dosya 5MB'den büyük olamaz"); input.value = ''; return; }
     if (!file.type.startsWith('image/')) { showToast('Sadece resim dosyası yükleyebilirsin'); input.value = ''; return; }
 
@@ -3111,14 +3221,10 @@ function handleFortuneImage(input) {
             canvas.width = w; canvas.height = h;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, w, h);
-            fortuneImageBase64 = canvas.toDataURL('image/jpeg', 0.85);
+            fortuneImages.push(canvas.toDataURL('image/jpeg', 0.85));
 
             // Show preview
-            const preview = document.getElementById('fortune-preview');
-            preview.innerHTML = `
-                <img src="${fortuneImageBase64}" alt="Fincan" class="fortune-preview-img">
-                <button type="button" class="fortune-remove-img" onclick="removeFortuneImage(event)">✕</button>
-            `;
+            renderFortunePreview();
             document.getElementById('fortune-submit-btn').disabled = false;
         };
         img.src = e.target.result;
@@ -3126,22 +3232,54 @@ function handleFortuneImage(input) {
     reader.readAsDataURL(file);
 }
 
-function removeFortuneImage(e) {
-    if (e) e.stopPropagation();
-    fortuneImageBase64 = null;
+function renderFortunePreview() {
+    const preview = document.getElementById('fortune-preview');
+    if (fortuneImages.length === 0) {
+        preview.innerHTML = `
+            <div class="fortune-drop-icon">📸</div>
+            <p class="fortune-drop-text">Fincanin fotografini yukle</p>
+            <div class="fortune-upload-buttons">
+                <button type="button" class="btn-fortune-upload" onclick="pickFortuneImage('gallery')">Galeriden Sec</button>
+                <button type="button" class="btn-fortune-upload btn-fortune-camera" onclick="pickFortuneImage('camera')">Fotograf Cek</button>
+            </div>
+            <small>JPG, PNG — max 5MB — en fazla 3 fotoğraf</small>
+        `;
+        document.getElementById('fortune-submit-btn').disabled = true;
+        return;
+    }
+    preview.innerHTML = `
+        <div class="fortune-thumbs-grid">
+            ${fortuneImages.map((img, i) => `
+                <div class="fortune-thumb">
+                    <img src="${img}" alt="Fincan ${i + 1}" class="fortune-thumb-img">
+                    <button type="button" class="fortune-thumb-remove" onclick="removeFortuneImageAt(${i})">✕</button>
+                </div>
+            `).join('')}
+            ${fortuneImages.length < 3 ? `
+                <div class="fortune-thumb fortune-thumb-add" onclick="pickFortuneImage('gallery')">
+                    <span>+</span>
+                    <small>${3 - fortuneImages.length} kaldı</small>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+function removeFortuneImageAt(index) {
+    fortuneImages.splice(index, 1);
+    renderFortunePreview();
     document.getElementById('fortune-file').value = '';
     const cam = document.getElementById('fortune-camera');
     if (cam) cam.value = '';
-    document.getElementById('fortune-preview').innerHTML = `
-        <div class="fortune-drop-icon">📸</div>
-        <p class="fortune-drop-text">Fincanin fotografini yukle</p>
-        <div class="fortune-upload-buttons">
-            <button type="button" class="btn-fortune-upload" onclick="pickFortuneImage('gallery')">Galeriden Sec</button>
-            <button type="button" class="btn-fortune-upload btn-fortune-camera" onclick="pickFortuneImage('camera')">Fotograf Cek</button>
-        </div>
-        <small>JPG, PNG — max 5MB</small>
-    `;
-    document.getElementById('fortune-submit-btn').disabled = true;
+}
+
+function removeFortuneImage(e) {
+    if (e) e.stopPropagation();
+    fortuneImages = [];
+    document.getElementById('fortune-file').value = '';
+    const cam = document.getElementById('fortune-camera');
+    if (cam) cam.value = '';
+    renderFortunePreview();
 }
 
 // Drag & drop support for fortune image
@@ -3173,7 +3311,7 @@ async function showFortune() {
     const birthDate = document.getElementById('fortune-birth-date').value;
     const status = document.getElementById('fortune-status').value;
     const cup = document.getElementById('fortune-cup').value;
-    if (!fortuneImageBase64) { showToast('Lütfen fincanın fotoğrafını yükle 📸'); return; }
+    if (fortuneImages.length === 0) { showToast('Lütfen fincanın fotoğrafını yükle 📸'); return; }
 
     const sunSign = getSunSignFromDate(birthDate);
     const resultEl = document.getElementById('fortune-result');
@@ -3189,7 +3327,7 @@ async function showFortune() {
     `;
 
     try {
-        const data = await callAI('fortune', { image: fortuneImageBase64, cup, sunSign, status }, false);
+        const data = await callAI('fortune', { images: fortuneImages, cup, sunSign, status }, false);
         SoundFX.play('mystic');
         const symbols = data.symbols || [];
         resultEl.innerHTML = `
@@ -3247,19 +3385,11 @@ async function showFortune() {
 }
 
 function resetFortunePage() {
-    fortuneImageBase64 = null;
+    fortuneImages = [];
     document.getElementById('fortune-file').value = '';
     const cam = document.getElementById('fortune-camera');
     if (cam) cam.value = '';
-    document.getElementById('fortune-preview').innerHTML = `
-        <div class="fortune-drop-icon">📸</div>
-        <p class="fortune-drop-text">Fincanin fotografini yukle</p>
-        <div class="fortune-upload-buttons">
-            <button type="button" class="btn-fortune-upload" onclick="pickFortuneImage('gallery')">Galeriden Sec</button>
-            <button type="button" class="btn-fortune-upload btn-fortune-camera" onclick="pickFortuneImage('camera')">Fotograf Cek</button>
-        </div>
-        <small>JPG, PNG — max 5MB</small>
-    `;
+    renderFortunePreview();
     document.getElementById('fortune-submit-btn').disabled = true;
     document.getElementById('fortune-cup').value = '';
     resetAIPage('fortune-form', 'fortune-result');

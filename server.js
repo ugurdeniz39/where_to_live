@@ -616,54 +616,111 @@ Bu kişi için bugün özel kristal, wellness ve spiritüel rehberlik ver.`;
 // ═══════════════════════════════════════
 app.post('/api/tarot', async (req, res) => {
     try {
-        const { birthDate, sunSign, question } = req.body;
+        const { birthDate, sunSign, question, spread } = req.body;
 
-        // Pre-select 3 random cards from the full 78-card deck to guide AI
+        // ── Spread configurations ──
+        const SPREADS = {
+            'three-card': {
+                count: 3,
+                positions: ['Geçmiş', 'Şimdi', 'Gelecek'],
+                desc: 'Geçmiş-Şimdi-Gelecek üç kart açılımı',
+                tokens: 1000
+            },
+            'yes-no': {
+                count: 1,
+                positions: ['Cevap'],
+                desc: 'Tek kart Evet/Hayır açılımı — kartın dik veya ters gelmesine göre cevap',
+                tokens: 600
+            },
+            'relationship': {
+                count: 3,
+                positions: ['Sen', 'O', 'Aranızdaki Enerji'],
+                desc: 'İlişki açılımı — iki kişi arasındaki enerjiyi inceler',
+                tokens: 1000
+            },
+            'celtic-cross': {
+                count: 10,
+                positions: ['Mevcut Durum', 'Engel', 'Bilinçaltı', 'Geçmiş', 'Olası Gelecek', 'Yakın Gelecek', 'Tutum', 'Çevre', 'Umut & Korku', 'Sonuç'],
+                desc: 'Kelt Haçı — 10 kartlık derinlemesine analiz',
+                tokens: 1800
+            }
+        };
+
+        const spreadConfig = SPREADS[spread] || SPREADS['three-card'];
+
+        // ── Build 78-card deck with zodiac element weighting ──
         const majorArcana = ['The Fool','The Magician','The High Priestess','The Empress','The Emperor','The Hierophant','The Lovers','The Chariot','Strength','The Hermit','Wheel of Fortune','Justice','The Hanged Man','Death','Temperance','The Devil','The Tower','The Star','The Moon','The Sun','Judgement','The World'];
         const suits = ['Wands','Cups','Swords','Pentacles'];
         const ranks = ['Ace','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Page','Knight','Queen','King'];
         const minorArcana = suits.flatMap(s => ranks.map(r => `${r} of ${s}`));
-        const fullDeck = [...majorArcana, ...minorArcana]; // 78 cards
-        // Shuffle and pick 3
+
+        // Element-weighted deck: boost suit matching zodiac element
+        const signElements = {
+            'Koç': 'fire', 'Aslan': 'fire', 'Yay': 'fire',
+            'Boğa': 'earth', 'Başak': 'earth', 'Oğlak': 'earth',
+            'İkizler': 'air', 'Terazi': 'air', 'Kova': 'air',
+            'Yengeç': 'water', 'Akrep': 'water', 'Balık': 'water'
+        };
+        const elementSuit = { fire: 'Wands', water: 'Cups', air: 'Swords', earth: 'Pentacles' };
+        const userElement = signElements[sunSign] || null;
+        const boostedSuit = userElement ? elementSuit[userElement] : null;
+
+        // Build weighted deck — boosted suit cards appear 2x
+        let fullDeck = [...majorArcana, ...minorArcana];
+        if (boostedSuit) {
+            const boosted = minorArcana.filter(c => c.includes(boostedSuit));
+            fullDeck = [...fullDeck, ...boosted]; // Add extra copies of matching suit
+        }
+
+        // Shuffle and pick
         const shuffled = fullDeck.sort(() => Math.random() - 0.5);
-        const picked = shuffled.slice(0, 3);
-        const reversals = picked.map(() => Math.random() < 0.3); // 30% reversal chance
+        const picked = shuffled.slice(0, spreadConfig.count);
+        const reversals = picked.map(() => Math.random() < 0.3);
+
+        // ── Build dynamic prompt based on spread ──
+        const cardsList = picked.map((card, i) =>
+            `{ "position": "${spreadConfig.positions[i]}", "name": "Kartın Türkçe adı", "nameEn": "English name", "emoji": "uygun emoji", "meaning": "Bu kartın ${spreadConfig.positions[i]} pozisyonundaki DERİN anlamı, 3-4 cümle.", "reversed": ${reversals[i]}, "keywords": ["anahtar1", "anahtar2", "anahtar3"] }`
+        ).join(',\n    ');
+
+        const pickedList = picked.map((card, i) =>
+            `${i + 1}. ${spreadConfig.positions[i]}: ${card}${reversals[i] ? ' (TERS)' : ''}`
+        ).join('\n');
 
         const systemPrompt = `Sen derin bilgiye sahip, gizemli ve empatik bir tarot ustasısın. Türkçe yaz.
 Mistik, şefkatli ve bilge bir ton kullan. Danışanını derinden anlamaya çalış.
 ${question ? 'Danışanın sana özel bir soru sordu — okumanın HER AŞAMASINI bu soruya bağla.' : ''}
+Bu bir ${spreadConfig.desc}.
+${sunSign ? `Danışanın ${sunSign} burcunda — bu burcun enerjisini yorumlarına yansıt.` : ''}
 
 KURALLAR:
-- Sana verilen 3 kartı AYNEN kullan, değiştirme.
-- Her kartın anlamını pozisyonuna (Geçmiş/Şimdi/Gelecek) ve ${question ? 'sorulan soruya' : 'kişinin yaşam enerjisine'} göre ÖZEL yorumla.
-- Reversed (ters) kartları farklı yorumla — engel, iç çatışma veya gizli ders olarak oku.
-- Genel mesajda 3 kartın BAĞLANTISINI kur — bir hikaye anlat.
-- Klişe cümlelerden kaçın. Samimi, dokunaklı ve spesifik ol.
+- Sana verilen ${spreadConfig.count} kartı AYNEN kullan, değiştirme.
+- Her kartın anlamını pozisyonuna ve ${question ? 'sorulan soruya' : 'kişinin yaşam enerjisine'} göre ÖZEL yorumla.
+- Reversed (ters) kartları farklı yorumla — engel, iç çatışma veya gizli ders.
+- Genel mesajda kartların BAĞLANTISINI kur — bir hikaye anlat.
+${spread === 'yes-no' ? '- Evet/Hayır açılımı: Kartın dik gelmesi olumlu (EVET), ters gelmesi olumsuz (HAYIR) veya bekle anlamına gelir. Net bir cevap ver.' : ''}
+${spread === 'relationship' ? '- İlişki açılımı: Her kartı ilgili kişinin perspektifinden oku. Üçüncü kart ilişkinin dinamiğini gösterir.' : ''}
 
-Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
+Yanıtını MUTLAKA aşağıdaki JSON formatında ver:
 {
   "cards": [
-    { "position": "Geçmiş", "name": "Kartın Türkçe adı", "nameEn": "English name", "emoji": "uygun emoji", "meaning": "Bu kartın bu pozisyondaki DERİN anlamı, 3-4 cümle. Kişiye özel.", "reversed": ${reversals[0]}, "keywords": ["anahtar1", "anahtar2", "anahtar3"] },
-    { "position": "Şimdi", "name": "Kartın Türkçe adı", "nameEn": "English name", "emoji": "uygun emoji", "meaning": "Bu kartın bu pozisyondaki DERİN anlamı, 3-4 cümle. Kişiye özel.", "reversed": ${reversals[1]}, "keywords": ["anahtar1", "anahtar2", "anahtar3"] },
-    { "position": "Gelecek", "name": "Kartın Türkçe adı", "nameEn": "English name", "emoji": "uygun emoji", "meaning": "Bu kartın bu pozisyondaki DERİN anlamı, 3-4 cümle. Kişiye özel.", "reversed": ${reversals[2]}, "keywords": ["anahtar1", "anahtar2", "anahtar3"] }
+    ${cardsList}
   ],
-  "overall": "Üç kartın birlikte anlattığı HIKAYE, 4-5 cümle. Kartlar arası bağlantıyı kur.",
-  "advice": "Kartların sana özel, somut ve uygulanabilir tavsiyesi, 2-3 cümle",
-  "energy": "Bugünün baskın enerjisi, tek kelime veya kısa ifade",
-  "warning": "Kartların dikkat çektiği nokta veya uyarı, 1 cümle"
+  "overall": "Kartların birlikte anlattığı HIKAYE, 4-5 cümle.",
+  "advice": "Somut ve uygulanabilir tavsiye, 2-3 cümle",
+  "energy": "Baskın enerji, tek kelime veya kısa ifade",
+  "warning": "Dikkat çekilen nokta, 1 cümle"${spread === 'yes-no' ? ',\n  "answer": "EVET veya HAYIR veya BEKLE — net bir cevap"' : ''}
 }`;
 
         const userPrompt = `Danışan: Doğum ${birthDate || 'bilinmiyor'}, Güneş burcu: ${sunSign || 'bilinmiyor'}.
-${question ? `SORUSU: "${question}" — Bu soruyu doğrudan yanıtla.` : 'Hayatının genel akışı hakkında derin bir okuma isteniyor.'}
+${question ? `SORUSU: "${question}"` : 'Hayatının genel akışı hakkında derin bir okuma isteniyor.'}
 
+Açılım: ${spreadConfig.desc}
 Çekilen kartlar:
-1. Geçmiş: ${picked[0]}${reversals[0] ? ' (TERS)' : ''}
-2. Şimdi: ${picked[1]}${reversals[1] ? ' (TERS)' : ''}
-3. Gelecek: ${picked[2]}${reversals[2] ? ' (TERS)' : ''}
+${pickedList}
 
 Bu kartları derinlemesine yorumla.`;
 
-        const raw = await askGPT(systemPrompt, userPrompt, 1000);
+        const raw = await askGPT(systemPrompt, userPrompt, spreadConfig.tokens);
         const result = extractJSON(raw);
         if (!result) throw new Error('AI yanıtı parse edilemedi');
         res.json({ success: true, data: result });
@@ -768,21 +825,26 @@ Yüzeysel kalma — bilinçaltının gerçekten ne söylemeye çalıştığını
 // ═══════════════════════════════════════
 app.post('/api/fortune', async (req, res) => {
     try {
-        const { image, cup, sunSign, status } = req.body;
-        if (!image) return res.status(400).json({ error: 'Fincan fotoğrafı gerekli' });
-        // Validate base64 image
-        if (!image.startsWith('data:image/')) {
-            return res.status(400).json({ error: 'Geçersiz resim formatı. Lütfen fotoğraf yükleyin.' });
-        }
-        // Check image size (~4MB max for base64 = ~3MB actual image)
-        const base64Size = image.length * 0.75;
-        if (base64Size > 4 * 1024 * 1024) {
-            return res.status(400).json({ error: 'Resim çok büyük. Lütfen daha küçük bir fotoğraf deneyin.' });
+        const { images, image, cup, sunSign, status } = req.body;
+        // Support both array (new) and single image (backward compat)
+        const imageList = images && images.length > 0 ? images : (image ? [image] : []);
+        if (imageList.length === 0) return res.status(400).json({ error: 'Fincan fotoğrafı gerekli' });
+        if (imageList.length > 3) return res.status(400).json({ error: 'En fazla 3 fotoğraf gönderilebilir' });
+        // Validate all images
+        for (const img of imageList) {
+            if (!img.startsWith('data:image/')) {
+                return res.status(400).json({ error: 'Geçersiz resim formatı. Lütfen fotoğraf yükleyin.' });
+            }
+            const base64Size = img.length * 0.75;
+            if (base64Size > 4 * 1024 * 1024) {
+                return res.status(400).json({ error: 'Resim çok büyük. Lütfen daha küçük bir fotoğraf deneyin.' });
+            }
         }
 
+        const multiPhoto = imageList.length > 1;
         const systemPrompt = `Sen deneyimli bir Türk kahve falcısısın. Geleneksel Türk kahve falı geleneğine hakimsin.
 Sıcak, samimi, gizemli ama umut verici bir ton kullan. Türkçe yaz.
-Fotoğraftaki fincanı detaylı incele — tabanı, duvarları, kenarları.
+${multiPhoto ? 'Birden fazla açıdan çekilmiş fincan fotoğraflarını birlikte değerlendir — tabanı, duvarları, kenarları tüm açılardan incele.' : 'Fotoğraftaki fincanı detaylı incele — tabanı, duvarları, kenarları.'}
 Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
 {
   "title": "Falın başlığı — yaratıcı ve dikkat çekici, 4-6 kelime",
@@ -803,16 +865,18 @@ Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma
 
         const textPart = `Kişinin burcu: ${sunSign || 'bilinmiyor'}. Medeni durumu: ${status === 'single' ? 'Bekar' : status === 'married' ? 'Evli' : 'İlişkide'}.
 ${cup ? `Kullanıcının notu: "${cup}"` : ''}
-Bu fincan fotoğrafını detaylı incele ve kahve falı yorumla.`;
+${multiPhoto ? `${imageList.length} farklı açıdan çekilmiş fincan fotoğraflarını birlikte incele ve kahve falı yorumla.` : 'Bu fincan fotoğrafını detaylı incele ve kahve falı yorumla.'}`;
+
+        const userContent = [
+            { type: 'text', text: textPart },
+            ...imageList.map(img => ({ type: 'image_url', image_url: { url: img, detail: 'high' } }))
+        ];
 
         const response = await openai.chat.completions.create({
             model: 'gpt-4o-mini',
             messages: [
                 { role: 'system', content: systemPrompt },
-                { role: 'user', content: [
-                    { type: 'text', text: textPart },
-                    { type: 'image_url', image_url: { url: image, detail: 'high' } }
-                ]}
+                { role: 'user', content: userContent }
             ],
             max_tokens: 900,
             temperature: 0.85
