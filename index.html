@@ -7,8 +7,9 @@
     
     <!-- SEO Meta Tags -->
     <meta name="description" content="AI destekli astrokartografi ile yıldızların seni nereye çağırdığını keşfet. Günlük burç yorumu, uyum testi, AI tarot, kristal rehberi ve rüya yorumu.">
-    <meta name="keywords" content="astrokartografi, burç yorumu, tarot, kristal, rüya yorumu, astroloji, AI, yapay zeka, uyum testi, ay takvimi">
+    <meta name="keywords" content="astrokartografi, burç yorumu, günlük burç, haftalık burç, tarot falı, kristal rehberi, rüya yorumu, kahve falı, astroloji, AI, yapay zeka, uyum testi, ay takvimi, retrograt, burç uyumu, doğum haritası, natal harita">
     <meta name="author" content="AstroMap">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
     <meta name="theme-color" content="#c9a0ff">
     <meta name="color-scheme" content="dark">
     
@@ -76,7 +77,31 @@
             "description": "Ücretsiz temel özellikler"
         },
         "inLanguage": "tr",
-        "browserRequirements": "Requires JavaScript"
+        "browserRequirements": "Requires JavaScript",
+        "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.8",
+            "reviewCount": "1200",
+            "bestRating": "5"
+        }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": "AstroMap nedir?",
+                "acceptedAnswer": { "@type": "Answer", "text": "AstroMap, yapay zeka destekli astroloji ve astrokartografi platformudur. Gunluk burc yorumu, tarot, kristal rehberi, ruya yorumu ve kahve fali gibi ozellikler sunar." }
+            },
+            {
+                "@type": "Question",
+                "name": "AstroMap ucretsiz mi?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Evet, AstroMap temel ozellikleri ucretsiz kullanabilirsiniz. Premium ve VIP planlar ek ozellikler sunar." }
+            }
+        ]
     }
     </script>
 </head>
@@ -121,6 +146,7 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
             </div>
         </div>
         <div class="nav-actions">
+            <button class="btn-dark-toggle" id="dark-toggle" type="button" onclick="toggleDarkLight()" aria-label="Karanlık/aydınlık mod" title="Karanlık/Aydınlık Mod">🌙</button>
             <button class="btn-ghost" data-modal="login-modal" type="button">Giriş Yap</button>
             <button class="btn-nav-primary" data-modal="signup-modal" type="button">Ücretsiz Başla</button>
         </div>

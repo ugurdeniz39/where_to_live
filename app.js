@@ -426,6 +426,34 @@ const UsageLimiter = {
 // ═══════════════════════════════════════
 // PREMIUM CHECK
 // ═══════════════════════════════════════
+// ═══════════════════════════════════════
+// DARK/LIGHT MODE TOGGLE
+// ═══════════════════════════════════════
+function toggleDarkLight() {
+    const btn = document.getElementById('dark-toggle');
+    if (currentTheme === 'moonlight') {
+        // Switch back to previous theme or cosmic
+        const prev = localStorage.getItem('astromap_theme_prev') || 'cosmic';
+        applyTheme(prev);
+        currentTheme = prev;
+        localStorage.setItem('astromap_theme', prev);
+        if (btn) btn.textContent = '🌙';
+    } else {
+        // Save current and switch to moonlight
+        localStorage.setItem('astromap_theme_prev', currentTheme);
+        applyTheme('moonlight');
+        currentTheme = 'moonlight';
+        localStorage.setItem('astromap_theme', 'moonlight');
+        if (btn) btn.textContent = '☀️';
+    }
+    // Update theme panel if open
+    document.querySelectorAll('.theme-card').forEach(card => {
+        card.classList.toggle('active', card.dataset.theme === currentTheme);
+    });
+    const toggleBtn = document.querySelector('.theme-toggle');
+    if (toggleBtn) toggleBtn.innerHTML = themes[currentTheme]?.icon || '';
+}
+
 function isPremiumUser() {
     const user = AuthSystem.getUser();
     return user && (user.plan === 'premium' || user.plan === 'vip');
@@ -1745,6 +1773,7 @@ function createCityCard(city, idx, globalRank) {
         </div>
         <div class="result-tags">${tags}</div>
         <div class="result-reason">${city.reason}</div>
+        <button class="btn-city-detail" onclick="event.stopPropagation();showCityDetail('${city.city.replace(/'/g,"\\'")}','${city.country.replace(/'/g,"\\'")}',${city.score},'${(city.influences||[]).map(i=>i.planet).join(", ")}')">✨ AI Detay</button>
     `;
     return card;
 }
@@ -2569,6 +2598,85 @@ function focusCity(city, index) {
         }
     }
     highlightCard(index);
+}
+
+async function showCityDetail(city, country, score, influences) {
+    // Create or reuse modal
+    let modal = document.getElementById('city-detail-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'city-detail-modal';
+        modal.className = 'modal-overlay';
+        modal.onclick = (e) => { if (e.target === modal) modal.classList.add('hidden'); };
+        document.body.appendChild(modal);
+    }
+
+    const natal = results?.natalChart;
+    const sunSign = natal?.sun?.sign || '';
+    const moonSign = natal?.moon?.sign || '';
+
+    modal.classList.remove('hidden');
+    modal.innerHTML = `
+        <div class="modal-content city-detail-content">
+            <button class="modal-close" onclick="document.getElementById('city-detail-modal').classList.add('hidden')">✕</button>
+            <h2>${city}, ${country}</h2>
+            <p style="color:var(--text-muted);margin-bottom:16px">Skor: <strong>${score}%</strong> · ${influences}</p>
+            <div class="city-detail-loading">
+                <div class="dream-loading-dots"><span>.</span><span>.</span><span>.</span></div>
+                <p>AI analiz ediliyor...</p>
+            </div>
+        </div>
+    `;
+
+    try {
+        const resp = await fetch('/api/city-insight', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ city, country, score, influences, sunSign, moonSign, preferences: selectedPreferences })
+        });
+        const json = await resp.json();
+        if (!json.success) throw new Error(json.error || 'AI yanıt vermedi');
+        const d = json.data;
+
+        modal.querySelector('.city-detail-content').innerHTML = `
+            <button class="modal-close" onclick="document.getElementById('city-detail-modal').classList.add('hidden')">✕</button>
+            <h2>${city}, ${country}</h2>
+            <p class="city-detail-headline">${sanitize(d.headline || '')}</p>
+            <div class="city-detail-sections">
+                <div class="city-detail-section">
+                    <h4>🌟 Neden Bu Şehir?</h4>
+                    <p>${sanitize(d.whyThisCity || '')}</p>
+                </div>
+                <div class="city-detail-section">
+                    <h4>⚡ Enerji</h4>
+                    <p>${sanitize(d.energy || '')}</p>
+                </div>
+                ${d.bestFor ? `<div class="city-detail-section">
+                    <h4>🎯 En İyi</h4>
+                    <div class="city-detail-tags">${d.bestFor.map(b => `<span class="city-detail-tag">${sanitize(b)}</span>`).join('')}</div>
+                </div>` : ''}
+                <div class="city-detail-section">
+                    <h4>🏠 Yaşam Tarzı</h4>
+                    <p>${sanitize(d.lifestyle || '')}</p>
+                </div>
+                <div class="city-detail-section">
+                    <h4>📅 En İyi Sezon</h4>
+                    <p>${sanitize(d.bestSeason || '')}</p>
+                </div>
+                <div class="city-detail-section">
+                    <h4>💡 İpucu</h4>
+                    <p>${sanitize(d.tip || '')}</p>
+                </div>
+            </div>
+            <div class="city-detail-vibe">${sanitize(d.vibe || '')}</div>
+        `;
+    } catch (err) {
+        modal.querySelector('.city-detail-content').innerHTML = `
+            <button class="modal-close" onclick="document.getElementById('city-detail-modal').classList.add('hidden')">✕</button>
+            <h2>${city}, ${country}</h2>
+            <div class="ai-error"><p>AI analizi yüklenemedi: ${err.message}</p></div>
+        `;
+    }
 }
 
 function highlightCard(index) {
@@ -4423,6 +4531,9 @@ function initThemeSystem() {
     applyTheme(currentTheme);
     createThemeToggleBtn();
     createThemePickerPanel();
+    // Set dark/light toggle icon
+    const darkBtn = document.getElementById('dark-toggle');
+    if (darkBtn) darkBtn.textContent = currentTheme === 'moonlight' ? '☀️' : '🌙';
 }
 
 function createThemeToggleBtn() {
