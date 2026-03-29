@@ -45,6 +45,89 @@ const Analytics = {
 };
 
 // ═══════════════════════════════════════
+// A/B TESTING
+// ═══════════════════════════════════════
+const ABTest = {
+    _variants: {},
+
+    // Get or assign a variant for a test
+    getVariant(testName, variants = ['A', 'B']) {
+        const key = 'ab_' + testName;
+        let variant = localStorage.getItem(key);
+        if (!variant || !variants.includes(variant)) {
+            variant = variants[Math.floor(Math.random() * variants.length)];
+            localStorage.setItem(key, variant);
+        }
+        this._variants[testName] = variant;
+        return variant;
+    },
+
+    // Track conversion for a test
+    trackConversion(testName) {
+        const variant = this._variants[testName] || localStorage.getItem('ab_' + testName);
+        if (!variant) return;
+        Analytics.track('ab_conversion', { test: testName, variant });
+    },
+
+    // Get all active test assignments
+    getAll() { return { ...this._variants }; }
+};
+
+// ═══════════════════════════════════════
+// i18n — INTERNATIONALIZATION
+// ═══════════════════════════════════════
+const i18n = {
+    _lang: localStorage.getItem('astromap_lang') || 'tr',
+
+    translations: {
+        tr: {
+            home: 'Ana Sayfa', daily: 'Gunluk Yorum', compatibility: 'Uyum Testi',
+            moon: 'Ay Takvimi', tarot: 'Tarot', crystal: 'Kristal', dream: 'Ruya',
+            fortune: 'Fal', retrograde: 'Retro', about: 'Hakkinda', pricing: 'Premium',
+            natal: 'Dogum Haritasi', login: 'Giris Yap', signup: 'Ucretsiz Basla',
+            loading: 'Yukleniyor...', error: 'Bir hata olustu',
+            offline: 'Internet baglantiniz yok', retry: 'Tekrar dene',
+            share: 'Paylas', download: 'Indir', back: 'Geri',
+            calculate: 'Hesapla', submit: 'Gonder', cancel: 'Iptal',
+            dailyLimit: 'Gunluk ucretsiz hakkiniz doldu',
+            premiumRequired: 'Bu ozellik Premium kullanicilara ozel',
+        },
+        en: {
+            home: 'Home', daily: 'Daily Horoscope', compatibility: 'Compatibility',
+            moon: 'Moon Calendar', tarot: 'Tarot', crystal: 'Crystal', dream: 'Dream',
+            fortune: 'Fortune', retrograde: 'Retrograde', about: 'About', pricing: 'Premium',
+            natal: 'Birth Chart', login: 'Sign In', signup: 'Get Started',
+            loading: 'Loading...', error: 'An error occurred',
+            offline: 'No internet connection', retry: 'Try again',
+            share: 'Share', download: 'Download', back: 'Back',
+            calculate: 'Calculate', submit: 'Submit', cancel: 'Cancel',
+            dailyLimit: 'Daily free limit reached',
+            premiumRequired: 'This feature requires Premium',
+        }
+    },
+
+    t(key) {
+        return this.translations[this._lang]?.[key] || this.translations.tr[key] || key;
+    },
+
+    setLang(lang) {
+        if (!this.translations[lang]) return;
+        this._lang = lang;
+        localStorage.setItem('astromap_lang', lang);
+    },
+
+    getLang() { return this._lang; }
+};
+
+function switchLang(lang) {
+    i18n.setLang(lang);
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+    showToast(lang === 'tr' ? 'Dil: Turkce' : 'Language: English');
+    // Note: Full page translation would require reload or dynamic text replacement
+    // For now, just sets the preference — AI responses will use this language
+}
+
+// ═══════════════════════════════════════
 // PERFORMANCE UTILITIES
 // ═══════════════════════════════════════
 function throttle(fn, delay = 16) {
@@ -4269,6 +4352,77 @@ function closeOnboarding() {
         overlay.style.opacity = '0';
         setTimeout(() => overlay.remove(), 300);
     }
+}
+
+// ═══════════════════════════════════════
+// FEEDBACK FORM
+// ═══════════════════════════════════════
+let _feedbackMood = '';
+
+function openFeedbackForm() {
+    openModal('feedback-modal');
+    _feedbackMood = '';
+    document.querySelectorAll('.feedback-emoji').forEach(e => e.classList.remove('selected'));
+    document.getElementById('feedback-feature').value = '';
+    document.getElementById('feedback-message').value = '';
+}
+
+function selectFeedbackMood(btn) {
+    document.querySelectorAll('.feedback-emoji').forEach(e => e.classList.remove('selected'));
+    btn.classList.add('selected');
+    _feedbackMood = btn.dataset.mood;
+}
+
+function submitFeedback(e) {
+    e.preventDefault();
+    if (!_feedbackMood) { showToast('Lutfen bir duygu sec'); return; }
+    const feature = document.getElementById('feedback-feature').value;
+    const message = document.getElementById('feedback-message').value.trim();
+
+    // Send to analytics
+    const apiBase = window.__ASTROMAP_CONFIG?.apiBase || '';
+    fetch(apiBase + '/api/analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            event: 'feedback',
+            data: { mood: _feedbackMood, feature, message: message.slice(0, 500) },
+            session: Analytics._sessionId
+        })
+    }).catch(() => {});
+
+    closeModal('feedback-modal');
+    showToast('Tesekkurler! Geri bildirimin bize ulasti 💜');
+}
+
+// ═══════════════════════════════════════
+// REFERRAL SYSTEM
+// ═══════════════════════════════════════
+function generateReferralCode() {
+    const user = AuthSystem.getUser();
+    if (!user) { showToast('Referans kodu icin giris yap'); navigateTo('pricing'); return null; }
+    // Generate deterministic code from user id
+    const code = 'ASTRO' + (user.id || user.email || '').slice(-6).toUpperCase().replace(/[^A-Z0-9]/g, 'X');
+    return code;
+}
+
+function shareReferralLink() {
+    const code = generateReferralCode();
+    if (!code) return;
+    const url = 'https://wheretolive-nine.vercel.app/?ref=' + code;
+    const text = 'AstroMap ile yildizlarimin beni nereye cagirdigini kesfettim! Sen de dene:';
+
+    if (navigator.share) {
+        navigator.share({ title: 'AstroMap', text, url }).catch(() => {});
+    } else {
+        navigator.clipboard.writeText(url).then(() => {
+            showToast('Referans linki kopyalandi!');
+        }).catch(() => {
+            showToast('Link: ' + url);
+        });
+    }
+
+    Analytics.track('referral_share', { code });
 }
 
 // ═══════════════════════════════════════

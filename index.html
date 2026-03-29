@@ -142,6 +142,11 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
             <a class="nav-link" href="javascript:void(0)" data-page="about" data-nav="about" role="menuitem" tabindex="0">ℹ️ Hakkında</a>
             <a class="nav-link" href="javascript:void(0)" data-page="pricing" data-nav="pricing" role="menuitem" tabindex="0">Premium ✨</a>
             <div class="nav-drawer-actions">
+                <div class="lang-toggle">
+                    <button class="lang-btn active" data-lang="tr" onclick="switchLang('tr')">TR</button>
+                    <button class="lang-btn" data-lang="en" onclick="switchLang('en')">EN</button>
+                </div>
+                <button class="btn-ghost" onclick="openFeedbackForm();closeMobileNav()" type="button">💬 Geri Bildirim</button>
                 <button class="btn-ghost" data-modal="login-modal" type="button">Giriş Yap</button>
                 <button class="btn-nav-primary" data-modal="signup-modal" type="button">Ücretsiz Başla</button>
             </div>
@@ -422,6 +427,12 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
             </ul>
             <button class="btn-pricing" onclick="startCheckout('vip')">VIP Ol 💎</button>
         </div>
+    </div>
+
+    <div class="referral-banner">
+        <h3>🎁 Arkadasini Davet Et</h3>
+        <p>Arkadasin kaydolursa ikiniz de 1 hafta Premium kazanin!</p>
+        <button class="btn-primary" onclick="shareReferralLink()">Davet Linkini Paylas</button>
     </div>
 
 
@@ -1023,6 +1034,46 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
         </button>
         <button class="btn-social apple" onclick="socialLogin('apple')">🍎 Apple ile Giriş Yap</button>
         <p class="modal-footer">Hesabın yok mu? <a onclick="closeModal('login-modal');openModal('signup-modal')">Ücretsiz oluştur</a></p>
+    </div>
+</div>
+
+<!-- ══════════════════ FEEDBACK MODAL ══════════════════ -->
+<div id="feedback-modal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width:480px">
+        <button class="modal-close" onclick="closeModal('feedback-modal')">✕</button>
+        <h2 style="font-family:var(--font-display);margin-bottom:16px">💬 Geri Bildirim</h2>
+        <p style="color:var(--text-muted);font-size:14px;margin-bottom:20px">Deneyimini gelistirmemize yardimci ol!</p>
+        <form onsubmit="submitFeedback(event)">
+            <div class="form-group">
+                <label>Nasil hissediyorsun?</label>
+                <div class="feedback-emojis" id="feedback-mood">
+                    <button type="button" class="feedback-emoji" data-mood="love" onclick="selectFeedbackMood(this)">😍</button>
+                    <button type="button" class="feedback-emoji" data-mood="happy" onclick="selectFeedbackMood(this)">😊</button>
+                    <button type="button" class="feedback-emoji" data-mood="neutral" onclick="selectFeedbackMood(this)">😐</button>
+                    <button type="button" class="feedback-emoji" data-mood="sad" onclick="selectFeedbackMood(this)">😕</button>
+                    <button type="button" class="feedback-emoji" data-mood="angry" onclick="selectFeedbackMood(this)">😤</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>En cok hangi ozelligi sevdin?</label>
+                <select id="feedback-feature">
+                    <option value="">Sec...</option>
+                    <option value="map">🌍 Astrokartografi</option>
+                    <option value="horoscope">🌟 Burc Yorumu</option>
+                    <option value="tarot">🃏 Tarot</option>
+                    <option value="crystal">💎 Kristal</option>
+                    <option value="fortune">☕ Kahve Fali</option>
+                    <option value="dream">💭 Ruya Yorumu</option>
+                    <option value="natal">🪐 Dogum Haritasi</option>
+                    <option value="other">Diger</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Mesajin (istege bagli)</label>
+                <textarea id="feedback-message" placeholder="Onerin, sikayet veya tesekkkurun..." rows="3" maxlength="500"></textarea>
+            </div>
+            <button type="submit" class="btn-primary" style="width:100%">Gonder</button>
+        </form>
     </div>
 </div>
 

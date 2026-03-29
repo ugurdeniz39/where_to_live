@@ -825,6 +825,21 @@ a:hover { color: var(--accent-light); }
 .modal-content { position: relative; max-width: 440px; width: 95%; max-height: 90vh; overflow-y: auto; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); padding: 40px 32px; }
 .modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; z-index: 10; }
 .modal-close:hover { color: var(--text); }
+.feedback-emojis { display: flex; gap: 8px; justify-content: center; }
+.feedback-emoji {
+    font-size: 32px; padding: 8px 12px; border: 2px solid var(--border);
+    border-radius: var(--radius-sm); background: transparent; cursor: pointer;
+    transition: var(--transition);
+}
+.feedback-emoji:hover { border-color: var(--accent-dark); transform: scale(1.1); }
+.feedback-emoji.selected { border-color: var(--accent); background: rgba(201,160,255,0.15); transform: scale(1.15); }
+.referral-banner {
+    max-width: 500px; margin: 40px auto; padding: 32px; text-align: center;
+    background: linear-gradient(135deg, rgba(201,160,255,0.1), rgba(255,215,110,0.08));
+    border: 1px solid rgba(201,160,255,0.2); border-radius: var(--radius);
+}
+.referral-banner h3 { font-family: var(--font-display); margin-bottom: 8px; }
+.referral-banner p { color: var(--text-muted); font-size: 14px; margin-bottom: 16px; }
 .modal-auth {
     background: var(--surface); border: 1px solid var(--border); padding: 40px 32px;
 }
@@ -3465,3 +3480,12 @@ body.light-theme .dash-fav-card, body.light-theme .dash-history-item {
     background: #fafaf9; border-color: rgba(0,0,0,0.06);
 }
 body.light-theme .dash-stat-num { color: #7c3aed; }
+
+/* Language Toggle */
+.lang-toggle { display: flex; gap: 4px; justify-content: center; margin-bottom: 8px; }
+.lang-btn {
+    padding: 6px 14px; border: 1px solid var(--border); border-radius: var(--radius-xs);
+    background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: var(--transition);
+}
+.lang-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
