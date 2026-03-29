@@ -15,6 +15,10 @@ data/
 # Capacitor build output
 www/
 
+# Keystore (ASLA git'e ekleme!)
+*.keystore
+*.jks
+
 # Native platform build artifacts (keep platform configs in git)
 android/app/build/
 android/.gradle/

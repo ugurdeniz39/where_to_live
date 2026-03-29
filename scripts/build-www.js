@@ -76,13 +76,14 @@ const nativeConfig = `
     window.__ASTROMAP_CONFIG = {
         isNative: typeof window.Capacitor !== 'undefined',
         // Set your production API URL here
-        apiBase: 'https://astromap.app'
+        apiBase: 'https://wheretolive-nine.vercel.app'
     };
 </script>`;
 
+// Match both <script src="app.js and <script defer src="app.js
 html = html.replace(
-    '<script src="app.js',
-    nativeConfig + '\n<script src="app.js'
+    /(<script[^>]*src="app\.js)/,
+    nativeConfig + '\n$1'
 );
 
 fs.writeFileSync(indexPath, html);

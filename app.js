@@ -29,7 +29,8 @@ const Analytics = {
             console.log(`📊 Analytics: ${event}`, data);
         }
         // Send to analytics backend (fire-and-forget)
-        fetch('/api/analytics', {
+        const _ab = (window.__ASTROMAP_CONFIG?.isNative && window.__ASTROMAP_CONFIG?.apiBase) || '';
+        fetch(_ab + '/api/analytics', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(entry)
@@ -2791,7 +2792,8 @@ async function showCityDetail(city, country, score, influences) {
     `;
 
     try {
-        const resp = await fetch('/api/city-insight', {
+        const cityApiBase = (window.__ASTROMAP_CONFIG?.isNative && window.__ASTROMAP_CONFIG?.apiBase) || '';
+        const resp = await fetch(cityApiBase + '/api/city-insight', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ city, country, score, influences, sunSign, moonSign, preferences: selectedPreferences })
