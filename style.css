@@ -1538,6 +1538,9 @@ textarea::placeholder { color: var(--text-dim); }
 .ai-error p { color: var(--rose-light); font-size: 14px; }
 
 .reset-btn { display: block; margin: 28px auto 40px; }
+.ai-result-actions { display: flex; justify-content: center; gap: 12px; margin: 28px auto 40px; flex-wrap: wrap; }
+.ai-result-actions .reset-btn, .ai-result-actions .share-btn { margin: 0; }
+.share-btn { border-color: var(--accent-dark) !important; }
 
 /* ════════════ TAROT PAGE — REAL CARD CEREMONY ════════════ */
 .tarot-ceremony {

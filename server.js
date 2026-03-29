@@ -306,6 +306,119 @@ function extractJSON(raw) {
 }
 
 // ═══════════════════════════════════════
+// API: Analytics — Event Logging
+// ═══════════════════════════════════════
+const ANALYTICS_FILE = path.join(__dirname, 'data', 'analytics.jsonl');
+
+app.post('/api/analytics', (req, res) => {
+    try {
+        const { event, data, session, page } = req.body;
+        if (!event || typeof event !== 'string') return res.status(400).json({ error: 'event gerekli' });
+
+        const entry = {
+            event: event.slice(0, 100),
+            data: typeof data === 'object' ? data : {},
+            session: (session || '').slice(0, 50),
+            page: (page || '').slice(0, 100),
+            ts: new Date().toISOString(),
+            ip: req.ip || req.socket?.remoteAddress
+        };
+
+        // Append to JSONL file (one JSON per line)
+        const dir = path.dirname(ANALYTICS_FILE);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.appendFileSync(ANALYTICS_FILE, JSON.stringify(entry) + '\n', 'utf-8');
+
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Analytics error:', err.message);
+        res.json({ ok: false });
+    }
+});
+
+app.get('/api/analytics/summary', (req, res) => {
+    try {
+        if (!fs.existsSync(ANALYTICS_FILE)) return res.json({ total: 0, events: {} });
+        const lines = fs.readFileSync(ANALYTICS_FILE, 'utf-8').trim().split('\n').filter(Boolean);
+        const events = {};
+        const pages = {};
+        const sessions = new Set();
+        for (const line of lines.slice(-10000)) { // Last 10k events
+            try {
+                const e = JSON.parse(line);
+                events[e.event] = (events[e.event] || 0) + 1;
+                if (e.page) pages[e.page] = (pages[e.page] || 0) + 1;
+                if (e.session) sessions.add(e.session);
+            } catch {}
+        }
+        res.json({ total: lines.length, uniqueSessions: sessions.size, events, pages });
+    } catch (err) {
+        res.json({ total: 0, events: {}, error: err.message });
+    }
+});
+
+// ═══════════════════════════════════════
+// API: Push Notification — Token Registration
+// ═══════════════════════════════════════
+const PUSH_TOKENS_FILE = path.join(__dirname, 'data', 'push-tokens.json');
+
+function loadPushTokens() {
+    try {
+        if (!fs.existsSync(PUSH_TOKENS_FILE)) return [];
+        return JSON.parse(fs.readFileSync(PUSH_TOKENS_FILE, 'utf-8'));
+    } catch { return []; }
+}
+
+function savePushTokens(tokens) {
+    try {
+        const dir = path.dirname(PUSH_TOKENS_FILE);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(PUSH_TOKENS_FILE, JSON.stringify(tokens, null, 2), 'utf-8');
+    } catch (err) { console.error('Push token kayıt hatası:', err.message); }
+}
+
+app.post('/api/push/register', (req, res) => {
+    try {
+        const { token, subscription, platform, user } = req.body;
+        if (!token && !subscription) return res.status(400).json({ error: 'Token veya subscription gerekli' });
+
+        const tokens = loadPushTokens();
+        const identifier = token || JSON.stringify(subscription);
+
+        // Deduplicate
+        const exists = tokens.find(t => t.identifier === identifier);
+        if (exists) {
+            exists.lastSeen = new Date().toISOString();
+            exists.user = user || exists.user;
+        } else {
+            tokens.push({
+                identifier,
+                token: token || null,
+                subscription: subscription || null,
+                platform: platform || 'unknown',
+                user: user || 'anonymous',
+                registeredAt: new Date().toISOString(),
+                lastSeen: new Date().toISOString()
+            });
+        }
+
+        savePushTokens(tokens);
+        console.log(`📱 Push token kaydedildi: ${platform} — ${(user || 'anonymous').slice(0, 30)}`);
+        res.json({ ok: true, total: tokens.length });
+    } catch (err) {
+        console.error('Push register error:', err.message);
+        res.status(500).json({ error: 'Token kaydedilemedi' });
+    }
+});
+
+app.get('/api/push/stats', (req, res) => {
+    const tokens = loadPushTokens();
+    const platforms = {};
+    tokens.forEach(t => { platforms[t.platform] = (platforms[t.platform] || 0) + 1; });
+    res.json({ total: tokens.length, platforms });
+});
+
+// ═══════════════════════════════════════
 // API: Health Check
 // ═══════════════════════════════════════
 app.get('/api/health', (req, res) => {

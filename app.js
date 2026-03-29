@@ -28,8 +28,12 @@ const Analytics = {
         if (localStorage.getItem('astromap_debug')) {
             console.log(`📊 Analytics: ${event}`, data);
         }
-        // TODO: Send to analytics backend when ready
-        // fetch('/api/analytics', { method: 'POST', body: JSON.stringify(entry) });
+        // Send to analytics backend (fire-and-forget)
+        fetch('/api/analytics', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(entry)
+        }).catch(() => {}); // Silent fail
     },
     _sessionId: 's_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     getSummary() {
@@ -1233,7 +1237,10 @@ async function showDailyHoroscope() {
                 </div>
 
                 <div class="daily-affirmation stagger-6">"${h.affirmation || ''}"</div>
-                <button class="btn-ghost reset-btn stagger-6" onclick="resetAIPage('daily-form','daily-result')">🌟 Tekrar Sor</button>
+                <div class="ai-result-actions stagger-6">
+                    <button class="btn-ghost reset-btn" onclick="resetAIPage('daily-form','daily-result')">🌟 Tekrar Sor</button>
+                    <button class="btn-ghost share-btn" onclick="shareAIResult('daily-result','Günlük Burç')">📸 Paylaş</button>
+                </div>
             </div>
         `;
 
@@ -1352,7 +1359,10 @@ async function showCompatibility() {
                     <div class="compat-best-dates">🎯 ${c.bestDates || ''}</div>
                 </div>
 
-                <button class="btn-ghost reset-btn stagger-6" onclick="resetAIPage('compat-form','compat-result')">💕 Tekrar Dene</button>
+                <div class="ai-result-actions stagger-6">
+                    <button class="btn-ghost reset-btn" onclick="resetAIPage('compat-form','compat-result')">💕 Tekrar Dene</button>
+                    <button class="btn-ghost share-btn" onclick="shareAIResult('compat-result','Uyumluluk')">📸 Paylaş</button>
+                </div>
             </div>
         `;
 
@@ -2251,6 +2261,78 @@ async function downloadShareCard() {
 }
 
 // ═══════════════════════════════════════
+// AI RESULT SHARE (Canvas-based)
+// ═══════════════════════════════════════
+async function shareAIResult(resultElementId, title) {
+    const el = document.getElementById(resultElementId);
+    if (!el) { showToast('Paylaşılacak sonuç bulunamadı'); return; }
+
+    try {
+        if (typeof html2canvas !== 'function') {
+            // Fallback: Web Share API with text
+            if (navigator.share) {
+                const text = el.innerText.slice(0, 500);
+                await navigator.share({ title: `AstroMap — ${title}`, text, url: 'https://astromap.app' });
+                return;
+            }
+            showToast('Paylaşma özelliği kullanılamıyor');
+            return;
+        }
+
+        showToast('Kart oluşturuluyor...');
+        const canvas = await html2canvas(el, {
+            backgroundColor: '#0e0e2e',
+            scale: 2,
+            useCORS: true,
+            logging: false
+        });
+
+        // Add watermark
+        const ctx = canvas.getContext('2d');
+        ctx.font = '14px Inter, sans-serif';
+        ctx.fillStyle = 'rgba(201,160,255,0.5)';
+        ctx.textAlign = 'right';
+        ctx.fillText('astromap.app', canvas.width - 20, canvas.height - 15);
+
+        const dataUrl = canvas.toDataURL('image/png');
+
+        // Native share (Capacitor)
+        if (window.Capacitor?.Plugins?.Share) {
+            try {
+                await window.Capacitor.Plugins.Share.share({
+                    title: `AstroMap — ${title}`,
+                    text: 'AstroMap ile kozmik rehberliğimi keşfettim!',
+                    url: 'https://astromap.app'
+                });
+                return;
+            } catch {}
+        }
+
+        // Web Share API with file
+        if (navigator.canShare) {
+            try {
+                const blob = await (await fetch(dataUrl)).blob();
+                const file = new File([blob], 'astromap-sonuc.png', { type: 'image/png' });
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({ title: `AstroMap — ${title}`, files: [file] });
+                    return;
+                }
+            } catch {}
+        }
+
+        // Fallback: download
+        const link = document.createElement('a');
+        link.download = `astromap-${resultElementId}.png`;
+        link.href = dataUrl;
+        link.click();
+        showToast('Kart indirildi!');
+    } catch (err) {
+        console.error('Share error:', err);
+        showToast('Paylaşma başarısız oldu');
+    }
+}
+
+// ═══════════════════════════════════════
 // REPORT DOWNLOAD
 // ═══════════════════════════════════════
 function downloadReport() {
@@ -2773,7 +2855,10 @@ async function showCrystalGuide() {
                 </div>
 
                 <div class="crystal-affirmation stagger-5">"${data.affirmation || ''}"</div>
-                <button class="btn-ghost reset-btn stagger-6" onclick="resetAIPage('crystal-form','crystal-result')">💎 Tekrar Sor</button>
+                <div class="ai-result-actions stagger-6">
+                    <button class="btn-ghost reset-btn" onclick="resetAIPage('crystal-form','crystal-result')">💎 Tekrar Sor</button>
+                    <button class="btn-ghost share-btn" onclick="shareAIResult('crystal-result','Kristal Rehberi')">📸 Paylaş</button>
+                </div>
             </div>
         `;
     } catch (err) {
@@ -2977,7 +3062,10 @@ async function showFortune() {
                     <div class="dream-advice-item"><strong>⏰ Zamanlama:</strong> ${data.timing || ''}</div>
                 </div>
 
-                <button class="btn-ghost reset-btn stagger-6" onclick="resetFortunePage()">☕ Yeni Fal Baktır</button>
+                <div class="ai-result-actions stagger-6">
+                    <button class="btn-ghost reset-btn" onclick="resetFortunePage()">☕ Yeni Fal Baktır</button>
+                    <button class="btn-ghost share-btn" onclick="shareAIResult('fortune-result','Kahve Falı')">📸 Paylaş</button>
+                </div>
             </div>
         `;
     } catch (err) {
@@ -3070,7 +3158,10 @@ async function showDreamInterpretation() {
                     <div class="dream-advice-item"><strong>⚡ Bugün Yap:</strong> ${data.luckyAction || ''}</div>
                 </div>
 
-                <button class="btn-ghost reset-btn stagger-6" onclick="resetAIPage('dream-form','dream-result')">💭 Başka Rüya Yorumla</button>
+                <div class="ai-result-actions stagger-6">
+                    <button class="btn-ghost reset-btn" onclick="resetAIPage('dream-form','dream-result')">💭 Başka Rüya Yorumla</button>
+                    <button class="btn-ghost share-btn" onclick="shareAIResult('dream-result','Rüya Yorumu')">📸 Paylaş</button>
+                </div>
             </div>
         `;
     } catch (err) {
@@ -3351,8 +3442,17 @@ async function initPushNotifications() {
 
         PushNotifications.addListener('registration', (token) => {
             console.log('Push token:', token.value);
-            // TODO: Send token to your backend for sending notifications
             localStorage.setItem('astromap_push_token', token.value);
+            // Send token to backend
+            fetch('/api/push/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: token.value,
+                    platform: 'native',
+                    user: AuthSystem.getUser()?.email || 'anonymous'
+                })
+            }).catch(() => {});
         });
 
         PushNotifications.addListener('pushNotificationReceived', (notification) => {
@@ -3365,6 +3465,49 @@ async function initPushNotifications() {
         });
     } catch (err) {
         console.warn('Push init failed:', err);
+    }
+}
+
+// ═══════════════════════════════════════
+// WEB PUSH NOTIFICATIONS (Browser)
+// ═══════════════════════════════════════
+async function initWebPush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (window.Capacitor?.isNativePlatform?.()) return; // Skip on native, handled above
+
+    try {
+        const reg = await navigator.serviceWorker.ready;
+        const existing = await reg.pushManager.getSubscription();
+        if (existing) return; // Already subscribed
+
+        // Check if user wants notifications
+        if (Notification.permission === 'denied') return;
+        if (Notification.permission === 'default') {
+            // Ask after some engagement (not on first load)
+            const pageViews = parseInt(localStorage.getItem('astromap_pv') || '0');
+            if (pageViews < 3) return; // Wait for 3 page views
+        }
+
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') return;
+
+        const subscription = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: localStorage.getItem('astromap_vapid_public') || undefined
+        });
+
+        // Send to backend
+        fetch('/api/push/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                subscription: subscription.toJSON(),
+                platform: 'web',
+                user: AuthSystem.getUser()?.email || 'anonymous'
+            })
+        }).catch(() => {});
+    } catch (err) {
+        console.warn('Web push init failed:', err);
     }
 }
 
@@ -3393,8 +3536,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auth: restore session UI
     AuthSystem.updateUI();
 
-    // Init push notifications (native only)
+    // Init push notifications (native + web)
     initPushNotifications();
+    initWebPush();
+
+    // Track page view for push notification timing
+    const pv = parseInt(localStorage.getItem('astromap_pv') || '0') + 1;
+    localStorage.setItem('astromap_pv', String(pv));
 
     // Share link: check URL for shared chart
     handleShareLink();
