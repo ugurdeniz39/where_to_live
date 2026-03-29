@@ -41,6 +41,7 @@ html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body {
     font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6;
     overflow-x: hidden; -webkit-font-smoothing: antialiased;
+    padding-top: env(safe-area-inset-top, 0);
     padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
@@ -64,6 +65,7 @@ a:hover { color: var(--accent-light); }
 /* ════════════ NAVBAR ════════════ */
 .navbar {
     position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    padding-top: env(safe-area-inset-top, 0);
     background: var(--navbar-bg, rgba(7,7,26,0.85)); backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);

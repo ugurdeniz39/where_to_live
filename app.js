@@ -29,7 +29,7 @@ const Analytics = {
             console.log(`📊 Analytics: ${event}`, data);
         }
         // Send to analytics backend (fire-and-forget)
-        const _ab = (window.__ASTROMAP_CONFIG?.isNative && window.__ASTROMAP_CONFIG?.apiBase) || '';
+        const _ab = window.__ASTROMAP_CONFIG?.apiBase || '';
         fetch(_ab + '/api/analytics', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -481,7 +481,7 @@ async function callAI(endpoint, body, useCache = true) {
     UsageLimiter.consume();
     
     let res;
-    const apiBase = (window.__ASTROMAP_CONFIG?.isNative && window.__ASTROMAP_CONFIG?.apiBase) || '';
+    const apiBase = window.__ASTROMAP_CONFIG?.apiBase || '';
     try {
         res = await fetch(apiBase + '/api/' + endpoint, {
             method: 'POST',
@@ -1122,7 +1122,7 @@ async function submitBillingAndPay(e) {
     document.getElementById('checkout-step-payment').classList.remove('hidden');
 
     try {
-        const apiBase = (window.__ASTROMAP_CONFIG?.isNative && window.__ASTROMAP_CONFIG?.apiBase) || '';
+        const apiBase = window.__ASTROMAP_CONFIG?.apiBase || '';
         const response = await fetch(apiBase + '/api/checkout/init', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2792,7 +2792,7 @@ async function showCityDetail(city, country, score, influences) {
     `;
 
     try {
-        const cityApiBase = (window.__ASTROMAP_CONFIG?.isNative && window.__ASTROMAP_CONFIG?.apiBase) || '';
+        const cityApiBase = window.__ASTROMAP_CONFIG?.apiBase || '';
         const resp = await fetch(cityApiBase + '/api/city-insight', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3748,7 +3748,7 @@ async function initPushNotifications() {
             console.log('Push token:', token.value);
             localStorage.setItem('astromap_push_token', token.value);
             // Send token to backend
-            fetch('/api/push/register', {
+            fetch((window.__ASTROMAP_CONFIG?.apiBase || '') + '/api/push/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -3801,7 +3801,7 @@ async function initWebPush() {
         });
 
         // Send to backend
-        fetch('/api/push/register', {
+        fetch((window.__ASTROMAP_CONFIG?.apiBase || '') + '/api/push/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

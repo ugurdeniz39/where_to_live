@@ -72,10 +72,9 @@ if (!html.includes('capacitor.js')) {
 // Inject native API base URL config before app.js loads
 const nativeConfig = `
 <script>
-    // Capacitor native app config
+    // Capacitor native app config — ALWAYS use remote API in native builds
     window.__ASTROMAP_CONFIG = {
-        isNative: typeof window.Capacitor !== 'undefined',
-        // Set your production API URL here
+        isNative: true,
         apiBase: 'https://wheretolive-nine.vercel.app'
     };
 </script>`;
