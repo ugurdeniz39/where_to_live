@@ -194,6 +194,10 @@ app.use(express.static(path.join(__dirname), {
             res.setHeader('Cache-Control', 'no-cache');
         } else if (filePath.endsWith('.js') || filePath.endsWith('.css')) {
             res.setHeader('Cache-Control', 'public, max-age=3600');
+        } else if (/\.(png|jpg|svg|ico|webp|woff2?)$/i.test(filePath)) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else if (filePath.endsWith('.json') && !filePath.includes('package')) {
+            res.setHeader('Cache-Control', 'public, max-age=86400');
         }
     }
 }));
