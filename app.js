@@ -586,6 +586,8 @@ function toggleMobileNav() {
         hamburger.classList.add('is-active');
         if (overlay) overlay.classList.add('visible');
         document.body.style.overflow = 'hidden';
+        // Lift navbar above overlay so drawer is visible
+        navbar.style.zIndex = '10001';
         // Force drawer visibility (belt-and-suspenders for mobile)
         navLinks.style.transform = 'translateX(0)';
         navLinks.style.display = 'flex';
@@ -596,7 +598,7 @@ function toggleMobileNav() {
         navLinks.style.bottom = '0';
         navLinks.style.width = '300px';
         navLinks.style.maxWidth = '85vw';
-        navLinks.style.zIndex = '9999';
+        navLinks.style.zIndex = '10002';
         navLinks.style.overflowY = 'auto';
         navLinks.style.background = 'rgba(7,7,26,0.98)';
         navLinks.style.borderLeft = '1px solid rgba(255,255,255,0.08)';
@@ -638,7 +640,7 @@ function closeMobileNav() {
         if (actions) actions.style.display = '';
         navLinks.querySelectorAll('.nav-link').forEach(link => { link.style.cssText = ''; });
     }
-    if (navbar) navbar.classList.remove('menu-open');
+    if (navbar) { navbar.classList.remove('menu-open'); navbar.style.zIndex = ''; }
     if (hamburger) {
         hamburger.textContent = '☰';
         hamburger.classList.remove('is-active');
