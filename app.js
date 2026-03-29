@@ -334,6 +334,7 @@ let showLines = true;
 let showHeatmap = false;
 let visiblePlanets = new Set();
 let currentPage = 'home';
+const _pageHistory = ['home']; // Track navigation history for back button
 
 // ═══════════════════════════════════════
 // NAVIGATION (SPA Router)
@@ -358,6 +359,11 @@ function navigateTo(pageId) {
     closeMobileNav();
 
     currentPage = pageId;
+    // Track history for back button (avoid duplicates)
+    if (_pageHistory[_pageHistory.length - 1] !== pageId) {
+        _pageHistory.push(pageId);
+        if (_pageHistory.length > 20) _pageHistory.shift(); // Keep last 20
+    }
     window.scrollTo(0, 0);
 
     // Load page data
@@ -4044,6 +4050,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // First-time onboarding
     showOnboardingIfNeeded();
+
+    // Daily energy card on home
+    renderDailyEnergyCard();
+
+    // Android back button — go to previous page instead of closing app
+    document.addEventListener('backbutton', handleBackButton, false); // Capacitor/Cordova
+    window.addEventListener('popstate', handleBackButton); // Web fallback
+    // Push initial state
+    if (window.history && !window.__backStateSet) {
+        window.history.pushState({ page: 'home' }, '', '');
+        window.__backStateSet = true;
+    }
 });
 
 // ═══════════════════════════════════════
@@ -4067,28 +4085,181 @@ function initHapticFeedback() {
 }
 
 // ═══════════════════════════════════════
-// ONBOARDING (First-time users)
+// ANDROID BACK BUTTON HANDLER
 // ═══════════════════════════════════════
+function handleBackButton(e) {
+    // Close drawer if open
+    const navLinks = document.getElementById('nav-links');
+    if (navLinks && navLinks.classList.contains('open')) {
+        closeMobileNav();
+        if (e && e.preventDefault) e.preventDefault();
+        // Re-push state so next back works
+        window.history.pushState({ page: currentPage }, '', '');
+        return;
+    }
+
+    // Close any open modal
+    const openModal = document.querySelector('.modal-overlay:not(.hidden), .onboarding-overlay');
+    if (openModal) {
+        openModal.classList.add('hidden');
+        if (e && e.preventDefault) e.preventDefault();
+        window.history.pushState({ page: currentPage }, '', '');
+        return;
+    }
+
+    // Navigate to previous page
+    if (_pageHistory.length > 1) {
+        _pageHistory.pop(); // Remove current
+        const prevPage = _pageHistory[_pageHistory.length - 1];
+        if (prevPage && prevPage !== currentPage) {
+            // Don't push to history again (avoid loop)
+            currentPage = prevPage;
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            const target = document.getElementById('page-' + prevPage) || document.getElementById(prevPage);
+            if (target) target.classList.add('active');
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            const activeLink = document.querySelector(`.nav-link[data-page="${prevPage}"]`);
+            if (activeLink) activeLink.classList.add('active');
+            window.scrollTo(0, 0);
+            window.history.pushState({ page: prevPage }, '', '');
+            return;
+        }
+    }
+
+    // On home page — let app close (don't prevent default)
+    if (currentPage === 'home') {
+        // Allow native back = exit app
+        return;
+    }
+
+    // Fallback: go home
+    navigateTo('home');
+    if (e && e.preventDefault) e.preventDefault();
+    window.history.pushState({ page: 'home' }, '', '');
+}
+
+// ═══════════════════════════════════════
+// DAILY ENERGY CARD (Home banner)
+// ═══════════════════════════════════════
+function renderDailyEnergyCard() {
+    const el = document.getElementById('daily-energy-card');
+    if (!el) return;
+
+    const moon = AstroEngine.calculateMoonPhase(new Date());
+    const today = new Date();
+    const dayOfWeek = today.toLocaleDateString('tr-TR', { weekday: 'long' });
+    const dateStr = today.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+
+    // Planet of the day (traditional)
+    const dayPlanets = ['Ay', 'Mars', 'Merkur', 'Jupter', 'Venus', 'Saturn', 'Gunes'];
+    const dayEmojis = ['🌙', '♂', '☿', '♃', '♀', '♄', '☉'];
+    const dayIdx = today.getDay(); // 0=Sun
+    const todayPlanet = dayPlanets[dayIdx];
+    const todayEmoji = dayEmojis[dayIdx];
+
+    // Daily energy messages (rotates by day of year)
+    const messages = [
+        'Bugün yeni başlangıçlar için güçlü bir enerji var.',
+        'İç sesin sana rehberlik ediyor, dinle.',
+        'Yaratıcılığın zirveye çıkıyor bugün.',
+        'Sabır ve kararlılık bugünün anahtarı.',
+        'Evrenin sana sunduğu fırsatlara açık ol.',
+        'Bugün duygusal dengen önemli, kendine zaman ayır.',
+        'Cesaret gerektiren adımlar için doğru gün.'
+    ];
+    const msgIdx = Math.floor((today.getFullYear() * 366 + (today.getMonth() * 31) + today.getDate())) % messages.length;
+
+    el.innerHTML = `
+        <div class="energy-card-inner">
+            <div class="energy-card-left">
+                <span class="energy-moon">${moon.phaseEmoji}</span>
+                <div class="energy-moon-info">
+                    <small>${moon.phaseName}</small>
+                    <small>${moon.moonSignSymbol} ${moon.moonSign}</small>
+                </div>
+            </div>
+            <div class="energy-card-center">
+                <div class="energy-date">${dayOfWeek}, ${dateStr}</div>
+                <div class="energy-message">${messages[msgIdx]}</div>
+                <div class="energy-planet">${todayEmoji} ${todayPlanet} günü</div>
+            </div>
+            <button class="energy-card-action" onclick="navigateTo('daily')" title="Günlük yorumunu al">→</button>
+        </div>
+    `;
+}
+
+// ═══════════════════════════════════════
+// ONBOARDING (Swipeable 3-screen intro)
+// ═══════════════════════════════════════
+let _onboardingPage = 0;
+
 function showOnboardingIfNeeded() {
     if (localStorage.getItem('astromap_onboarded')) return;
+    _onboardingPage = 0;
 
     const overlay = document.createElement('div');
     overlay.className = 'onboarding-overlay';
     overlay.innerHTML = `
-        <div class="onboarding-card">
-            <div class="onboarding-emoji">✦</div>
-            <h2>AstroMap'e Hos Geldin!</h2>
-            <p>Yildizlarin seni nereye cagirdigini kesfetmeye hazir misin?</p>
-            <div class="onboarding-features">
-                <div class="onboarding-feature">🌍 558 sehir astrokartografi haritasi</div>
-                <div class="onboarding-feature">🃏 AI Tarot — 4 farkli acilim</div>
-                <div class="onboarding-feature">🌟 Gunluk burc yorumu</div>
-                <div class="onboarding-feature">☕ Kahve fali — fotograf yukle</div>
+        <div class="onboarding-container">
+            <div class="onboarding-slides" id="onboarding-slides">
+                <div class="onboarding-slide active">
+                    <div class="onboarding-visual">✦</div>
+                    <h2>Yildizlarin Seni Nereye Cagiriyor?</h2>
+                    <p>Dogum haritani dunya haritasina yansitiyoruz. 558 sehir, 10 gezegen, senin kozmik yol haritan.</p>
+                </div>
+                <div class="onboarding-slide">
+                    <div class="onboarding-visual">🃏</div>
+                    <h2>AI ile Mistik Rehberlik</h2>
+                    <p>Tarot, kahve fali, ruya yorumu, kristal rehberi — yapay zeka ile kisisellestirilmis derin okumalar.</p>
+                </div>
+                <div class="onboarding-slide">
+                    <div class="onboarding-visual">🌟</div>
+                    <h2>Her Gun Yeni Kesfet</h2>
+                    <p>Gunluk burc yorumu, ay takvimi, retrograt takibi — yildizlarin sana ne soyluyor her gun ogren.</p>
+                </div>
             </div>
-            <button class="btn-primary" onclick="closeOnboarding()" style="width:100%;margin-top:20px">Kesfetmeye Basla</button>
+            <div class="onboarding-dots">
+                <span class="onboarding-dot active" onclick="goOnboardingSlide(0)"></span>
+                <span class="onboarding-dot" onclick="goOnboardingSlide(1)"></span>
+                <span class="onboarding-dot" onclick="goOnboardingSlide(2)"></span>
+            </div>
+            <div class="onboarding-actions">
+                <button class="btn-ghost onboarding-skip" onclick="closeOnboarding()">Atla</button>
+                <button class="btn-primary onboarding-next" id="onboarding-next-btn" onclick="nextOnboardingSlide()">Devam</button>
+            </div>
         </div>
     `;
     document.body.appendChild(overlay);
+
+    // Swipe support
+    let startX = 0;
+    const slides = overlay.querySelector('.onboarding-slides');
+    slides.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; }, { passive: true });
+    slides.addEventListener('touchend', (e) => {
+        const dx = e.changedTouches[0].clientX - startX;
+        if (Math.abs(dx) > 50) {
+            if (dx < 0 && _onboardingPage < 2) goOnboardingSlide(_onboardingPage + 1);
+            else if (dx > 0 && _onboardingPage > 0) goOnboardingSlide(_onboardingPage - 1);
+        }
+    }, { passive: true });
+}
+
+function goOnboardingSlide(idx) {
+    _onboardingPage = idx;
+    const slides = document.querySelectorAll('.onboarding-slide');
+    const dots = document.querySelectorAll('.onboarding-dot');
+    slides.forEach((s, i) => s.classList.toggle('active', i === idx));
+    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+    const btn = document.getElementById('onboarding-next-btn');
+    if (btn) btn.textContent = idx === 2 ? 'Basla' : 'Devam';
+}
+
+function nextOnboardingSlide() {
+    if (_onboardingPage < 2) {
+        goOnboardingSlide(_onboardingPage + 1);
+    } else {
+        closeOnboarding();
+    }
 }
 
 function closeOnboarding() {
