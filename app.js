@@ -579,14 +579,43 @@ function toggleMobileNav() {
     const hamburger = document.querySelector('.nav-hamburger');
     const overlay = document.getElementById('nav-overlay');
     const isOpen = navLinks.classList.toggle('open');
-    
+
     if (isOpen) {
         navbar.classList.add('menu-open');
         hamburger.textContent = '✕';
         hamburger.classList.add('is-active');
         if (overlay) overlay.classList.add('visible');
-        document.body.style.overflow = 'hidden'; // Prevent background scroll
-        // Close on overlay click
+        document.body.style.overflow = 'hidden';
+        // Force drawer visibility (belt-and-suspenders for mobile)
+        navLinks.style.transform = 'translateX(0)';
+        navLinks.style.display = 'flex';
+        navLinks.style.flexDirection = 'column';
+        navLinks.style.position = 'fixed';
+        navLinks.style.top = '0';
+        navLinks.style.right = '0';
+        navLinks.style.bottom = '0';
+        navLinks.style.width = '300px';
+        navLinks.style.maxWidth = '85vw';
+        navLinks.style.zIndex = '9999';
+        navLinks.style.overflowY = 'auto';
+        navLinks.style.background = 'rgba(7,7,26,0.98)';
+        navLinks.style.borderLeft = '1px solid rgba(255,255,255,0.08)';
+        navLinks.style.boxShadow = '-8px 0 32px rgba(0,0,0,0.4)';
+        // Show drawer header & actions
+        const header = navLinks.querySelector('.nav-drawer-header');
+        if (header) header.style.display = 'flex';
+        const actions = navLinks.querySelector('.nav-drawer-actions');
+        if (actions) actions.style.display = 'flex';
+        // Make links visible
+        navLinks.querySelectorAll('.nav-link').forEach(link => {
+            link.style.display = 'flex';
+            link.style.padding = '14px 20px';
+            link.style.fontSize = '15px';
+            link.style.minHeight = '48px';
+            link.style.overflow = 'visible';
+            link.style.whiteSpace = 'normal';
+            link.style.flexShrink = '0';
+        });
         if (overlay) overlay.onclick = closeMobileNav;
     } else {
         closeMobileNav();
@@ -598,8 +627,17 @@ function closeMobileNav() {
     const navbar = document.getElementById('navbar');
     const hamburger = document.querySelector('.nav-hamburger');
     const overlay = document.getElementById('nav-overlay');
-    
-    if (navLinks) navLinks.classList.remove('open');
+
+    if (navLinks) {
+        navLinks.classList.remove('open');
+        // Clear forced inline styles — let CSS take over
+        navLinks.style.cssText = '';
+        const header = navLinks.querySelector('.nav-drawer-header');
+        if (header) header.style.display = '';
+        const actions = navLinks.querySelector('.nav-drawer-actions');
+        if (actions) actions.style.display = '';
+        navLinks.querySelectorAll('.nav-link').forEach(link => { link.style.cssText = ''; });
+    }
     if (navbar) navbar.classList.remove('menu-open');
     if (hamburger) {
         hamburger.textContent = '☰';
