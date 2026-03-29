@@ -362,6 +362,7 @@ function navigateTo(pageId) {
 
     // Load page data
     if (pageId === 'moon') loadMoonCalendar();
+    if (pageId === 'natal') filterNatalCities('');
     if (pageId === 'retrograde') loadRetrogradeCalendar();
     if (pageId === 'dashboard') loadDashboard();
     
@@ -404,12 +405,14 @@ const UsageLimiter = {
     },
 
     getRemaining() {
+        if (window.__ASTROMAP_CONFIG?.isNative) return Infinity;
         const user = AuthSystem.getUser();
         if (user && (user.plan === 'premium' || user.plan === 'vip')) return Infinity;
         return Math.max(0, this.FREE_DAILY_LIMIT - this._getData().count);
     },
 
     consume() {
+        if (window.__ASTROMAP_CONFIG?.isNative) return true;
         const user = AuthSystem.getUser();
         if (user && (user.plan === 'premium' || user.plan === 'vip')) return true;
         const data = this._getData();
@@ -456,6 +459,7 @@ function toggleDarkLight() {
 }
 
 function isPremiumUser() {
+    if (window.__ASTROMAP_CONFIG?.isNative) return true;
     const user = AuthSystem.getUser();
     return user && (user.plan === 'premium' || user.plan === 'vip');
 }
@@ -603,13 +607,13 @@ function toggleMobileNav() {
             display: flex !important;
             flex-direction: column !important;
             position: fixed !important;
-            top: 0 !important;
+            top: 64px !important;
             right: 0 !important;
             bottom: 0 !important;
             width: 300px !important;
             max-width: 85vw !important;
-            height: 100vh !important;
-            height: 100dvh !important;
+            height: calc(100vh - 64px) !important;
+            height: calc(100dvh - 64px) !important;
             z-index: 10002 !important;
             overflow-y: auto !important;
             overflow-x: hidden !important;
@@ -1669,6 +1673,114 @@ function loadMoonCalendar() {
             </div>
         </div>
     `;
+}
+
+// ═══════════════════════════════════════
+// STANDALONE NATAL CHART PAGE
+// ═══════════════════════════════════════
+function filterNatalCities(query) {
+    const select = document.getElementById('natal-birth-city');
+    if (!select) return;
+    const q = (query || '').toLowerCase().trim();
+    const allCities = CITY_DATABASE.ALL_CITIES;
+    const filtered = q ? allCities.filter(c => c.city.toLowerCase().includes(q) || c.country.toLowerCase().includes(q)) : allCities;
+    const toShow = filtered.slice(0, 50);
+    select.innerHTML = '';
+    toShow.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.city.toLowerCase().replace(/\s+/g, '');
+        opt.textContent = `${c.city}, ${c.country}`;
+        select.appendChild(opt);
+    });
+    if (toShow.length > 0) select.value = toShow[0].value;
+}
+
+function showNatalChart() {
+    const birthDate = document.getElementById('natal-birth-date').value;
+    const birthTime = document.getElementById('natal-birth-time').value;
+    const birthCity = document.getElementById('natal-birth-city').value;
+    if (!birthDate) { showToast('Doğum tarihini gir'); return; }
+
+    const resultEl = document.getElementById('natal-result');
+    document.getElementById('natal-form').style.display = 'none';
+    resultEl.classList.remove('hidden');
+    resultEl.innerHTML = '<div class="ai-loading"><div class="ai-loading-spinner">🪐</div><p>Doğum haritanız hesaplanıyor...</p></div>';
+
+    setTimeout(() => {
+        const birthLocation = AstroEngine.calculate(birthDate, birthTime, birthCity || 'istanbul', [], { climate: 'any', size: 'any', nature: 'any', region: 'any' });
+        const natal = birthLocation.natalChart;
+        const houses = birthLocation.houses;
+        const aspects = birthLocation.natalAspects || [];
+        const planetOrder = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto'];
+        const premium = isPremiumUser();
+
+        // SVG Wheel (premium only)
+        const svgHtml = premium ? buildZodiacWheel(natal, houses, aspects, planetOrder) : '';
+
+        // Planet positions
+        let rows = '';
+        for (const key of planetOrder) {
+            const pos = natal[key];
+            const planet = AstroEngine.PLANETS[key];
+            const detail = premium ? ` ${pos.dmsStr || pos.degree.toFixed(1) + '°'}` : '';
+            rows += `<div class="natal-row">
+                <span class="natal-planet"><span style="color:${planet.color}">${planet.symbol}</span> ${planet.name}</span>
+                <span class="natal-sign">${pos.signSymbol} ${pos.sign}${detail}</span>
+            </div>`;
+        }
+
+        // Houses (premium only)
+        let houseRows = '';
+        if (premium && houses && houses.cusps) {
+            const romanNums = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+            for (let i = 0; i < 12; i++) {
+                const lon = houses.cusps[i];
+                const signIdx = Math.floor(lon / 30);
+                const deg = lon % 30;
+                const sign = AstroEngine.SIGNS[signIdx];
+                const totalSec = Math.round(deg * 3600);
+                const s = totalSec % 60, m = Math.floor(totalSec / 60) % 60, d = Math.floor(totalSec / 3600);
+                houseRows += `<div class="natal-row natal-house-row">
+                    <span class="natal-planet">${romanNums[i]}. Ev</span>
+                    <span class="natal-sign">${sign.symbol} ${sign.name} ${d}°${String(m).padStart(2,'0')}'${String(s).padStart(2,'0')}"</span>
+                </div>`;
+            }
+        }
+
+        // Aspects (premium only)
+        let aspectRows = '';
+        if (premium) {
+            for (const asp of aspects.slice(0, 15)) {
+                const p1 = AstroEngine.PLANETS[asp.planet1];
+                const p2 = AstroEngine.PLANETS[asp.planet2];
+                aspectRows += `<div class="natal-row natal-aspect-row">
+                    <span class="natal-planet">
+                        <span style="color:${p1.color}">${p1.symbol}</span>
+                        <span style="color:${asp.color};margin:0 4px">${asp.symbol}</span>
+                        <span style="color:${p2.color}">${p2.symbol}</span>
+                    </span>
+                    <span class="natal-sign" style="color:${asp.color}">${asp.type} ${asp.orb.toFixed(1)}°</span>
+                </div>`;
+            }
+        }
+
+        const domElem = AstroEngine.getDominantElement(natal);
+        const elemEmoji = { fire: '🔥', earth: '🌍', air: '💨', water: '💧' };
+        const elemName = { fire: 'Ateş', earth: 'Toprak', air: 'Hava', water: 'Su' };
+
+        resultEl.innerHTML = `
+            ${svgHtml ? `<div class="natal-wheel-wrap">${svgHtml}</div>` : '<div class="natal-premium-hint">🔒 Tam zodiac wheel için Premium\'a geç</div>'}
+            <div class="natal-dominant">Baskın Element: ${elemEmoji[domElem] || ''} ${elemName[domElem] || domElem}</div>
+            <div class="natal-section">
+                <h4 class="natal-section-title">☉ Gezegen Pozisyonları</h4>
+                <div class="natal-grid">${rows}</div>
+            </div>
+            ${houseRows ? `<div class="natal-section"><h4 class="natal-section-title">🏠 Ev Başlangıçları</h4><div class="natal-grid">${houseRows}</div></div>` : ''}
+            ${aspectRows ? `<div class="natal-section"><h4 class="natal-section-title">✦ Açılar (Aspektler)</h4><div class="natal-grid">${aspectRows}</div></div>` : ''}
+            ${!premium ? '<div class="natal-premium-hint">🔒 Derece, dakika, ev ve aspekt bilgileri için <a href="javascript:void(0)" onclick="navigateTo(\'pricing\')">Premium\'a geç</a></div>' : ''}
+            <button class="btn-ghost reset-btn" onclick="resetAIPage('natal-form','natal-result')">🪐 Tekrar Hesapla</button>
+        `;
+    }, 500);
 }
 
 // ═══════════════════════════════════════
@@ -3183,7 +3295,7 @@ async function nativePickPhoto(source) {
             height: 1024
         });
         if (photo?.dataUrl) {
-            if (fortuneImages.length >= 3) { showToast('En fazla 3 fotoğraf yükleyebilirsin'); return false; }
+            if (fortuneImages.length >= 6) { showToast('En fazla 6 fotoğraf yükleyebilirsin'); return false; }
             fortuneImages.push(photo.dataUrl);
             renderFortunePreview();
             document.getElementById('fortune-submit-btn').disabled = false;
@@ -3211,7 +3323,7 @@ async function pickFortuneImage(source) {
 function handleFortuneImage(input) {
     const file = input.files[0];
     if (!file) return;
-    if (fortuneImages.length >= 3) { showToast('En fazla 3 fotoğraf yükleyebilirsin'); input.value = ''; return; }
+    if (fortuneImages.length >= 6) { showToast('En fazla 6 fotoğraf yükleyebilirsin'); input.value = ''; return; }
     if (file.size > 5 * 1024 * 1024) { showToast("Dosya 5MB'den büyük olamaz"); input.value = ''; return; }
     if (!file.type.startsWith('image/')) { showToast('Sadece resim dosyası yükleyebilirsin'); input.value = ''; return; }
 
@@ -3252,7 +3364,7 @@ function renderFortunePreview() {
                 <button type="button" class="btn-fortune-upload" onclick="pickFortuneImage('gallery')">Galeriden Sec</button>
                 <button type="button" class="btn-fortune-upload btn-fortune-camera" onclick="pickFortuneImage('camera')">Fotograf Cek</button>
             </div>
-            <small>JPG, PNG — max 5MB — en fazla 3 fotoğraf</small>
+            <small>JPG, PNG — max 5MB — en fazla 6 fotoğraf</small>
         `;
         document.getElementById('fortune-submit-btn').disabled = true;
         return;
@@ -3265,13 +3377,14 @@ function renderFortunePreview() {
                     <button type="button" class="fortune-thumb-remove" onclick="removeFortuneImageAt(${i})">✕</button>
                 </div>
             `).join('')}
-            ${fortuneImages.length < 3 ? `
+            ${fortuneImages.length < 6 ? `
                 <div class="fortune-thumb fortune-thumb-add" onclick="pickFortuneImage('gallery')">
                     <span>+</span>
-                    <small>${3 - fortuneImages.length} kaldı</small>
+                    <small>${6 - fortuneImages.length} kaldı</small>
                 </div>
             ` : ''}
         </div>
+        ${fortuneImages.length < 3 ? '<p class="fortune-hint" style="text-align:center;font-size:13px;opacity:0.7;margin-top:8px;">En az 3 fotograf ile en iyi sonucu alirsin</p>' : ''}
     `;
 }
 

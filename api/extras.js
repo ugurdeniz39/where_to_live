@@ -28,6 +28,9 @@ module.exports = (req, res) => {
             return res.json({ ok: true });
         }
         // GET summary
+        const adminToken = process.env.ADMIN_TOKEN || 'astromap-admin-2024';
+        const queryToken = (req.query && req.query.token) || new URL(req.url, 'http://localhost').searchParams.get('token');
+        if (queryToken !== adminToken) return res.status(403).json({ error: 'Yetkisiz erisim' });
         const events = {}, pages = {};
         const sessions = new Set();
         for (const e of global._analyticsEvents) {
@@ -58,6 +61,9 @@ module.exports = (req, res) => {
             return res.json({ ok: true, total: global._pushTokens.length });
         }
         // GET stats
+        const adminToken2 = process.env.ADMIN_TOKEN || 'astromap-admin-2024';
+        const queryToken2 = (req.query && req.query.token) || new URL(req.url, 'http://localhost').searchParams.get('token');
+        if (queryToken2 !== adminToken2) return res.status(403).json({ error: 'Yetkisiz erisim' });
         const platforms = {};
         global._pushTokens.forEach(t => { platforms[t.platform] = (platforms[t.platform] || 0) + 1; });
         return res.json({ total: global._pushTokens.length, platforms });

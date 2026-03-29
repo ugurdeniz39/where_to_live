@@ -138,6 +138,7 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
             <a class="nav-link" href="javascript:void(0)" data-page="dream" data-nav="dream" role="menuitem" tabindex="0">💭 Rüya</a>
             <a class="nav-link" href="javascript:void(0)" data-page="fortune" data-nav="fortune" role="menuitem" tabindex="0">☕ Fal</a>
             <a class="nav-link" href="javascript:void(0)" data-page="retrograde" data-nav="retrograde" role="menuitem" tabindex="0">⚠️ Retro</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="natal" data-nav="natal" role="menuitem" tabindex="0">🪐 Doğum Haritası</a>
             <a class="nav-link" href="javascript:void(0)" data-page="about" data-nav="about" role="menuitem" tabindex="0">ℹ️ Hakkında</a>
             <a class="nav-link" href="javascript:void(0)" data-page="pricing" data-nav="pricing" role="menuitem" tabindex="0">Premium ✨</a>
             <div class="nav-drawer-actions">
@@ -698,6 +699,31 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
         </div>
 
         <div id="dream-result"></div>
+    </div>
+</section>
+
+<!-- ══════════════════ PAGE: NATAL CHART ══════════════════ -->
+<section id="page-natal" class="page">
+    <div class="page-container">
+        <h1 class="page-title">🪐 Doğum <em>Haritası</em></h1>
+        <p class="page-subtitle">Gezegen pozisyonlarını ve evlerini keşfet.</p>
+
+        <div id="natal-form" class="ai-form">
+            <div class="form-row">
+                <div class="form-group form-group-half"><label>Doğum Tarihi</label><input type="date" id="natal-birth-date" value="1995-06-15"></div>
+                <div class="form-group form-group-half"><label>Doğum Saati</label><input type="time" id="natal-birth-time" value="14:30"></div>
+            </div>
+            <div class="form-group">
+                <label>Doğum Şehri</label>
+                <input type="text" id="natal-city-search" placeholder="Şehir ara..." autocomplete="off" oninput="filterNatalCities(this.value)">
+                <select id="natal-birth-city" size="4" class="city-select"></select>
+            </div>
+            <button class="btn-primary" onclick="showNatalChart()">
+                <span class="btn-sparkle">🪐</span> Haritamı Hesapla
+            </button>
+        </div>
+
+        <div id="natal-result" class="hidden"></div>
     </div>
 </section>
 

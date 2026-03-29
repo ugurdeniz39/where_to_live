@@ -349,6 +349,8 @@ app.post('/api/analytics', (req, res) => {
 });
 
 app.get('/api/analytics/summary', (req, res) => {
+    const adminToken = process.env.ADMIN_TOKEN || 'astromap-admin-2024';
+    if (req.query.token !== adminToken) return res.status(403).json({ error: 'Yetkisiz erisim' });
     try {
         if (!fs.existsSync(ANALYTICS_FILE)) return res.json({ total: 0, events: {} });
         const lines = fs.readFileSync(ANALYTICS_FILE, 'utf-8').trim().split('\n').filter(Boolean);
@@ -424,6 +426,8 @@ app.post('/api/push/register', (req, res) => {
 });
 
 app.get('/api/push/stats', (req, res) => {
+    const adminToken = process.env.ADMIN_TOKEN || 'astromap-admin-2024';
+    if (req.query.token !== adminToken) return res.status(403).json({ error: 'Yetkisiz erisim' });
     const tokens = loadPushTokens();
     const platforms = {};
     tokens.forEach(t => { platforms[t.platform] = (platforms[t.platform] || 0) + 1; });
