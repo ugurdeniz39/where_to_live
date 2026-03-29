@@ -3915,7 +3915,67 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Lazy images
     initLazyImages();
+
+    // Haptic feedback for mobile
+    initHapticFeedback();
+
+    // First-time onboarding
+    showOnboardingIfNeeded();
 });
+
+// ═══════════════════════════════════════
+// HAPTIC FEEDBACK (Native feel)
+// ═══════════════════════════════════════
+function initHapticFeedback() {
+    const Haptics = window.Capacitor?.Plugins?.Haptics;
+    if (!Haptics) return;
+
+    // Light haptic on button taps
+    document.addEventListener('click', (e) => {
+        const target = e.target.closest('.btn-primary, .btn-ghost, .btn-nav-primary, .pref-card, .spread-btn, .nav-link');
+        if (target) Haptics.impact({ style: 'Light' }).catch(() => {});
+    });
+
+    // Medium haptic on form submissions
+    document.addEventListener('click', (e) => {
+        const submit = e.target.closest('[onclick*="show"], [onclick*="calculate"]');
+        if (submit) Haptics.impact({ style: 'Medium' }).catch(() => {});
+    });
+}
+
+// ═══════════════════════════════════════
+// ONBOARDING (First-time users)
+// ═══════════════════════════════════════
+function showOnboardingIfNeeded() {
+    if (localStorage.getItem('astromap_onboarded')) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'onboarding-overlay';
+    overlay.innerHTML = `
+        <div class="onboarding-card">
+            <div class="onboarding-emoji">✦</div>
+            <h2>AstroMap'e Hos Geldin!</h2>
+            <p>Yildizlarin seni nereye cagirdigini kesfetmeye hazir misin?</p>
+            <div class="onboarding-features">
+                <div class="onboarding-feature">🌍 558 sehir astrokartografi haritasi</div>
+                <div class="onboarding-feature">🃏 AI Tarot — 4 farkli acilim</div>
+                <div class="onboarding-feature">🌟 Gunluk burc yorumu</div>
+                <div class="onboarding-feature">☕ Kahve fali — fotograf yukle</div>
+            </div>
+            <button class="btn-primary" onclick="closeOnboarding()" style="width:100%;margin-top:20px">Kesfetmeye Basla</button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+}
+
+function closeOnboarding() {
+    localStorage.setItem('astromap_onboarded', 'true');
+    const overlay = document.querySelector('.onboarding-overlay');
+    if (overlay) {
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 300);
+    }
+}
 
 // ═══════════════════════════════════════
 // MAGNETIC BUTTON EFFECT

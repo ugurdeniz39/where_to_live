@@ -1,5 +1,5 @@
-// AstroMap Service Worker v5 — Network-first for fresh deploys
-const CACHE_NAME = 'astromap-v5';
+// AstroMap Service Worker v6 — Network-first for fresh deploys
+const CACHE_NAME = 'astromap-v8';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -7,13 +7,17 @@ const STATIC_ASSETS = [
     '/app.js',
     '/cities-database.js',
     '/astro-engine.js',
-    '/manifest.json'
+    '/manifest.json',
+    '/icons/apple-touch-icon.png',
+    '/icons/icon-192x192.png',
+    '/icons/icon-512x512.png',
+    '/icons/favicon-32x32.png'
 ];
 
 const EXTERNAL_ASSETS = [
     'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
     'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-    'https://html2canvas.hertzen.com/dist/html2canvas.min.js'
+    'https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js'
 ];
 
 // Install — cache static assets & activate immediately
