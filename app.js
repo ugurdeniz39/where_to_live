@@ -759,22 +759,35 @@ window.addEventListener('scroll', throttle(() => {
 // ═══════════════════════════════════════
 // Uses event delegation on the navbar — catches clicks on all nav children regardless of inline onclick
 (function initNavbarDelegation() {
+    let navbarInitialized = false; // Guard against double-init
+
     function setupNavbar() {
+        if (navbarInitialized) return; // Prevent duplicate handlers
         const navbar = document.getElementById('navbar');
         if (!navbar) return;
-        
+        navbarInitialized = true;
+
         let lastTouchTime = 0; // Prevent double-fire from touch + click
-        
+
         function handleNavAction(e) {
             // Debounce: skip if this fires too close to a previous touch/click
             const now = Date.now();
             if (now - lastTouchTime < 300 && e.type === 'click') return;
             if (e.type === 'touchend') lastTouchTime = now;
-            
+
             const target = e.target.closest('[data-nav]');
             const modalBtn = e.target.closest('[data-modal]');
             const hamburger = e.target.closest('.nav-hamburger, #nav-hamburger');
-            
+
+            if (hamburger) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof toggleMobileNav === 'function') {
+                    toggleMobileNav();
+                }
+                return;
+            }
+
             if (target) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -784,7 +797,7 @@ window.addEventListener('scroll', throttle(() => {
                 }
                 return;
             }
-            
+
             if (modalBtn) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -794,24 +807,15 @@ window.addEventListener('scroll', throttle(() => {
                 }
                 return;
             }
-            
-            if (hamburger) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (typeof toggleMobileNav === 'function') {
-                    toggleMobileNav();
-                }
-                return;
-            }
         }
-        
+
         // Capture phase click handler — maximum reliability
         navbar.addEventListener('click', handleNavAction, true);
-        
+
         // Touch handler for mobile — prevent 300ms delay
         navbar.addEventListener('touchend', handleNavAction, { passive: false, capture: true });
     }
-    
+
     // Try immediately (scripts at bottom of body, DOM likely ready)
     if (document.getElementById('navbar')) {
         setupNavbar();
