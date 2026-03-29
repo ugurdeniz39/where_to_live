@@ -463,7 +463,12 @@ function isPremiumUser() {
 // ═══════════════════════════════════════
 // AI API HELPER
 // ═══════════════════════════════════════
+const _pendingRequests = new Set();
 async function callAI(endpoint, body, useCache = true) {
+    // Prevent duplicate concurrent requests to same endpoint
+    if (_pendingRequests.has(endpoint)) {
+        throw new Error('Bu istek zaten gonderiliyor, lutfen bekle...');
+    }
     Analytics.track('ai_request', { endpoint });
     // Check cache first
     if (useCache) {
@@ -482,6 +487,7 @@ async function callAI(endpoint, body, useCache = true) {
     
     let res;
     const apiBase = window.__ASTROMAP_CONFIG?.apiBase || '';
+    _pendingRequests.add(endpoint);
     try {
         res = await fetch(apiBase + '/api/' + endpoint, {
             method: 'POST',
@@ -489,6 +495,7 @@ async function callAI(endpoint, body, useCache = true) {
             body: JSON.stringify(body)
         });
     } catch (networkErr) {
+        _pendingRequests.delete(endpoint);
         // Offline fallback: try to serve stale cache
         const staleCache = AICache.get(endpoint, body, true); // true = ignore TTL
         if (staleCache) {
@@ -496,7 +503,7 @@ async function callAI(endpoint, body, useCache = true) {
             staleCache._offline = true;
             return staleCache;
         }
-        throw new Error('İnternet bağlantınız yok. Lütfen bağlantınızı kontrol edin.');
+        throw new Error('Internet baglantiniz yok. Lutfen bagantinizi kontrol edin.');
     }
 
     // Check content type before parsing
@@ -516,7 +523,8 @@ async function callAI(endpoint, body, useCache = true) {
 
     // Track in history
     AuthSystem.addToHistory(endpoint, body);
-    
+
+    _pendingRequests.delete(endpoint);
     return sanitized;
 }
 

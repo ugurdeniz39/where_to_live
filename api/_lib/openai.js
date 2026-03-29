@@ -1,7 +1,9 @@
 const OpenAI = require('openai');
 
 const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY?.trim()
+    apiKey: process.env.OPENAI_API_KEY?.trim(),
+    timeout: 25000, // 25 second timeout — fail fast
+    maxRetries: 2
 });
 
 async function askGPT(systemPrompt, userPrompt, maxTokens = 1000, temperature = 0.85) {
@@ -18,7 +20,10 @@ async function askGPT(systemPrompt, userPrompt, maxTokens = 1000, temperature = 
         return response.choices[0].message.content;
     } catch (err) {
         console.error('OpenAI Error:', err.message);
-        throw new Error('AI servisi şu an yanıt veremiyor. Lütfen tekrar dene.');
+        if (err.code === 'ETIMEDOUT' || err.message?.includes('timeout')) {
+            throw new Error('Sunucu yanitlamiyor. Lutfen tekrar dene.');
+        }
+        throw new Error('AI servisi su an yanit veremiyor. Lutfen tekrar dene.');
     }
 }
 

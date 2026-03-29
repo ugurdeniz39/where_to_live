@@ -87,5 +87,51 @@ html = html.replace(
 
 fs.writeFileSync(indexPath, html);
 
-console.log(`\n  Built www/ — ${copied} files copied`);
+// ── Minify JS files ──
+const { execSync } = require('child_process');
+const jsFiles = ['app.js', 'astro-engine.js', 'cities-database.js'];
+let savedBytes = 0;
+for (const jsFile of jsFiles) {
+    const jsPath = path.join(WWW, jsFile);
+    if (!fs.existsSync(jsPath)) continue;
+    const originalSize = fs.statSync(jsPath).size;
+    try {
+        execSync(`npx terser "${jsPath}" --compress --mangle --output "${jsPath}"`, { stdio: 'pipe' });
+        const newSize = fs.statSync(jsPath).size;
+        const saved = originalSize - newSize;
+        savedBytes += saved;
+        console.log(`  Minified ${jsFile}: ${(originalSize/1024).toFixed(0)}KB → ${(newSize/1024).toFixed(0)}KB (-${(saved/1024).toFixed(0)}KB)`);
+    } catch (e) {
+        console.warn(`  SKIP minify ${jsFile}: ${e.message.slice(0, 80)}`);
+    }
+}
+
+// ── Minify CSS ──
+const cssPath = path.join(WWW, 'style.css');
+if (fs.existsSync(cssPath)) {
+    const originalSize = fs.statSync(cssPath).size;
+    let css = fs.readFileSync(cssPath, 'utf8');
+    // Basic CSS minification (no dependency needed)
+    css = css.replace(/\/\*[\s\S]*?\*\//g, ''); // Remove comments
+    css = css.replace(/\s+/g, ' '); // Collapse whitespace
+    css = css.replace(/\s*([{}:;,>+~])\s*/g, '$1'); // Remove space around selectors
+    css = css.replace(/;}/g, '}'); // Remove last semicolons
+    fs.writeFileSync(cssPath, css);
+    const newSize = fs.statSync(cssPath).size;
+    savedBytes += (originalSize - newSize);
+    console.log(`  Minified style.css: ${(originalSize/1024).toFixed(0)}KB → ${(newSize/1024).toFixed(0)}KB (-${((originalSize-newSize)/1024).toFixed(0)}KB)`);
+}
+
+// ── Minify HTML ──
+const htmlSize = fs.statSync(indexPath).size;
+html = fs.readFileSync(indexPath, 'utf8');
+html = html.replace(/<!--[\s\S]*?-->/g, ''); // Remove HTML comments
+html = html.replace(/^\s+/gm, ''); // Remove leading whitespace
+html = html.replace(/\n\s*\n/g, '\n'); // Remove empty lines
+fs.writeFileSync(indexPath, html);
+const htmlNewSize = fs.statSync(indexPath).size;
+savedBytes += (htmlSize - htmlNewSize);
+console.log(`  Minified index.html: ${(htmlSize/1024).toFixed(0)}KB → ${(htmlNewSize/1024).toFixed(0)}KB (-${((htmlSize-htmlNewSize)/1024).toFixed(0)}KB)`);
+
+console.log(`\n  Built www/ — ${copied} files, saved ${(savedBytes/1024).toFixed(0)}KB total`);
 console.log('  Ready for: npx cap sync\n');

@@ -50,7 +50,9 @@ const PORT = process.env.PORT || 3000;
 
 // OpenAI client
 const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY?.trim()
+    apiKey: process.env.OPENAI_API_KEY?.trim(),
+    timeout: 25000,
+    maxRetries: 2
 });
 
 // iyzico client — FAIL FAST if keys missing in production
@@ -581,33 +583,47 @@ app.post('/api/crystal-guide', async (req, res) => {
         const { birthDate, sunSign, moonSign, mood } = req.body;
         if (!birthDate) return res.status(400).json({ error: 'Doğum tarihi gerekli' });
 
-        const systemPrompt = `Sen kristal terapi, çakra dengeleme ve wellness konusunda uzman bir spiritüel rehbersin. Türkçe yaz.
-Nazik, şefkatli ve bilge bir ton kullan. Kadınlara hitap ediyorsun — onları güçlendiren, rahatlatıcı bir dil kullan.
-Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
+        const today = new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' });
+
+        const systemPrompt = `Sen kristal terapi, cakra dengeleme, aromaterapi ve butunsel wellness konusunda 20 yillik deneyime sahip bir spirituel rehbersin. Turkce yaz.
+Sicak, sefkatli ve bilge bir ton kullan. Kisiyi guclendiren, rahatlatici bir dil kullan.
+
+ONEMLI KURALLAR:
+- Her seferinde FARKLI kristaller oner. Ametist, Rozekuvars gibi bilinen kristalleri BAZEN oner, ama Labradorit, Moldavit, Sunstone, Larimar, Selenite, Karneol, Sitrin, Akuamarin, Lepidolit, Rodokrozit gibi cesitli kristalleri de kullan.
+- Ruh haline GERCEKTEN uygun kristal sec — "stresli" diyen birine rahatlatici, "enerjisiz" diyen birine enerji veren.
+- Cakra bilgisi SPESIFIK olsun — hangi cakra neden bloke, nasil acilir.
+- Meditasyon suresi ve mantra kisisellestirilmis olsun.
+- Renk onerileri burcun elementine uygun olsun.
+
+Yanitini MUTLAKA asagidaki JSON formatinda ver, baska hicbir sey yazma:
 {
-  "mainCrystal": { "name": "Ana kristal adı", "emoji": "💎", "color": "#hex renk", "benefit": "Bu kristalin sana faydası, 2 cümle", "howToUse": "Nasıl kullanılır, 1-2 cümle" },
+  "mainCrystal": { "name": "Ana kristal adi", "emoji": "uygun emoji", "color": "#hex renk", "benefit": "Bu kristalin sana faydasi, 2-3 cumle. SPESIFIK.", "howToUse": "Nasil kullanilir — nereye koyulmali, ne zaman tutulmali, 2 cumle", "cleansingTip": "Bu kristali nasil temizlersin, 1 cumle" },
   "supportCrystals": [
-    { "name": "Destek kristal 1", "emoji": "emoji", "benefit": "Kısa fayda" },
-    { "name": "Destek kristal 2", "emoji": "emoji", "benefit": "Kısa fayda" }
+    { "name": "Destek kristal 1", "emoji": "emoji", "benefit": "Kisa fayda, 1-2 cumle" },
+    { "name": "Destek kristal 2", "emoji": "emoji", "benefit": "Kisa fayda, 1-2 cumle" },
+    { "name": "Destek kristal 3", "emoji": "emoji", "benefit": "Kisa fayda, 1-2 cumle" }
   ],
-  "chakra": { "name": "Odaklanman gereken çakra", "color": "#hex", "tip": "Çakra dengeleme ipucu, 1-2 cümle" },
-  "colors": { "wear": "Bugün giymeni önerdiğim renk", "avoid": "Kaçınman gereken renk", "home": "Evinde bulundurman gereken renk" },
-  "meditation": { "duration": "X dakika", "focus": "Meditasyon odağı, 1 cümle", "mantra": "Tekrar edilecek mantra" },
-  "tea": "Önerilen bitki çayı ve faydası",
-  "oil": "Önerilen esansiyel yağ ve kullanımı",
-  "moonRitual": "Ay fazına göre bugün yapılabilecek ritüel, 2-3 cümle",
-  "affirmation": "Güçlendirici bir olumla"
+  "chakra": { "name": "Odaklanman gereken cakra", "color": "#hex", "location": "Cakranin vucuttaki yeri", "blockReason": "Bu cakra neden bloke olabilir, 1 cumle", "tip": "Cakra dengeleme teknigi, 2 cumle" },
+  "colors": { "wear": "Bugün giymeni onerdigim renk ve NEDEN", "avoid": "Kacinman gereken renk ve NEDEN", "home": "Evinde bulundurman gereken renk" },
+  "meditation": { "duration": "X dakika", "focus": "Meditasyon odagi, 1 cumle", "mantra": "Tekrar edilecek mantra — TURKCE ve anlamli", "technique": "Nefes teknigi veya pozisyon, 1 cumle" },
+  "tea": { "name": "Bitki cayi adi", "benefit": "Faydasi, 1 cumle", "recipe": "Nasil demlenir, 1 cumle" },
+  "oil": { "name": "Esansiyel yag adi", "usage": "Nasil kullanilir, 1 cumle", "blend": "Hangi yagla karistirilabilir" },
+  "moonRitual": "Bugunun ay fazina gore yapilabilecek rituel, 3 cumle. SPESIFIK adimlar ver.",
+  "dailyPractice": "Bugune ozel 3 adimlik mini wellness rutini",
+  "affirmation": "Guclendirici ve OZGUN bir olumlama cumlesi — klise olmasin"
 }`;
 
-        const userPrompt = `Kişi: Doğum ${birthDate}, Güneş burcu: ${sunSign || 'bilinmiyor'}, Ay burcu: ${moonSign || 'bilinmiyor'}.
-Şu anki ruh hali: ${mood || 'genel denge arayışı'}.
-Bu kişi için bugün özel kristal, wellness ve spiritüel rehberlik ver.`;
+        const userPrompt = `Tarih: ${today}.
+Kisi: Dogum ${birthDate}, Gunes burcu: ${sunSign || 'bilinmiyor'}, Ay burcu: ${moonSign || 'bilinmiyor'}.
+Su anki ruh hali: ${mood || 'genel denge arayisi'}.
+Bu kisi icin BUGUNUN enerjisine ozel, derinlemesine kristal ve wellness rehberligi ver.
+Her oneri spesifik ve uygulanabilir olsun.`;
 
-        const cacheKey = `crystal_${birthDate}_${sunSign}_${mood || 'general'}`;
+        const cacheKey = `crystal_${birthDate}_${sunSign}_${mood || 'general'}_${new Date().toDateString()}`;
         const cached = getCachedResponse(cacheKey, 'crystal');
         if (cached) return res.json({ success: true, data: cached });
 
-        const raw = await askGPT(systemPrompt, userPrompt, 800);
+        const raw = await askGPT(systemPrompt, userPrompt, 1000);
         const result = extractJSON(raw);
         if (!result) throw new Error('AI yanıtı parse edilemedi');
         setCachedResponse(cacheKey, result, 'crystal');
