@@ -1,20 +1,64 @@
 {
   "version": 2,
   "functions": {
-    "api/fortune.js": { "maxDuration": 60 }
+    "api/fortune.js": { "maxDuration": 60 },
+    "api/daily-horoscope.js": { "maxDuration": 30 },
+    "api/compatibility.js": { "maxDuration": 30 },
+    "api/crystal-guide.js": { "maxDuration": 30 },
+    "api/tarot.js": { "maxDuration": 30 },
+    "api/dream.js": { "maxDuration": 30 },
+    "api/city-insight.js": { "maxDuration": 30 }
   },
   "rewrites": [
     { "source": "/api/checkout/init", "destination": "/api/checkout/init" },
     { "source": "/api/checkout/callback", "destination": "/api/checkout/callback" },
+    { "source": "/api/push/register", "destination": "/api/push" },
+    { "source": "/api/push/stats", "destination": "/api/push" },
+    { "source": "/api/analytics/summary", "destination": "/api/analytics" },
     { "source": "/api/:path", "destination": "/api/:path" },
     { "source": "/((?!api|.*\\..*).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
+      ]
+    },
+    {
       "source": "/api/(.*)",
       "headers": [
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type" }
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type" },
+        { "key": "Cache-Control", "value": "no-store" }
+      ]
+    },
+    {
+      "source": "/(.*)\\.css",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/(.*)\\.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/manifest.json",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400" }
+      ]
+    },
+    {
+      "source": "/(.*)\\.png",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     }
   ]

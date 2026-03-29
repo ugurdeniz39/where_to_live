@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /*.json$
+
+User-agent: Googlebot
+Allow: /manifest.json
+
+Sitemap: https://astromap.app/sitemap.xml
