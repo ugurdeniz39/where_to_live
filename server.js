@@ -71,12 +71,18 @@ const PLANS = {
     'vip-yearly':      { price: '990.00', name: 'AstroMap VIP Yıllık' }
 };
 
-// CORS — restrict to known origins
+// CORS — restrict to known origins + allow Capacitor mobile apps
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:5173').split(',').map(s => s.trim());
 app.use(cors({
     origin: function(origin, callback) {
-        // Allow requests with no origin (mobile apps, curl, etc)
-        if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+        // Allow requests with no origin (mobile apps, curl, server-to-server)
+        if (!origin) return callback(null, true);
+        // Allow known web origins
+        if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+        // Allow Capacitor/Cordova native app origins
+        if (origin === 'https://localhost' || origin === 'capacitor://localhost' || origin === 'http://localhost') return callback(null, true);
+        // Allow Vercel preview deployments
+        if (origin.endsWith('.vercel.app')) return callback(null, true);
         callback(new Error('CORS policy: Bu origin izinli değil'));
     },
     methods: ['GET', 'POST', 'OPTIONS'],

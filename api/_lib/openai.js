@@ -51,10 +51,17 @@ function parseJSON(raw) {
 function corsHeaders(res, req) {
     const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',').map(s => s.trim());
     const origin = req && req.headers && req.headers.origin;
-    if (origin && allowedOrigins.includes(origin)) {
+    // Allow known origins, Capacitor native apps, and Vercel previews
+    const isAllowed = !origin
+        || allowedOrigins.includes(origin)
+        || origin === 'https://localhost'
+        || origin === 'capacitor://localhost'
+        || origin === 'http://localhost'
+        || origin.endsWith('.vercel.app');
+    if (isAllowed && origin) {
         res.setHeader('Access-Control-Allow-Origin', origin);
     } else {
-        res.setHeader('Access-Control-Allow-Origin', allowedOrigins[0] || 'http://localhost:3000');
+        res.setHeader('Access-Control-Allow-Origin', allowedOrigins[0] || '*');
     }
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
