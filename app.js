@@ -9,6 +9,37 @@
  */
 
 // ═══════════════════════════════════════
+// ANALYTICS SCAFFOLD
+// ═══════════════════════════════════════
+const Analytics = {
+    events: [],
+    track(event, data = {}) {
+        const entry = {
+            event,
+            data,
+            ts: Date.now(),
+            page: window.location.hash || 'home',
+            session: this._sessionId
+        };
+        this.events.push(entry);
+        // Keep max 500 events in memory
+        if (this.events.length > 500) this.events.shift();
+        // Debug mode
+        if (localStorage.getItem('astromap_debug')) {
+            console.log(`📊 Analytics: ${event}`, data);
+        }
+        // TODO: Send to analytics backend when ready
+        // fetch('/api/analytics', { method: 'POST', body: JSON.stringify(entry) });
+    },
+    _sessionId: 's_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    getSummary() {
+        const counts = {};
+        this.events.forEach(e => { counts[e.event] = (counts[e.event] || 0) + 1; });
+        return { total: this.events.length, counts, session: this._sessionId };
+    }
+};
+
+// ═══════════════════════════════════════
 // PERFORMANCE UTILITIES
 // ═══════════════════════════════════════
 function throttle(fn, delay = 16) {
@@ -48,13 +79,13 @@ const AICache = {
         return this.prefix + endpoint + '_' + btoa(unescape(encodeURIComponent(JSON.stringify(body)))).slice(0, 60);
     },
     
-    get(endpoint, body) {
+    get(endpoint, body, ignoreExpiry = false) {
         try {
             const key = this._key(endpoint, body);
             const raw = localStorage.getItem(key);
             if (!raw) return null;
             const { data, ts } = JSON.parse(raw);
-            if (Date.now() - ts > this.ttl) {
+            if (!ignoreExpiry && Date.now() - ts > this.ttl) {
                 localStorage.removeItem(key);
                 return null;
             }
@@ -143,20 +174,22 @@ const AuthSystem = {
 
     isLoggedIn() { return !!this.getUser(); },
 
-    login(email, password) {
+    async login(email, password) {
         const users = this._getAllUsers();
         const user = users.find(u => u.email === email);
         if (!user) throw new Error('Bu e-posta ile kayıtlı hesap bulunamadı');
-        if (user.password !== this._hash(password)) throw new Error('Yanlış şifre');
+        const hashed = await this._hash(password);
+        if (user.password !== hashed) throw new Error('Yanlış şifre');
         const session = { ...user, password: undefined, loginAt: Date.now() };
         localStorage.setItem(this._key, JSON.stringify(session));
         return session;
     },
 
-    signup(name, email, password, birthDate) {
+    async signup(name, email, password, birthDate) {
         const users = this._getAllUsers();
         if (users.find(u => u.email === email)) throw new Error('Bu e-posta zaten kayıtlı');
-        const user = { id: 'u_' + Date.now(), name, email, password: this._hash(password), birthDate, createdAt: Date.now(), plan: 'free' };
+        const hashed = await this._hash(password);
+        const user = { id: 'u_' + Date.now(), name, email, password: hashed, birthDate, createdAt: Date.now(), plan: 'free' };
         users.push(user);
         localStorage.setItem('astromap_users', JSON.stringify(users));
         const session = { ...user, password: undefined, loginAt: Date.now() };
@@ -224,15 +257,27 @@ const AuthSystem = {
         try { return JSON.parse(localStorage.getItem('astromap_users') || '[]'); } catch { return []; }
     },
 
-    _hash(str) {
-        // Simple hash for localStorage auth (NOT for production)
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash |= 0;
+    async _hash(str) {
+        // SHA-256 via SubtleCrypto — much stronger than simple checksum
+        // NOTE: For production, use server-side bcrypt/argon2 with proper salting
+        try {
+            const encoder = new TextEncoder();
+            const salt = 'astromap_v4_salt_'; // Static salt — use per-user salt in production
+            const data = encoder.encode(salt + str);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return 'h2_' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+        } catch {
+            // Fallback for environments without SubtleCrypto
+            let hash = 0;
+            const salted = 'astromap_v4_' + str;
+            for (let i = 0; i < salted.length; i++) {
+                const char = salted.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash |= 0;
+            }
+            return 'h_' + Math.abs(hash).toString(36);
         }
-        return 'h_' + Math.abs(hash).toString(36);
     }
 };
 
@@ -289,6 +334,7 @@ let currentPage = 'home';
 // NAVIGATION (SPA Router)
 // ═══════════════════════════════════════
 function navigateTo(pageId) {
+    Analytics.track('page_view', { page: pageId });
     SoundFX.play('click');
     // Hide all pages
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -296,10 +342,6 @@ function navigateTo(pageId) {
     const target = document.getElementById('page-' + pageId) || document.getElementById(pageId);
     if (target) {
         target.classList.add('active');
-        // Re-trigger animation
-        target.style.animation = 'none';
-        target.offsetHeight; // reflow
-        target.style.animation = '';
     }
 
     // Update nav links
@@ -338,9 +380,58 @@ function navigateTo(pageId) {
 }
 
 // ═══════════════════════════════════════
+// FREEMIUM USAGE LIMITER
+// ═══════════════════════════════════════
+const UsageLimiter = {
+    _key: 'astromap_daily_usage',
+    FREE_DAILY_LIMIT: 3,
+
+    _getToday() {
+        return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    },
+
+    _getData() {
+        try {
+            const raw = JSON.parse(localStorage.getItem(this._key) || '{}');
+            if (raw.date !== this._getToday()) return { date: this._getToday(), count: 0 };
+            return raw;
+        } catch { return { date: this._getToday(), count: 0 }; }
+    },
+
+    getRemaining() {
+        const user = AuthSystem.getUser();
+        if (user && (user.plan === 'premium' || user.plan === 'vip')) return Infinity;
+        return Math.max(0, this.FREE_DAILY_LIMIT - this._getData().count);
+    },
+
+    consume() {
+        const user = AuthSystem.getUser();
+        if (user && (user.plan === 'premium' || user.plan === 'vip')) return true;
+        const data = this._getData();
+        if (data.count >= this.FREE_DAILY_LIMIT) return false;
+        data.count++;
+        localStorage.setItem(this._key, JSON.stringify(data));
+        return true;
+    },
+
+    canUse() {
+        return this.getRemaining() > 0;
+    }
+};
+
+// ═══════════════════════════════════════
+// PREMIUM CHECK
+// ═══════════════════════════════════════
+function isPremiumUser() {
+    const user = AuthSystem.getUser();
+    return user && (user.plan === 'premium' || user.plan === 'vip');
+}
+
+// ═══════════════════════════════════════
 // AI API HELPER
 // ═══════════════════════════════════════
 async function callAI(endpoint, body, useCache = true) {
+    Analytics.track('ai_request', { endpoint });
     // Check cache first
     if (useCache) {
         const cached = AICache.get(endpoint, body);
@@ -349,16 +440,30 @@ async function callAI(endpoint, body, useCache = true) {
             return cached;
         }
     }
+
+    // Freemium limit check (cache hits don't count)
+    if (!UsageLimiter.canUse()) {
+        throw new Error(`Günlük ücretsiz AI hakkın doldu (${UsageLimiter.FREE_DAILY_LIMIT}/${UsageLimiter.FREE_DAILY_LIMIT}). Premium'a geç veya yarın tekrar dene!`);
+    }
+    UsageLimiter.consume();
     
     let res;
+    const apiBase = (window.__ASTROMAP_CONFIG?.isNative && window.__ASTROMAP_CONFIG?.apiBase) || '';
     try {
-        res = await fetch('/api/' + endpoint, {
+        res = await fetch(apiBase + '/api/' + endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
         });
     } catch (networkErr) {
-        throw new Error('Sunucuya bağlanılamadı. Lütfen localhost:3000 üzerinden açın.');
+        // Offline fallback: try to serve stale cache
+        const staleCache = AICache.get(endpoint, body, true); // true = ignore TTL
+        if (staleCache) {
+            console.log(`✦ Offline fallback: ${endpoint} (stale cache)`);
+            staleCache._offline = true;
+            return staleCache;
+        }
+        throw new Error('İnternet bağlantınız yok. Lütfen bağlantınızı kontrol edin.');
     }
 
     // Check content type before parsing
@@ -384,20 +489,25 @@ async function callAI(endpoint, body, useCache = true) {
 
 function showAILoading(container, message) {
     container.classList.remove('hidden');
+    const remaining = UsageLimiter.getRemaining();
+    const limitText = remaining === Infinity ? '' : `<p class="ai-loading-sub" style="opacity:0.6;font-size:12px">Kalan hak: ${remaining}/${UsageLimiter.FREE_DAILY_LIMIT}</p>`;
     container.innerHTML = `
         <div class="ai-loading">
             <div class="ai-loading-spinner"></div>
             <p class="ai-loading-text">${message || 'AI yanıt hazırlıyor...'}</p>
-            <p class="ai-loading-sub">Bu birkaç saniye sürebilir ✨</p>
+            <p class="ai-loading-sub">Bu birkaç saniye sürebilir</p>
+            ${limitText}
         </div>
     `;
 }
 
 function showAIError(container, msg) {
+    const isLimitError = msg && msg.includes('hakkın doldu');
     container.innerHTML = `
         <div class="ai-error">
-            <span class="ai-error-icon">⚠️</span>
+            <span class="ai-error-icon">${isLimitError ? '🔒' : '⚠️'}</span>
             <p>${msg || 'Bir hata oluştu. Lütfen tekrar dene.'}</p>
+            ${isLimitError ? `<button class="btn-primary" onclick="navigateTo('pricing')" style="margin-top:12px">Premium'a Gec</button>` : ''}
         </div>
     `;
 }
@@ -490,6 +600,22 @@ function navigateToStep(stepId) {
     window.scrollTo(0, 0);
 }
 
+// Mobile list/map view toggle
+function toggleMobileView(view) {
+    const sidebar = document.querySelector('.results-sidebar');
+    const mapWrap = document.querySelector('.results-map-wrap');
+    const btns = document.querySelectorAll('.view-toggle-btn');
+    btns.forEach(b => b.classList.toggle('active', b.dataset.view === view));
+    if (view === 'map') {
+        sidebar.style.display = 'none';
+        mapWrap.style.display = 'block';
+        if (map) setTimeout(() => map.invalidateSize(), 100);
+    } else {
+        sidebar.style.display = '';
+        mapWrap.style.display = '';
+    }
+}
+
 function resetApp() {
     selectedPreferences = [];
     lifestyleChoices = { climate: 'moderate', size: 'medium', nature: 'urban', region: 'any' };
@@ -536,8 +662,10 @@ function initStars() {
             life: 1
         };
     }
-    setInterval(createShootingStar, 6000);
+    let shootingStarIntervalId = setInterval(createShootingStar, 6000);
 
+    // Pause animations when page is not visible
+    let starsAnimId = null;
     function animate() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         for (const star of stars) {
@@ -568,19 +696,31 @@ function initStars() {
             ctx.lineWidth = 1.5;
             ctx.stroke();
         }
-        requestAnimationFrame(animate);
+        starsAnimId = requestAnimationFrame(animate);
     }
-    animate();
+    starsAnimId = requestAnimationFrame(animate);
+
+    // Pause when tab is hidden to save CPU/battery
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            if (starsAnimId) { cancelAnimationFrame(starsAnimId); starsAnimId = null; }
+            clearInterval(shootingStarIntervalId);
+            shootingStarIntervalId = null;
+        } else {
+            if (!starsAnimId) starsAnimId = requestAnimationFrame(animate);
+            if (!shootingStarIntervalId) shootingStarIntervalId = setInterval(createShootingStar, 6000);
+        }
+    });
     window.addEventListener('resize', resize);
 }
 
 // ═══════════════════════════════════════
 // NAVBAR SCROLL EFFECT
 // ═══════════════════════════════════════
-window.addEventListener('scroll', () => {
+window.addEventListener('scroll', throttle(() => {
     const nav = document.getElementById('navbar');
     if (nav) nav.classList.toggle('scrolled', window.scrollY > 30);
-});
+}, 100), { passive: true });
 
 // ═══════════════════════════════════════
 // NAVBAR EVENT DELEGATION (robust click handling)
@@ -653,8 +793,8 @@ window.addEventListener('scroll', () => {
 // ═══════════════════════════════════════
 // MODALS
 // ═══════════════════════════════════════
-function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function openModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
+function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
 
 // Close modal on backdrop click
 document.addEventListener('click', (e) => {
@@ -676,24 +816,29 @@ function showToast(msg, duration = 3000) {
 // ═══════════════════════════════════════
 // AUTH (Real localStorage auth)
 // ═══════════════════════════════════════
-function handleLogin(e) {
+async function handleLogin(e) {
     e.preventDefault();
     try {
         const form = e.target;
         const email = form.querySelector('input[type="email"]').value.trim();
         const password = form.querySelector('input[type="password"]').value;
         if (!email || !password) { showToast('Lütfen tüm alanları doldurun'); return; }
-        const user = AuthSystem.login(email, password);
+        const btn = form.querySelector('button[type="submit"]');
+        if (btn) { btn.disabled = true; btn.textContent = 'Giriş yapılıyor...'; }
+        const user = await AuthSystem.login(email, password);
         showToast(`Hoş geldin, ${user.name}! ✨`);
         closeModal('login-modal');
         AuthSystem.updateUI();
         SoundFX.play('success');
     } catch (err) {
         showToast(err.message);
+    } finally {
+        const btn = e.target.querySelector('button[type="submit"]');
+        if (btn) { btn.disabled = false; btn.textContent = 'Giriş Yap'; }
     }
 }
 
-function handleSignup(e) {
+async function handleSignup(e) {
     e.preventDefault();
     try {
         const form = e.target;
@@ -704,13 +849,18 @@ function handleSignup(e) {
         const password = inputs[3].value;
         if (!name || !email || !password) { showToast('Lütfen tüm alanları doldurun'); return; }
         if (password.length < 6) { showToast('Şifre en az 6 karakter olmalı'); return; }
-        const user = AuthSystem.signup(name, email, password, birthDate);
+        const btn = form.querySelector('button[type="submit"]');
+        if (btn) { btn.disabled = true; btn.textContent = 'Hesap oluşturuluyor...'; }
+        const user = await AuthSystem.signup(name, email, password, birthDate);
         showToast(`Hesabın oluşturuldu! Hoş geldin, ${user.name} ✨`);
         closeModal('signup-modal');
         AuthSystem.updateUI();
         SoundFX.play('success');
     } catch (err) {
         showToast(err.message);
+    } finally {
+        const btn = e.target.querySelector('button[type="submit"]');
+        if (btn) { btn.disabled = false; btn.textContent = 'Ücretsiz Başla'; }
     }
 }
 
@@ -722,13 +872,17 @@ function socialLogin(provider) {
 // PRICING
 // ═══════════════════════════════════════
 function toggleBilling() {
-    const isYearly = document.getElementById('billing-toggle').checked;
-    document.getElementById('lbl-monthly').classList.toggle('active', !isYearly);
-    document.getElementById('lbl-yearly').classList.toggle('active', isYearly);
-    document.getElementById('price-premium').textContent = isYearly ? '₺490' : '₺49';
-    document.getElementById('period-premium').textContent = isYearly ? '/yıl' : '/ay';
-    document.getElementById('price-vip').textContent = isYearly ? '₺990' : '₺99';
-    document.getElementById('period-vip').textContent = isYearly ? '/yıl' : '/ay';
+    const toggle = document.getElementById('billing-toggle');
+    if (!toggle) return;
+    const isYearly = toggle.checked;
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    const cls = (id, cls, on) => { const el = document.getElementById(id); if (el) el.classList.toggle(cls, on); };
+    cls('lbl-monthly', 'active', !isYearly);
+    cls('lbl-yearly', 'active', isYearly);
+    set('price-premium', isYearly ? '₺490' : '₺49');
+    set('period-premium', isYearly ? '/yıl' : '/ay');
+    set('price-vip', isYearly ? '₺990' : '₺99');
+    set('period-vip', isYearly ? '/yıl' : '/ay');
 }
 
 function toggleFaq(el) { el.classList.toggle('open'); }
@@ -766,7 +920,7 @@ function startCheckout(tier) {
 
     // Open modal
     openModal('checkout-modal');
-    playSound('click');
+    SoundFX.play('click');
 }
 
 async function submitBillingAndPay(e) {
@@ -786,7 +940,8 @@ async function submitBillingAndPay(e) {
     document.getElementById('checkout-step-payment').classList.remove('hidden');
 
     try {
-        const response = await fetch('/api/checkout/init', {
+        const apiBase = (window.__ASTROMAP_CONFIG?.isNative && window.__ASTROMAP_CONFIG?.apiBase) || '';
+        const response = await fetch(apiBase + '/api/checkout/init', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -811,11 +966,19 @@ async function submitBillingAndPay(e) {
             formDiv.innerHTML = data.checkoutFormContent;
             container.appendChild(formDiv);
 
-            // Execute any scripts in the injected content
+            // Execute any scripts in the injected content (validate iyzico domain)
+            const trustedDomains = ['iyzipay.com', 'iyzico.com'];
             const scripts = formDiv.querySelectorAll('script');
             scripts.forEach(oldScript => {
                 const newScript = document.createElement('script');
                 if (oldScript.src) {
+                    try {
+                        const srcHost = new URL(oldScript.src).hostname;
+                        if (!trustedDomains.some(d => srcHost === d || srcHost.endsWith('.' + d))) {
+                            console.warn('Blocked untrusted checkout script:', oldScript.src);
+                            return;
+                        }
+                    } catch { return; }
                     newScript.src = oldScript.src;
                 } else {
                     newScript.textContent = oldScript.textContent;
@@ -823,7 +986,7 @@ async function submitBillingAndPay(e) {
                 document.body.appendChild(newScript);
             });
 
-            playSound('success');
+            SoundFX.play('success');
         } else {
             showToast(data.error || 'Ödeme formu yüklenemedi');
             // Go back to billing step
@@ -850,8 +1013,18 @@ window.addEventListener('load', () => {
 
     if (checkoutStatus === 'success') {
         const amount = params.get('amount');
-        showToast(`Ödeme başarılı! ${amount ? '₺' + amount + ' alındı.' : ''} Premium aktif ✨`, 5000);
-        playSound('success');
+        const plan = params.get('plan') || 'premium';
+        showToast(`Ödeme başarılı! ${amount ? '₺' + amount + ' alındı.' : ''} ${plan === 'vip' ? 'VIP' : 'Premium'} aktif ✨`, 5000);
+        SoundFX.play('success');
+
+        // Activate premium in local session
+        const user = AuthSystem.getUser();
+        if (user) {
+            user.plan = plan;
+            user.planActivatedAt = new Date().toISOString();
+            localStorage.setItem(AuthSystem._key, JSON.stringify(user));
+            AuthSystem.updateUI();
+        }
 
         // Clean URL
         window.history.replaceState({}, '', '/');
@@ -871,7 +1044,7 @@ window.addEventListener('message', (e) => {
     if (e.data?.type === 'checkout-result') {
         if (e.data.status === 'success') {
             showToast('Ödeme başarılı! Premium aktif ✨', 5000);
-            playSound('success');
+            SoundFX.play('success');
             if (typeof launchCelebration === 'function') launchCelebration();
         }
         closeCheckout();
@@ -1214,6 +1387,45 @@ function loadMoonCalendar() {
     const el = document.getElementById('moon-content');
     if (!el) return;
 
+    // Generate monthly calendar with moon phases
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+    const mondayFirst = firstDay === 0 ? 6 : firstDay - 1; // Convert to Monday-first
+
+    const monthName = today.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+    const phaseEmojis = ['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'];
+
+    let calendarDays = '';
+    // Empty cells before first day
+    for (let i = 0; i < mondayFirst; i++) calendarDays += '<div class="moon-cal-day empty"></div>';
+    // Days of month
+    for (let d = 1; d <= daysInMonth; d++) {
+        const date = new Date(year, month, d);
+        const dayMoon = AstroEngine.calculateMoonPhase(date);
+        const isToday = d === today.getDate();
+        calendarDays += `
+            <div class="moon-cal-day${isToday ? ' today' : ''}">
+                <span class="moon-cal-num">${d}</span>
+                <span class="moon-cal-icon">${dayMoon.phaseEmoji}</span>
+            </div>`;
+    }
+
+    // Phase cycle strip
+    const phaseCycle = [
+        { emoji: '🌑', name: 'Yeni Ay', desc: 'Niyet koy, tohum ek' },
+        { emoji: '🌒', name: 'Hilal', desc: 'Planlara başla' },
+        { emoji: '🌓', name: 'İlk Dördün', desc: 'Harekete geç' },
+        { emoji: '🌔', name: 'Dolunay\u0027a Doğru', desc: 'İvme kazan' },
+        { emoji: '🌕', name: 'Dolunay', desc: 'Hasat zamanı' },
+        { emoji: '🌖', name: 'Azalan Ay', desc: 'Paylaş, minnetle' },
+        { emoji: '🌗', name: 'Son Dördün', desc: 'Bırak, affet' },
+        { emoji: '🌘', name: 'Balsamic Ay', desc: 'Dinlen, huzur bul' }
+    ];
+    const currentPhaseIdx = phaseEmojis.indexOf(moon.phaseEmoji);
+
     el.innerHTML = `
         <div class="moon-main">
             <span class="moon-emoji">${moon.phaseEmoji}</span>
@@ -1226,6 +1438,34 @@ function loadMoonCalendar() {
                 <div class="moon-date-item"><small>Sonraki Yeni Ay</small><span>🌑 ${moon.nextNew}</span></div>
             </div>
         </div>
+
+        <div class="moon-phase-cycle">
+            <h3>🔄 Ay Fazı Döngüsü</h3>
+            <div class="moon-cycle-strip">
+                ${phaseCycle.map((p, i) => `
+                    <div class="moon-cycle-item${i === currentPhaseIdx ? ' active' : ''}">
+                        <span class="moon-cycle-emoji">${p.emoji}</span>
+                        <span class="moon-cycle-name">${p.name}</span>
+                        <span class="moon-cycle-desc">${p.desc}</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+
+        <div class="moon-calendar-section">
+            <h3>📅 ${monthName}</h3>
+            <div class="moon-cal-grid">
+                <div class="moon-cal-header">Pzt</div>
+                <div class="moon-cal-header">Sal</div>
+                <div class="moon-cal-header">Çar</div>
+                <div class="moon-cal-header">Per</div>
+                <div class="moon-cal-header">Cum</div>
+                <div class="moon-cal-header">Cmt</div>
+                <div class="moon-cal-header">Paz</div>
+                ${calendarDays}
+            </div>
+        </div>
+
         <div class="moon-rituals">
             <h3>✨ ${moon.phaseName} Ritüelleri</h3>
             <div class="moon-ritual-list">
@@ -1977,17 +2217,36 @@ function shareResults() {
     document.getElementById('share-natal').textContent = `${natal.sun.sign} ☉ · ${natal.moon.sign} ☽ · ${natal.venus.sign} ♀`;
 }
 
-function downloadShareCard() {
+async function downloadShareCard() {
     const el = document.getElementById('share-card-inner');
-    if (typeof html2canvas === 'function') {
-        html2canvas(el, { backgroundColor: '#0e0e2e', scale: 2 }).then(canvas => {
-            const link = document.createElement('a');
-            link.download = 'astromap-sonuclarim.png';
-            link.href = canvas.toDataURL();
-            link.click();
-        });
-    } else {
-        showToast('Ekran görüntüsü alınamadı.');
+    if (typeof html2canvas !== 'function') {
+        showToast('Ekran goruntsu alinamadi.');
+        return;
+    }
+    try {
+        const canvas = await html2canvas(el, { backgroundColor: '#0e0e2e', scale: 2 });
+        const dataUrl = canvas.toDataURL();
+
+        // Native share if available
+        if (window.Capacitor?.Plugins?.Share) {
+            try {
+                await window.Capacitor.Plugins.Share.share({
+                    title: 'AstroMap Sonuclarim',
+                    text: 'AstroMap ile yildizlarimin beni nereye cagirdigini kesfettim!',
+                    url: 'https://astromap.app',
+                    dialogTitle: 'Sonuclarini Paylas'
+                });
+                return;
+            } catch {}
+        }
+
+        // Web fallback: download
+        const link = document.createElement('a');
+        link.download = 'astromap-sonuclarim.png';
+        link.href = dataUrl;
+        link.click();
+    } catch {
+        showToast('Ekran goruntsu alinamadi.');
     }
 }
 
@@ -2531,6 +2790,48 @@ async function showCrystalGuide() {
 // ═══════════════════════════════════════
 let fortuneImageBase64 = null;
 
+// Native camera via Capacitor (used in mobile apps)
+async function nativePickPhoto(source) {
+    if (!window.Capacitor?.Plugins?.Camera) return false;
+    try {
+        const { Camera, CameraResultType, CameraSource } = window.Capacitor.Plugins;
+        const photo = await Camera.getPhoto({
+            quality: 85,
+            allowEditing: false,
+            resultType: CameraResultType?.DataUrl || 'dataUrl',
+            source: source === 'camera' ? (CameraSource?.Camera || 'CAMERA') : (CameraSource?.Photos || 'PHOTOS'),
+            width: 1024,
+            height: 1024
+        });
+        if (photo?.dataUrl) {
+            fortuneImageBase64 = photo.dataUrl;
+            const preview = document.getElementById('fortune-preview');
+            preview.innerHTML = `
+                <img src="${fortuneImageBase64}" alt="Fincan" class="fortune-preview-img">
+                <button type="button" class="fortune-remove-img" onclick="removeFortuneImage(event)">✕</button>
+            `;
+            document.getElementById('fortune-submit-btn').disabled = false;
+            return true;
+        }
+    } catch (err) {
+        if (err.message !== 'User cancelled photos app') {
+            console.error('Native camera error:', err);
+        }
+    }
+    return false;
+}
+
+// Fortune image picker — tries native first, falls back to web file input
+async function pickFortuneImage(source) {
+    if (window.__ASTROMAP_CONFIG?.isNative) {
+        const success = await nativePickPhoto(source);
+        if (success) return;
+    }
+    // Web fallback
+    const inputId = source === 'camera' ? 'fortune-camera' : 'fortune-file';
+    document.getElementById(inputId)?.click();
+}
+
 function handleFortuneImage(input) {
     const file = input.files[0];
     if (!file) return;
@@ -2569,16 +2870,47 @@ function handleFortuneImage(input) {
 }
 
 function removeFortuneImage(e) {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     fortuneImageBase64 = null;
     document.getElementById('fortune-file').value = '';
+    const cam = document.getElementById('fortune-camera');
+    if (cam) cam.value = '';
     document.getElementById('fortune-preview').innerHTML = `
         <div class="fortune-drop-icon">📸</div>
-        <p class="fortune-drop-text">Fincanın fotoğrafını çek veya yükle</p>
+        <p class="fortune-drop-text">Fincanin fotografini yukle</p>
+        <div class="fortune-upload-buttons">
+            <button type="button" class="btn-fortune-upload" onclick="pickFortuneImage('gallery')">Galeriden Sec</button>
+            <button type="button" class="btn-fortune-upload btn-fortune-camera" onclick="pickFortuneImage('camera')">Fotograf Cek</button>
+        </div>
         <small>JPG, PNG — max 5MB</small>
     `;
     document.getElementById('fortune-submit-btn').disabled = true;
 }
+
+// Drag & drop support for fortune image
+(function initFortuneDragDrop() {
+    document.addEventListener('DOMContentLoaded', () => {
+        const dropzone = document.getElementById('fortune-dropzone');
+        if (!dropzone) return;
+
+        ['dragenter', 'dragover'].forEach(evt => {
+            dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+        });
+        ['dragleave', 'drop'].forEach(evt => {
+            dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.remove('dragover'); });
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            const file = e.dataTransfer?.files?.[0];
+            if (!file || !file.type.startsWith('image/')) return;
+            const input = document.getElementById('fortune-file');
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            input.files = dt.files;
+            handleFortuneImage(input);
+        });
+    });
+})();
 
 async function showFortune() {
     const birthDate = document.getElementById('fortune-birth-date').value;
@@ -2657,9 +2989,15 @@ async function showFortune() {
 function resetFortunePage() {
     fortuneImageBase64 = null;
     document.getElementById('fortune-file').value = '';
+    const cam = document.getElementById('fortune-camera');
+    if (cam) cam.value = '';
     document.getElementById('fortune-preview').innerHTML = `
         <div class="fortune-drop-icon">📸</div>
-        <p class="fortune-drop-text">Fincanın fotoğrafını çek veya yükle</p>
+        <p class="fortune-drop-text">Fincanin fotografini yukle</p>
+        <div class="fortune-upload-buttons">
+            <button type="button" class="btn-fortune-upload" onclick="pickFortuneImage('gallery')">Galeriden Sec</button>
+            <button type="button" class="btn-fortune-upload btn-fortune-camera" onclick="pickFortuneImage('camera')">Fotograf Cek</button>
+        </div>
         <small>JPG, PNG — max 5MB</small>
     `;
     document.getElementById('fortune-submit-btn').disabled = true;
@@ -2748,33 +3086,41 @@ function loadRetrogradeCalendar() {
     const el = document.getElementById('retrograde-content');
     if (!el) return;
 
-    // 2025 retrograde periods (pre-calculated for accuracy)
+    // 2025-2026 retrograde periods (pre-calculated for accuracy)
     const retrogrades = [
         { planet: 'Merkür ☿', periods: [
             { start: '2025-03-15', end: '2025-04-07', sign: 'Balık ♓' },
             { start: '2025-07-18', end: '2025-08-11', sign: 'Aslan ♌' },
-            { start: '2025-11-09', end: '2025-11-29', sign: 'Yay ♐' }
+            { start: '2025-11-09', end: '2025-11-29', sign: 'Yay ♐' },
+            { start: '2026-03-03', end: '2026-03-26', sign: 'Balık ♓' },
+            { start: '2026-07-02', end: '2026-07-26', sign: 'Aslan ♌' },
+            { start: '2026-10-24', end: '2026-11-13', sign: 'Akrep ♏' }
         ], effect: 'İletişim, teknoloji, seyahat aksaklıkları. Sözleşme imzalamayın.', color: '#87CEEB' },
         { planet: 'Venüs ♀', periods: [
             { start: '2025-03-02', end: '2025-04-13', sign: 'Koç ♈ → Balık ♓' }
         ], effect: 'Aşk ve ilişkilerde yeniden değerlendirme. Eski aşklar geri dönebilir.', color: '#ff6b9d' },
         { planet: 'Mars ♂', periods: [
-            { start: '2025-01-06', end: '2025-02-24', sign: 'Yengeç ♋ → İkizler ♊' }
+            { start: '2025-01-06', end: '2025-02-24', sign: 'Yengeç ♋ → İkizler ♊' },
+            { start: '2026-10-30', end: '2027-01-12', sign: 'Aslan ♌' }
         ], effect: 'Enerji düşüklüğü, motivasyon kaybı. Büyük eylemleri erteleyin.', color: '#ff4444' },
         { planet: 'Jüpiter ♃', periods: [
             { start: '2025-11-11', end: '2026-03-10', sign: 'Yengeç ♋' }
         ], effect: 'Büyüme ve fırsatların yavaşlaması. İçsel genişleme dönemi.', color: '#ffd76e' },
         { planet: 'Satürn ♄', periods: [
-            { start: '2025-07-13', end: '2025-11-28', sign: 'Balık ♓' }
+            { start: '2025-07-13', end: '2025-11-28', sign: 'Balık ♓' },
+            { start: '2026-07-27', end: '2026-12-11', sign: 'Koç ♈' }
         ], effect: 'Sorumluluklar ve yapı yeniden sorgulanıyor. Sabır gerekli.', color: '#c9a0ff' },
         { planet: 'Uranüs ♅', periods: [
-            { start: '2025-09-06', end: '2026-02-04', sign: 'Boğa ♉' }
+            { start: '2025-09-06', end: '2026-02-04', sign: 'Boğa ♉' },
+            { start: '2026-09-10', end: '2027-02-07', sign: 'İkizler ♊' }
         ], effect: 'Beklenmedik değişimler yavaşlıyor. İç devrim zamanı.', color: '#00CED1' },
         { planet: 'Neptün ♆', periods: [
-            { start: '2025-07-04', end: '2025-12-10', sign: 'Balık ♓ → Kova ♒' }
+            { start: '2025-07-04', end: '2025-12-10', sign: 'Balık ♓ → Kova ♒' },
+            { start: '2026-07-07', end: '2026-12-13', sign: 'Kova ♒' }
         ], effect: 'Hayaller ve illüzyonlar netleşiyor. Gerçeklerle yüzleşme.', color: '#4169E1' },
         { planet: 'Plüton ♇', periods: [
-            { start: '2025-05-04', end: '2025-10-13', sign: 'Kova ♒' }
+            { start: '2025-05-04', end: '2025-10-13', sign: 'Kova ♒' },
+            { start: '2026-05-07', end: '2026-10-16', sign: 'Kova ♒' }
         ], effect: 'Derin dönüşümler yavaşlıyor. İç gücü keşfetme zamanı.', color: '#800020' }
     ];
 
@@ -2803,7 +3149,7 @@ function loadRetrogradeCalendar() {
                 `).join('')}
             </div>
 
-            <h3 class="retro-section-title">📅 2025 Retro Takvimi</h3>
+            <h3 class="retro-section-title">📅 ${new Date().getFullYear()} Retro Takvimi</h3>
             <div class="retro-timeline">
                 ${retrogrades.map(r => `
                     <div class="retro-planet-row">
@@ -2864,20 +3210,44 @@ function generateShareLink() {
     });
 }
 
+/**
+ * Universal share function using Web Share API with clipboard fallback
+ * Usage: shareContent('Tarot Yorumum', 'Geçmiş: Kupa Ası...');
+ */
+function shareContent(title, text) {
+    const shareData = {
+        title: `AstroMap — ${title}`,
+        text: text,
+        url: window.location.origin
+    };
+    if (navigator.share) {
+        navigator.share(shareData).catch(() => {});
+    } else {
+        navigator.clipboard.writeText(`${shareData.title}\n\n${text}\n\n${shareData.url}`).then(() => {
+            showToast('Sonuç panoya kopyalandı! 📋');
+        }).catch(() => {
+            showToast('Paylaşım desteklenmiyor');
+        });
+    }
+}
+
 function handleShareLink() {
     const params = new URLSearchParams(window.location.search);
     const chartParam = params.get('chart');
     if (!chartParam) return;
 
     try {
-        const { d, t, c } = JSON.parse(atob(chartParam));
-        if (d) {
+        const decoded = JSON.parse(atob(chartParam));
+        const d = typeof decoded.d === 'string' ? decoded.d : null;
+        const t = typeof decoded.t === 'string' ? decoded.t : '';
+        const c = typeof decoded.c === 'string' ? decoded.c : '';
+        if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
             const dateEl = document.getElementById('birth-date');
             const timeEl = document.getElementById('birth-time');
             const cityEl = document.getElementById('birth-city');
             if (dateEl) dateEl.value = d;
-            if (timeEl) timeEl.value = t;
-            if (cityEl) cityEl.value = c;
+            if (timeEl && /^\d{2}:\d{2}$/.test(t)) timeEl.value = t;
+            if (cityEl) cityEl.value = c.slice(0, 100);
             showToast('Paylaşılan doğum haritası yüklendi ✨');
             navigateTo('chart');
         }
@@ -2967,20 +3337,64 @@ function loadDashboard() {
 }
 
 // ═══════════════════════════════════════
+// PUSH NOTIFICATIONS (Native only)
+// ═══════════════════════════════════════
+async function initPushNotifications() {
+    if (!window.Capacitor?.Plugins?.PushNotifications) return;
+    const PushNotifications = window.Capacitor.Plugins.PushNotifications;
+
+    try {
+        const permResult = await PushNotifications.requestPermissions();
+        if (permResult.receive !== 'granted') return;
+
+        await PushNotifications.register();
+
+        PushNotifications.addListener('registration', (token) => {
+            console.log('Push token:', token.value);
+            // TODO: Send token to your backend for sending notifications
+            localStorage.setItem('astromap_push_token', token.value);
+        });
+
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+            showToast(notification.title || notification.body || 'Yeni bildirim');
+        });
+
+        PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+            const data = action.notification?.data;
+            if (data?.page) navigateTo(data.page);
+        });
+    } catch (err) {
+        console.warn('Push init failed:', err);
+    }
+}
+
+// ═══════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
-    // Remove loading state — prevent FOUC
-    requestAnimationFrame(() => {
+    // Remove loading state — wait for fonts, then reveal
+    const reveal = () => {
         document.body.classList.remove('is-loading');
         document.body.classList.add('is-loaded');
-    });
+    };
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => requestAnimationFrame(reveal));
+    } else {
+        requestAnimationFrame(() => requestAnimationFrame(reveal));
+    }
+
+    // Set footer year dynamically
+    const yearEl = document.getElementById('footer-year');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
     
     initStars();
     initBirthCityDropdown();
 
     // Auth: restore session UI
     AuthSystem.updateUI();
+
+    // Init push notifications (native only)
+    initPushNotifications();
 
     // Share link: check URL for shared chart
     handleShareLink();
@@ -3001,8 +3415,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load moon calendar if on that page
     loadMoonCalendar();
 
-    // Scroll-reveal animations
-    initScrollReveal();
+    // Scroll-reveal animations — delay to avoid competing with body reveal
+    setTimeout(initScrollReveal, 400);
 
     // Feature card mouse-follow glow
     initFeatureCardGlow();
@@ -3028,8 +3442,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Parallax starfield
     initParallaxStars();
 
-    // Hero stats counter animation
-    initHeroStatsAnimation();
+    // Hero stats counter animation — delay to avoid flicker
+    setTimeout(initHeroStatsAnimation, 500);
 
     // Sound effects toggle
     initSoundToggle();
@@ -3089,7 +3503,8 @@ function initCursorTrail() {
         dots.push({ el: dot, x: 0, y: 0 });
     }
     let mouseX = 0, mouseY = 0;
-    document.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; }, { passive: true });
+    let animId = null;
+    let idleTimer = null;
     function animate() {
         let x = mouseX, y = mouseY;
         dots.forEach((dot, i) => {
@@ -3099,9 +3514,17 @@ function initCursorTrail() {
             dot.el.style.top = dot.y + 'px';
             x = dot.x; y = dot.y;
         });
-        requestAnimationFrame(animate);
+        animId = requestAnimationFrame(animate);
     }
-    animate();
+    function stopTrail() {
+        if (animId) { cancelAnimationFrame(animId); animId = null; }
+    }
+    document.addEventListener('mousemove', e => {
+        mouseX = e.clientX; mouseY = e.clientY;
+        if (!animId) animate();
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(stopTrail, 2000);
+    }, { passive: true });
 }
 
 // ═══════════════════════════════════════
@@ -3917,11 +4340,13 @@ function selectTheme(themeName) {
     const theme = themes[themeName];
     if (!theme) return;
     
-    // Premium check — allow all for now (can gate with real auth later)
-    // if (theme.premium && !isPremiumUser()) {
-    //     showToast('Bu tema Premium kullanıcılara özel 🔒');
-    //     return;
-    // }
+    // Premium check
+    if (theme.premium && !isPremiumUser()) {
+        showToast('Bu tema Premium kullanıcılara özel. Yükseltmek için Fiyatlar sayfasına git.');
+        navigateTo('pricing');
+        toggleThemePanel();
+        return;
+    }
     
     applyTheme(themeName);
     
@@ -3982,7 +4407,9 @@ function updateMapTiles(themeName) {
 }
 
 function cycleTheme() {
-    const keys = Object.keys(themes).filter(k => !themes[k].premium);
+    const keys = isPremiumUser()
+        ? Object.keys(themes)
+        : Object.keys(themes).filter(k => !themes[k].premium);
     const idx = keys.indexOf(currentTheme);
     const next = keys[(idx + 1) % keys.length];
     selectTheme(next);
