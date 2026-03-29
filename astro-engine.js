@@ -383,7 +383,11 @@ const AstroEngine = (function () {
         const influences = [];
         let strongLineCount = 0; // track how many lines are close
 
+        // Track closest line distance per planet for uniqueness
+        const planetMinDists = {};
+
         for (const [planetKey, lines] of Object.entries(planetaryLines)) {
+            let bestPlanetDist = Infinity;
             for (const [lineType, points] of Object.entries(lines)) {
                 let minDist = Infinity;
                 for (const [pLat, pLon] of points) {
@@ -393,14 +397,16 @@ const AstroEngine = (function () {
                     const dist = Math.sqrt(dLat * dLat + dLon * dLon);
                     if (dist < minDist) minDist = dist;
                 }
-                // Gaussian proximity — sigma=18 for tighter, more meaningful results
-                const proximity = Math.exp(-Math.pow(minDist, 2) / (2 * Math.pow(18, 2)));
+                if (minDist < bestPlanetDist) bestPlanetDist = minDist;
+                
+                // Gaussian proximity — sigma=15 for tighter differentiation
+                const proximity = Math.exp(-Math.pow(minDist, 2) / (2 * Math.pow(15, 2)));
 
                 let prefWeight = 0;
                 for (const pref of preferences) {
                     prefWeight += (PREFERENCE_PLANET_WEIGHTS[pref] || {})[planetKey] || 0;
                 }
-                if (prefWeight === 0) prefWeight = 0.35;
+                if (prefWeight === 0) prefWeight = 0.25;
 
                 const lineWeight = LINE_TYPE_WEIGHTS[lineType] || 0.5;
                 const contribution = proximity * prefWeight * lineWeight;
@@ -418,65 +424,71 @@ const AstroEngine = (function () {
                     });
                 }
             }
+            planetMinDists[planetKey] = bestPlanetDist;
         }
 
-        // Multiple strong lines bonus (convergence)
-        const convergenceBonus = Math.min(15, strongLineCount * 1.5);
+        // Multiple strong lines bonus (convergence) — key astro differentiator
+        const convergenceBonus = Math.min(20, strongLineCount * 3);
 
-        // Lifestyle bonus (increased values)
+        // Lifestyle bonus — gentle nudge, not a dominator
         let lifestyleBonus = 0;
-        if (lifestyle.climate && lifestyle.climate !== 'any' && city.climate === lifestyle.climate) lifestyleBonus += 12;
-        if (lifestyle.size && lifestyle.size !== 'any' && city.size === lifestyle.size) lifestyleBonus += 8;
-        if (lifestyle.nature && lifestyle.nature !== 'any' && city.nature === lifestyle.nature) lifestyleBonus += 7;
+        if (lifestyle.climate && lifestyle.climate !== 'any' && city.climate === lifestyle.climate) lifestyleBonus += 3;
+        if (lifestyle.size && lifestyle.size !== 'any' && city.size === lifestyle.size) lifestyleBonus += 2;
+        if (lifestyle.nature && lifestyle.nature !== 'any' && city.nature === lifestyle.nature) lifestyleBonus += 3;
 
-        // Region preference bonus (stronger)
+        // Lifestyle PENALTY for mismatches (filter effect)
+        let lifestylePenalty = 0;
+        if (lifestyle.climate && lifestyle.climate !== 'any' && city.climate !== lifestyle.climate) lifestylePenalty += 6;
+        if (lifestyle.size && lifestyle.size !== 'any' && city.size !== lifestyle.size) lifestylePenalty += 3;
+        if (lifestyle.nature && lifestyle.nature !== 'any' && city.nature !== lifestyle.nature) lifestylePenalty += 5;
+
+        // Region preference bonus
         let regionBonus = 0;
         if (lifestyle.region && lifestyle.region !== 'any') {
-            if (lifestyle.region === 'tr' && city.region === 'tr') regionBonus = 14;
-            else if (city.region === lifestyle.region) regionBonus = 10;
+            if (lifestyle.region === 'tr' && city.region === 'tr') regionBonus = 4;
+            else if (city.region === lifestyle.region) regionBonus = 3;
+            else regionBonus = -3;
         }
 
-        // Vibe match (stronger)
-        const vibeKeywords = {
-            love: ['romantic', 'artistic', 'cultural'], career: ['business', 'innovative', 'cosmopolitan'],
-            peace: ['peaceful', 'spiritual', 'traditional'], luck: ['vibrant', 'cosmopolitan', 'diverse'],
-            creativity: ['artistic', 'bohemian', 'cultural'], adventure: ['adventurous', 'vibrant', 'diverse'],
-            growth: ['spiritual', 'historic', 'innovative'], learning: ['academic', 'cultural', 'historic']
-        };
+        // Direct vibe match — capped to prevent broad-vibe cities dominating
         let vibeMatch = false;
         let vibeCount = 0;
-        for (const pref of preferences) {
-            const kws = vibeKeywords[pref] || [];
-            if (city.vibe && city.vibe.some(v => kws.includes(v))) { vibeMatch = true; vibeCount++; }
+        if (city.vibe && preferences.length > 0) {
+            for (const pref of preferences) {
+                if (city.vibe.includes(pref)) { vibeMatch = true; vibeCount++; }
+            }
         }
-        if (vibeMatch) lifestyleBonus += 8 + vibeCount * 2;
+        const vibeBonus = vibeMatch ? Math.min(6, 2 + vibeCount * 1.5) : 0;
 
-        // Natal element match
+        // Natal element match — stronger astro tie
         const cityElementMap = { warm: 'fire', cold: 'water', moderate: 'earth' };
         const cityElement = cityElementMap[city.climate] || 'air';
         const dominantElement = getDominantElement(positions);
-        if (cityElement === dominantElement) lifestyleBonus += 6;
+        const elementBonus = cityElement === dominantElement ? 6 : 0;
 
         // Harmonic resonance bonus — based on how well the top influences align
         const topInfluences = influences.filter(inf => parseFloat(inf.proximity) > 0.4);
-        const harmonicBonus = Math.min(10, topInfluences.length * 2);
+        const harmonicBonus = Math.min(14, topInfluences.length * 3);
 
-        // Size penalty — small/unknown cities get penalized, mega cities get a slight boost
+        // Uniqueness jitter — wider range for more variety in results
+        const coordHash = Math.sin(city.lat * 12.9898 + city.lon * 78.233) * 43758.5453;
+        const uniqueJitter = (coordHash - Math.floor(coordHash)) * 10 - 5; // -5 to +5
+
+        // Size modifier — NO mega bonus (prevents Liverpool/Hamburg bias)
         let sizeMod = 0;
-        if (city.size === 'small') sizeMod = -8;
-        else if (city.size === 'medium') sizeMod = 0;
-        else if (city.size === 'mega') sizeMod = 3;
+        if (city.size === 'small') sizeMod = -2;
+        // medium and mega both get 0
 
-        // Calculate final score — bigger spread via 70 base multiplier + stronger bonuses
-        const astroBase = maxPossible > 0 ? (totalScore / maxPossible) * 70 : 0;
-        const raw = astroBase + lifestyleBonus + regionBonus + convergenceBonus + harmonicBonus + sizeMod;
+        // Calculate final score — astro STRONGLY dominates (85 base)
+        const astroBase = maxPossible > 0 ? (totalScore / maxPossible) * 85 : 0;
+        const raw = astroBase + lifestyleBonus - lifestylePenalty + regionBonus + convergenceBonus + harmonicBonus + vibeBonus + elementBonus + sizeMod + uniqueJitter;
         
         // Floor of 12 — distant/unmatched cities should clearly score low
         const score = Math.min(98, Math.max(12, Math.round(raw)));
 
         influences.sort((a, b) => parseFloat(b.proximity) - parseFloat(a.proximity));
 
-        return { score, influences: influences.slice(0, 5), lifestyleMatch: lifestyleBonus > 12, vibeMatch };
+        return { score, influences: influences.slice(0, 5), lifestyleMatch: lifestyleBonus > 6, vibeMatch };
     }
 
     function getDominantElement(positions) {
@@ -1104,12 +1116,42 @@ const AstroEngine = (function () {
             return { ...city, ...result, reason: generateReason(city, result, preferences) };
         }).sort((a, b) => b.score - a.score);
 
+        // ── Geographic Diversity Post-processing ──
+        // Ensure top results aren't all clustered in the same geographic area
+        const diversified = [];
+        const remaining = [...scoredCities];
+        const GEO_MIN_DIST = 8; // minimum degrees apart for top results
+        const TOP_N = 20; // apply diversity to top 20
+
+        while (diversified.length < TOP_N && remaining.length > 0) {
+            const candidate = remaining.shift();
+            // Check geographic distance from already-selected cities
+            const tooClose = diversified.some(sel => {
+                const dLat = candidate.lat - sel.lat;
+                const dLon = (candidate.lon - sel.lon) * Math.cos(candidate.lat * Math.PI / 180);
+                return Math.sqrt(dLat * dLat + dLon * dLon) < GEO_MIN_DIST;
+            });
+            if (!tooClose || diversified.length < 3) {
+                // Always allow top 3, then enforce diversity
+                diversified.push(candidate);
+            } else {
+                // Demote: push to end of diversified
+                remaining.push(candidate);
+                // Avoid infinite loop — if we've checked too many, just add it
+                if (remaining.length <= scoredCities.length - TOP_N) {
+                    diversified.push(candidate);
+                }
+            }
+        }
+        // Append rest
+        const finalCities = [...diversified, ...remaining];
+
         const transits = calculateTransits(natalChart);
 
         return {
             natalChart,
             planetaryLines: allPlanetaryLines,
-            recommendations: scoredCities,
+            recommendations: finalCities,
             birthLocation,
             transits,
             houses,

@@ -454,39 +454,59 @@ app.post('/api/daily-horoscope', async (req, res) => {
             'diğer': { tone: 'dost canlı, saygılı ve ilham verici' }
         }[gender] || { tone: 'sıcak ve ilham verici' };
 
-        const systemPrompt = `Sen deneyimli, sıcak ve empatik bir astrologsun. Türkçe yaz.
+        // Period-specific configuration
+        const periodConfig = {
+            daily:   { scoreLow: 35, scoreHigh: 98, sentences: '2-3', maxTokens: 800 },
+            weekly:  { scoreLow: 40, scoreHigh: 95, sentences: '3-4', maxTokens: 900 },
+            monthly: { scoreLow: 30, scoreHigh: 97, sentences: '4-5', maxTokens: 1000 },
+            yearly:  { scoreLow: 25, scoreHigh: 99, sentences: '5-6', maxTokens: 1100 }
+        };
+        const pc = periodConfig[period] || periodConfig.daily;
+
+        const systemPrompt = `Sen derin astroloji bilgisine sahip, sezgisel ve empatik bir astrologsun. Türkçe yaz.
 ${userName} adında birine hitap ediyorsun — ${genderText.tone} bir ton kullan.
-Yanıtlarını samimi, ilham verici ve motive edici tut. ${userName}'in adını sık sık kullan.
-Emoji kullan ama abartma. Her bölümü net ve akıcı yaz.
+${userName}'in adını doğal şekilde kullan (her cümlede değil, anahtar noktalarda).
+Emoji kullan ama abartma. Her bölümü net, akıcı ve BİRBİRİNDEN FARKLI yaz.
+
 Bu bir ${periodLabel} yorumdur. ${periodScope} için detaylı yorum yaz.
+
+ÖNEMLI KURALLAR:
+- Skorlar GERÇEKÇİ olsun. Her gün mükemmel olamaz! Bazı alanlar düşük (${pc.scoreLow}-55), bazıları yüksek (75-${pc.scoreHigh}) olabilir.
+- Her skor alanı İÇ TUTARLI olsun: düşük skor verdiysen yorumda da bunu yansıt (zorluk, dikkat gereken alan).
+- Klişe "harika günler seni bekliyor" tipi cümlelerden KAÇIN. Spesifik, somut ve kişiye özel yaz.
+- ${period === 'yearly' ? 'Yıllık yorumda mevsim mevsim farklı enerjilere değin.' : ''}
+- ${period === 'monthly' ? 'Aylık yorumda haftalar arası enerji değişimlerine değin.' : ''}
+- ${period === 'weekly' ? 'Haftalık yorumda hafta başı-ortası-sonu farklı enerjilerine değin.' : ''}
+
 Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
 {
-  "general": "${periodScope} genel enerjisi hakkında 2-3 cümle",
-  "love": "Aşk ve ilişkiler hakkında 2-3 cümle", 
-  "career": "Kariyer ve para hakkında 2-3 cümle",
-  "health": "Sağlık ve enerji hakkında 2-3 cümle",
-  "advice": "${periodLabel} özel tavsiye, 1-2 cümle",
-  "affirmation": "${periodScope} olumlaması — kısa ve güçlü bir cümle",
+  "general": "${periodScope} genel enerjisi, ${pc.sentences} cümle. Gezegen geçişlerine değin.",
+  "love": "Aşk ve ilişkiler, ${pc.sentences} cümle. Somut tavsiyelerle.",
+  "career": "Kariyer ve finans, ${pc.sentences} cümle. Pratik önerilerle.",
+  "health": "Sağlık ve enerji, ${pc.sentences} cümle. Spesifik öneriler.",
+  "advice": "${periodLabel} en önemli tavsiye, 1-2 cümle. SOMUT ve uygulanabilir.",
+  "affirmation": "Güçlü ve özgün bir olumlama cümlesi",
   "luckyColor": "Şans rengi (tek kelime)",
   "luckyNumber": "1-99 arası şans sayısı",
   "luckyStone": "Şans taşı adı",
   "luckyHour": "Şanslı saat aralığı örn: 14:00-16:00",
-  "scores": { "love": 60-100, "career": 60-100, "health": 60-100, "luck": 60-100, "energy": 60-100, "mood": 60-100 },
-  "tarotCard": "Günün tarot kartı adı",
+  "scores": { "love": ${pc.scoreLow}-${pc.scoreHigh}, "career": ${pc.scoreLow}-${pc.scoreHigh}, "health": ${pc.scoreLow}-${pc.scoreHigh}, "luck": ${pc.scoreLow}-${pc.scoreHigh}, "energy": ${pc.scoreLow}-${pc.scoreHigh}, "mood": ${pc.scoreLow}-${pc.scoreHigh} },
+  "tarotCard": "${periodLabel} tarot kartı adı (gerçek tarot kartı seç)",
   "tarotMeaning": "Bu kartın ${periodScope.toLowerCase()} senin için anlamı, 1-2 cümle"
 }`;
 
-        const userPrompt = `Bugün ${today}. 
-Kişi bilgileri: Doğum tarihi ${birthDate}, doğum saati ${birthTime || 'bilinmiyor'}.
+        const userPrompt = `Bugün ${today}.
+Kişi bilgileri: ${userName}, doğum tarihi ${birthDate}, doğum saati ${birthTime || 'bilinmiyor'}.
 Güneş burcu: ${sunSign || 'bilinmiyor'}, Ay burcu: ${moonSign || 'bilinmiyor'}, Yükselen: ${risingSign || 'bilinmiyor'}.
-Bu kişi için ${periodLabel.toLowerCase()} detaylı astroloji yorumunu yaz.`;
+Bu kişi için ${periodLabel.toLowerCase()} detaylı ve GERÇEKÇİ astroloji yorumunu yaz.
+Tüm alanlar mükemmel olamaz — bazı konularda zorluklar veya dikkat edilmesi gereken noktalar olmalı.`;
 
         // Check server cache
         const cacheKey = `daily_${period || 'daily'}_${birthDate}_${birthTime}_${sunSign}_${(name || '').slice(0,20)}_${gender || ''}`;
         const cached = getCachedResponse(cacheKey, 'daily');
         if (cached) return res.json({ success: true, data: cached });
 
-        const raw = await askGPT(systemPrompt, userPrompt, 800);
+        const raw = await askGPT(systemPrompt, userPrompt, pc.maxTokens);
         const result = extractJSON(raw);
         if (!result) throw new Error('AI yanıtı parse edilemedi');
         setCachedResponse(cacheKey, result, 'daily');
@@ -598,26 +618,52 @@ app.post('/api/tarot', async (req, res) => {
     try {
         const { birthDate, sunSign, question } = req.body;
 
-        const systemPrompt = `Sen deneyimli ve gizemli bir tarot okuyucususun. Türkçe yaz.
-Mistik ama sıcak bir ton kullan. Kadın kullanıcılara hitap ediyorsun.
-Kullanıcıya 3 kart çek ve oku: Geçmiş, Şimdi, Gelecek.
+        // Pre-select 3 random cards from the full 78-card deck to guide AI
+        const majorArcana = ['The Fool','The Magician','The High Priestess','The Empress','The Emperor','The Hierophant','The Lovers','The Chariot','Strength','The Hermit','Wheel of Fortune','Justice','The Hanged Man','Death','Temperance','The Devil','The Tower','The Star','The Moon','The Sun','Judgement','The World'];
+        const suits = ['Wands','Cups','Swords','Pentacles'];
+        const ranks = ['Ace','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Page','Knight','Queen','King'];
+        const minorArcana = suits.flatMap(s => ranks.map(r => `${r} of ${s}`));
+        const fullDeck = [...majorArcana, ...minorArcana]; // 78 cards
+        // Shuffle and pick 3
+        const shuffled = fullDeck.sort(() => Math.random() - 0.5);
+        const picked = shuffled.slice(0, 3);
+        const reversals = picked.map(() => Math.random() < 0.3); // 30% reversal chance
+
+        const systemPrompt = `Sen derin bilgiye sahip, gizemli ve empatik bir tarot ustasısın. Türkçe yaz.
+Mistik, şefkatli ve bilge bir ton kullan. Danışanını derinden anlamaya çalış.
+${question ? 'Danışanın sana özel bir soru sordu — okumanın HER AŞAMASINI bu soruya bağla.' : ''}
+
+KURALLAR:
+- Sana verilen 3 kartı AYNEN kullan, değiştirme.
+- Her kartın anlamını pozisyonuna (Geçmiş/Şimdi/Gelecek) ve ${question ? 'sorulan soruya' : 'kişinin yaşam enerjisine'} göre ÖZEL yorumla.
+- Reversed (ters) kartları farklı yorumla — engel, iç çatışma veya gizli ders olarak oku.
+- Genel mesajda 3 kartın BAĞLANTISINI kur — bir hikaye anlat.
+- Klişe cümlelerden kaçın. Samimi, dokunaklı ve spesifik ol.
+
 Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
 {
   "cards": [
-    { "position": "Geçmiş", "name": "Kart adı", "emoji": "uygun emoji", "meaning": "Bu kartın bu pozisyondaki anlamı, 2-3 cümle", "reversed": true/false },
-    { "position": "Şimdi", "name": "Kart adı", "emoji": "uygun emoji", "meaning": "Bu kartın bu pozisyondaki anlamı, 2-3 cümle", "reversed": true/false },
-    { "position": "Gelecek", "name": "Kart adı", "emoji": "uygun emoji", "meaning": "Bu kartın bu pozisyondaki anlamı, 2-3 cümle", "reversed": true/false }
+    { "position": "Geçmiş", "name": "Kartın Türkçe adı", "nameEn": "English name", "emoji": "uygun emoji", "meaning": "Bu kartın bu pozisyondaki DERİN anlamı, 3-4 cümle. Kişiye özel.", "reversed": ${reversals[0]}, "keywords": ["anahtar1", "anahtar2", "anahtar3"] },
+    { "position": "Şimdi", "name": "Kartın Türkçe adı", "nameEn": "English name", "emoji": "uygun emoji", "meaning": "Bu kartın bu pozisyondaki DERİN anlamı, 3-4 cümle. Kişiye özel.", "reversed": ${reversals[1]}, "keywords": ["anahtar1", "anahtar2", "anahtar3"] },
+    { "position": "Gelecek", "name": "Kartın Türkçe adı", "nameEn": "English name", "emoji": "uygun emoji", "meaning": "Bu kartın bu pozisyondaki DERİN anlamı, 3-4 cümle. Kişiye özel.", "reversed": ${reversals[2]}, "keywords": ["anahtar1", "anahtar2", "anahtar3"] }
   ],
-  "overall": "Üç kartın birlikte söylediği genel mesaj, 3-4 cümle",
-  "advice": "Kartların sana özel tavsiyesi, 2 cümle",
-  "energy": "Bugünün baskın enerjisi, tek kelime veya kısa ifade"
+  "overall": "Üç kartın birlikte anlattığı HIKAYE, 4-5 cümle. Kartlar arası bağlantıyı kur.",
+  "advice": "Kartların sana özel, somut ve uygulanabilir tavsiyesi, 2-3 cümle",
+  "energy": "Bugünün baskın enerjisi, tek kelime veya kısa ifade",
+  "warning": "Kartların dikkat çektiği nokta veya uyarı, 1 cümle"
 }`;
 
-        const userPrompt = `Kişi: Doğum ${birthDate || 'bilinmiyor'}, Güneş burcu: ${sunSign || 'bilinmiyor'}.
-${question ? `Sorusu: "${question}"` : 'Genel bir okuma isteniyor.'}
-3 kartlık (Geçmiş-Şimdi-Gelecek) tarot okuması yap.`;
+        const userPrompt = `Danışan: Doğum ${birthDate || 'bilinmiyor'}, Güneş burcu: ${sunSign || 'bilinmiyor'}.
+${question ? `SORUSU: "${question}" — Bu soruyu doğrudan yanıtla.` : 'Hayatının genel akışı hakkında derin bir okuma isteniyor.'}
 
-        const raw = await askGPT(systemPrompt, userPrompt, 800);
+Çekilen kartlar:
+1. Geçmiş: ${picked[0]}${reversals[0] ? ' (TERS)' : ''}
+2. Şimdi: ${picked[1]}${reversals[1] ? ' (TERS)' : ''}
+3. Gelecek: ${picked[2]}${reversals[2] ? ' (TERS)' : ''}
+
+Bu kartları derinlemesine yorumla.`;
+
+        const raw = await askGPT(systemPrompt, userPrompt, 1000);
         const result = extractJSON(raw);
         if (!result) throw new Error('AI yanıtı parse edilemedi');
         res.json({ success: true, data: result });
@@ -676,27 +722,39 @@ app.post('/api/dream', async (req, res) => {
         const { dream, sunSign } = req.body;
         if (!dream) return res.status(400).json({ error: 'Rüya açıklaması gerekli' });
 
-        const systemPrompt = `Sen rüya yorumu ve astroloji konusunda uzman bir spiritüel rehbersin. Türkçe yaz.
-Gizemli, derin ama sıcak bir ton kullan. Kadın kullanıcılara hitap ediyorsun.
+        const systemPrompt = `Sen Jungcu psikoloji ve astroloji bilgisiyle rüya yorumlayan derin bir spiritüel rehbersin. Türkçe yaz.
+Gizemli, derin ama şefkatli bir ton kullan. Rüyayı sadece yüzeysel sembollerle değil,
+bilinçaltı arketipleri, duygusal bağlamlar ve kişisel dönüşüm perspektifinden oku.
+
+KURALLAR:
+- Rüyadaki HER önemli detayı ayrı ayrı ele al.
+- Klişe "bu olumlu bir rüya" tipi genellemelerden KAÇIN.
+- Semboller en az 3, en fazla 5 tane olsun — her biri farklı bir katmana işaret etsin.
+- Rüyanın duygusal tonunu doğru yakala — korku, huzur, kafa karışıklığı, özlem vs.
+- Burcun rüya yorumuna etkisini de ekle (opsiyonel ama değerli).
+
 Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
 {
-  "title": "Rüyanın başlığı — yaratıcı ve dikkat çekici",
-  "interpretation": "Rüyanın detaylı yorumu, 4-5 cümle",
+  "title": "Rüyanın yaratıcı ve etkileyici başlığı",
+  "interpretation": "Rüyanın katmanlı, derin yorumu. Psikolojik ve spiritüel açıdan, 5-6 cümle",
   "symbols": [
-    { "symbol": "Sembol adı", "meaning": "Kısa anlamı" },
-    { "symbol": "Sembol 2", "meaning": "Kısa anlamı" }
+    { "symbol": "Sembol adı", "meaning": "Bu sembolün psikolojik ve spiritüel anlamı, 2 cümle" },
+    { "symbol": "Sembol 2", "meaning": "Anlamı, 2 cümle" },
+    { "symbol": "Sembol 3", "meaning": "Anlamı, 2 cümle" }
   ],
-  "emotion": "Rüyanın baskın duygusu",
-  "message": "Bilinçaltının sana vermek istediği mesaj, 2 cümle",
-  "advice": "Bu rüyadan çıkarılacak hayat tavsiyesi, 1-2 cümle",
-  "luckyAction": "Bugün yapman gereken bir eylem"
+  "emotion": "Rüyanın baskın duygusu — tek kelime veya kısa ifade",
+  "layer": "Bu rüya hangi bilinçaltı katmanına işaret ediyor? (Arzu, korku, dönüşüm, yas, özgürleşme vs.) 1 cümle",
+  "message": "Bilinçaltının sana vermek istediği mesaj, 2-3 cümle. Spesifik ve dokunaklı.",
+  "advice": "Bu rüyadan çıkarılacak somut hayat tavsiyesi, 2 cümle",
+  "luckyAction": "Bugün yapman gereken bir eylem — spesifik ve uygulanabilir"
 }`;
 
         const userPrompt = `Kişinin burcu: ${sunSign || 'bilinmiyor'}.
 Gördüğü rüya: "${dream}"
-Bu rüyayı astrolojik ve psikolojik açıdan yorumla.`;
+Bu rüyayı Jungcu arketipler, astrolojik bağlam ve duygusal katmanlar açısından DERİN yorumla.
+Yüzeysel kalma — bilinçaltının gerçekten ne söylemeye çalıştığını bul.`;
 
-        const raw = await askGPT(systemPrompt, userPrompt, 600);
+        const raw = await askGPT(systemPrompt, userPrompt, 800);
         const result = extractJSON(raw);
         if (!result) throw new Error('AI yanıtı parse edilemedi');
         res.json({ success: true, data: result });
