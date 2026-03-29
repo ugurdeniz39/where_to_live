@@ -589,20 +589,28 @@ function toggleMobileNav() {
         // Lift navbar above overlay so drawer is visible
         navbar.style.zIndex = '10001';
         // Force drawer visibility (belt-and-suspenders for mobile)
-        navLinks.style.transform = 'translateX(0)';
-        navLinks.style.display = 'flex';
-        navLinks.style.flexDirection = 'column';
-        navLinks.style.position = 'fixed';
-        navLinks.style.top = '0';
-        navLinks.style.right = '0';
-        navLinks.style.bottom = '0';
-        navLinks.style.width = '300px';
-        navLinks.style.maxWidth = '85vw';
-        navLinks.style.zIndex = '10002';
-        navLinks.style.overflowY = 'auto';
-        navLinks.style.background = 'rgba(7,7,26,0.98)';
-        navLinks.style.borderLeft = '1px solid rgba(255,255,255,0.08)';
-        navLinks.style.boxShadow = '-8px 0 32px rgba(0,0,0,0.4)';
+        navLinks.style.cssText = `
+            transform: translateX(0) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            position: fixed !important;
+            top: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 300px !important;
+            max-width: 85vw !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            z-index: 10002 !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            background: rgba(7,7,26,0.98) !important;
+            border-left: 1px solid rgba(255,255,255,0.08) !important;
+            box-shadow: -8px 0 32px rgba(0,0,0,0.4) !important;
+            padding: 0 !important;
+            gap: 0 !important;
+            flex-wrap: nowrap !important;
+        `;
         // Show drawer header & actions
         const header = navLinks.querySelector('.nav-drawer-header');
         if (header) header.style.display = 'flex';
