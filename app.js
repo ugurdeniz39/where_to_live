@@ -815,13 +815,31 @@ window.addEventListener('scroll', throttle(() => {
         if (!navbar) return;
         navbarInitialized = true;
 
-        let lastTouchTime = 0; // Prevent double-fire from touch + click
+        let lastTouchTime = 0;
+        let touchStartY = 0;
+        let touchStartX = 0;
+        const SCROLL_THRESHOLD = 10; // px — finger moved more than this = scroll, not tap
+
+        // Track touch start position to distinguish scroll from tap
+        navbar.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            if (touch) { touchStartY = touch.clientY; touchStartX = touch.clientX; }
+        }, { passive: true, capture: true });
 
         function handleNavAction(e) {
-            // Debounce: skip if this fires too close to a previous touch/click
             const now = Date.now();
             if (now - lastTouchTime < 300 && e.type === 'click') return;
-            if (e.type === 'touchend') lastTouchTime = now;
+
+            // For touchend: check if finger moved (scroll) — if so, ignore
+            if (e.type === 'touchend') {
+                lastTouchTime = now;
+                const touch = e.changedTouches?.[0];
+                if (touch) {
+                    const dx = Math.abs(touch.clientX - touchStartX);
+                    const dy = Math.abs(touch.clientY - touchStartY);
+                    if (dx > SCROLL_THRESHOLD || dy > SCROLL_THRESHOLD) return; // Was a scroll, not a tap
+                }
+            }
 
             const target = e.target.closest('[data-nav]');
             const modalBtn = e.target.closest('[data-modal]');
@@ -830,9 +848,7 @@ window.addEventListener('scroll', throttle(() => {
             if (hamburger) {
                 e.preventDefault();
                 e.stopPropagation();
-                if (typeof toggleMobileNav === 'function') {
-                    toggleMobileNav();
-                }
+                if (typeof toggleMobileNav === 'function') toggleMobileNav();
                 return;
             }
 
@@ -840,9 +856,7 @@ window.addEventListener('scroll', throttle(() => {
                 e.preventDefault();
                 e.stopPropagation();
                 const pageId = target.getAttribute('data-nav');
-                if (pageId && typeof navigateTo === 'function') {
-                    navigateTo(pageId);
-                }
+                if (pageId && typeof navigateTo === 'function') navigateTo(pageId);
                 return;
             }
 
@@ -850,9 +864,7 @@ window.addEventListener('scroll', throttle(() => {
                 e.preventDefault();
                 e.stopPropagation();
                 const modalId = modalBtn.getAttribute('data-modal');
-                if (modalId && typeof openModal === 'function') {
-                    openModal(modalId);
-                }
+                if (modalId && typeof openModal === 'function') openModal(modalId);
                 return;
             }
         }
