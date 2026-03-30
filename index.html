@@ -239,7 +239,7 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
                 <p>Bugünün kozmik enerji seviyesi, gezegen etkisi ve enerji tavsiyesi.</p>
                 <div id="quick-energy-badge" class="energy-quick-badge"></div>
             </div>
-            <div class="feature-card glass-locked" onclick="navigateTo('pricing')">
+            <div class="feature-card glass-locked" id="transit-feature-card" onclick="openTransitPage()">
                 <span class="feature-icon">📊</span>
                 <h3>Transit Rapor</h3>
                 <p>Aylık gezegen transitlerinin sana etkisi ve tahminler.</p>
@@ -738,6 +738,45 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
         </div>
 
         <div id="natal-result" class="hidden"></div>
+    </div>
+</section>
+
+<!-- ══════════════════ PAGE: TRANSIT RAPOR ══════════════════ -->
+<section id="page-transit" class="page">
+    <div class="page-container">
+        <h1 class="page-title">📊 Transit <em>Rapor</em></h1>
+        <p class="page-subtitle">Güncel gezegen geçişlerinin seni nasıl etkilediğini öğren.</p>
+
+        <div id="transit-form" class="ai-form">
+            <div class="form-row">
+                <div class="form-group form-group-half">
+                    <label>Doğum Tarihi</label>
+                    <input type="date" id="transit-birth-date" value="1995-06-15">
+                </div>
+                <div class="form-group form-group-half">
+                    <label>Doğum Saati <small style="color:var(--text-muted)">(opsiyonel)</small></label>
+                    <input type="time" id="transit-birth-time" value="14:30">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Doğum Yeri <small style="color:var(--text-muted)">(opsiyonel)</small></label>
+                <input type="text" id="transit-birth-place" placeholder="İstanbul, Ankara...">
+            </div>
+            <div class="form-group">
+                <label>Güneş Burcu</label>
+                <select id="transit-sun-sign">
+                    <option>Koç</option><option>Boğa</option><option>İkizler</option>
+                    <option>Yengeç</option><option>Aslan</option><option>Başak</option>
+                    <option>Terazi</option><option>Akrep</option><option>Yay</option>
+                    <option>Oğlak</option><option>Kova</option><option>Balık</option>
+                </select>
+            </div>
+            <button class="btn-primary" onclick="showTransitReport()">
+                <span class="btn-sparkle">📊</span> Transitlerimi Göster
+            </button>
+        </div>
+
+        <div id="transit-result"></div>
     </div>
 </section>
 

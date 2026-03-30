@@ -167,6 +167,8 @@ const CACHE_TTLS = {
     dream: 0,              // no cache — every dream is unique
     tarot: 0,              // no cache — must be unique each draw
     fortune: 0,            // no cache — each image is unique
+    transit: 86400000,     // 24 hours — daily transits stable
+    natal: 3600000,        // 1 hour — natal chart interpretation stable
     default: 1800000       // 30 min fallback
 };
 
@@ -758,6 +760,108 @@ Bu kartları derinlemesine yorumla.`;
         const raw = await askGPT(systemPrompt, userPrompt, spreadConfig.tokens);
         const result = extractJSON(raw);
         if (!result) throw new Error('AI yanıtı parse edilemedi');
+        res.json({ success: true, data: result });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ═══════════════════════════════════════
+// API: Transit Rapor
+// ═══════════════════════════════════════
+app.post('/api/transit', async (req, res) => {
+    try {
+        const { birthDate, sunSign, isPremium, lang } = req.body;
+        if (!isPremium) return res.status(403).json({ error: 'premium_required' });
+        if (!sunSign) return res.status(400).json({ error: 'sunSign gerekli' });
+
+        const today = new Date().toISOString().slice(0, 10);
+        const langCode = lang || 'tr';
+        const cacheKey = `transit_${sunSign}_${birthDate || 'unknown'}_${today}_${langCode}`;
+        const cached = getCachedResponse(cacheKey, 'transit');
+        if (cached) return res.json({ success: true, data: cached, cached: true });
+
+        const langInstruction = langCode === 'en'
+            ? 'Write ALL your response in ENGLISH.'
+            : 'Tüm yanıtını TÜRKÇE yaz.';
+
+        const systemPrompt = `Sen deneyimli bir astroloji uzmanısın. ${langInstruction}
+Güncel gezegen konumlarına dayanarak kişisel transit raporu hazırla.
+Yanıtını SADECE şu JSON formatında ver, başka hiçbir şey yazma:
+{
+  "transits": [
+    {
+      "planet": "gezegen adı",
+      "aspect": "açı tipi",
+      "natalPlanet": "natal gezegenin adı",
+      "effect": "positive veya challenging veya neutral",
+      "title": "kısa başlık",
+      "description": "2-3 cümle kişisel açıklama",
+      "advice": "somut 1 cümle tavsiye",
+      "duration": "süre bilgisi"
+    }
+  ],
+  "overallEnergy": "Bu dönem genel enerji özeti, 2 cümle",
+  "bestDays": "Bu ay en güçlü günler"
+}`;
+
+        const userPrompt = `${sunSign} burcu için güncel transit raporu hazırla.${birthDate ? ` Doğum tarihi: ${birthDate}.` : ''}
+3 önemli aktif transit ver. Mevcut tarihe göre gerçekçi gezegen hareketlerini kullan.`;
+
+        const raw = await askGPT(systemPrompt, userPrompt, 700, 0.8);
+        const result = extractJSON(raw);
+        if (!result) throw new Error('AI yanıtı parse edilemedi');
+        setCachedResponse(cacheKey, result, 'transit');
+        res.json({ success: true, data: result });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ═══════════════════════════════════════
+// API: Natal Chart AI Yorumu
+// ═══════════════════════════════════════
+app.post('/api/natal-interpretation', async (req, res) => {
+    try {
+        const { planets, sunSign, moonSign, ascendant, lang } = req.body;
+        if (!planets || !sunSign) return res.status(400).json({ error: 'planets ve sunSign gerekli' });
+
+        const langCode = lang || 'tr';
+        const cacheKey = `natal_${sunSign}_${moonSign || ''}_${ascendant || ''}_${JSON.stringify(planets).slice(0, 80)}_${langCode}`;
+        const cached = getCachedResponse(cacheKey, 'natal');
+        if (cached) return res.json({ success: true, data: cached, cached: true });
+
+        const langInstruction = langCode === 'en'
+            ? 'Write ALL your response in ENGLISH.'
+            : 'Tüm yanıtını TÜRKÇE yaz.';
+
+        const systemPrompt = `Sen doğum haritası yorumlama uzmanı bir astrologsun. ${langInstruction}
+Bilgece, ilham verici ama somut bir ton kullan. Klişelerden kaçın. Gezegenleri birbirleriyle bağdaştır.
+Yanıtını SADECE şu JSON formatında ver, başka hiçbir şey yazma:
+{
+  "summary": "Kişinin genel karakter özeti, 4-5 cümle.",
+  "strongestPlanet": "En güçlü gezegen adı",
+  "strongestPlanetReason": "Neden bu gezegen güçlü, 1-2 cümle",
+  "lifeThemes": ["Temel yaşam teması 1", "tema 2", "tema 3"],
+  "strengths": ["Güçlü yön 1", "Güçlü yön 2", "Güçlü yön 3"],
+  "challenges": ["Zorluk 1", "Zorluk 2"],
+  "advice": "Bu kişiye özel yaşam tavsiyesi, 2-3 cümle. Somut ve uygulanabilir.",
+  "soulPurpose": "Ruhsal amaç veya yaşam dersi, 1-2 cümle"
+}`;
+
+        const planetList = Object.entries(planets)
+            .map(([k, v]) => `${k}: ${v.sign}${v.degree ? ' ' + Number(v.degree).toFixed(1) + '°' : ''}`)
+            .join(', ');
+
+        const userPrompt = `Doğum haritası:
+Gezegenler: ${planetList}
+Güneş: ${sunSign}, Ay: ${moonSign || 'bilinmiyor'}, Yükselen: ${ascendant || 'bilinmiyor'}
+Bu haritayı derinlemesine yorumla. Somut ve kişisel ol.`;
+
+        const raw = await askGPT(systemPrompt, userPrompt, 700, 0.85);
+        const result = extractJSON(raw);
+        if (!result) throw new Error('AI yanıtı parse edilemedi');
+        setCachedResponse(cacheKey, result, 'natal');
         res.json({ success: true, data: result });
     } catch (err) {
         res.status(500).json({ error: err.message });

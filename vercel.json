@@ -7,7 +7,8 @@
     "api/crystal-guide.js": { "maxDuration": 30 },
     "api/tarot.js": { "maxDuration": 30 },
     "api/dream.js": { "maxDuration": 30 },
-    "api/city-insight.js": { "maxDuration": 30 }
+    "api/city-insight.js": { "maxDuration": 30 },
+    "api/extras.js": { "maxDuration": 30 }
   },
   "rewrites": [
     { "source": "/api/checkout/init", "destination": "/api/checkout/init" },
@@ -16,6 +17,8 @@
     { "source": "/api/analytics/:path*", "destination": "/api/extras" },
     { "source": "/api/analytics", "destination": "/api/extras" },
     { "source": "/api/premium-status", "destination": "/api/extras" },
+    { "source": "/api/transit", "destination": "/api/extras" },
+    { "source": "/api/natal-interpretation", "destination": "/api/extras" },
     { "source": "/api/:path", "destination": "/api/:path" },
     { "source": "/((?!api|.*\\..*).*)", "destination": "/index.html" }
   ],

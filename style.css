@@ -3493,3 +3493,123 @@ body.light-theme .dash-stat-num { color: #7c3aed; }
     cursor: pointer; transition: var(--transition);
 }
 .lang-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ════════════ TRANSIT RAPOR ════════════ */
+.transit-overall {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 16px; margin-bottom: 20px;
+}
+.transit-overall h4 {
+    font-family: var(--font-display); color: var(--accent-light);
+    font-size: 14px; margin-bottom: 8px;
+}
+.transit-best-days {
+    margin-top: 10px; font-size: 13px; color: var(--text-muted);
+    padding: 8px 12px; background: rgba(201,160,255,0.06);
+    border-radius: var(--radius-xs);
+}
+
+/* ════════════ CITY COMPARE ENHANCEMENTS ════════════ */
+.compare-header {
+    display: flex; gap: 8px; margin-bottom: 16px;
+}
+.compare-city-label {
+    flex: 1; padding: 12px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--bg-card);
+    text-align: center;
+}
+.compare-city-label.a { border-color: rgba(201,160,255,0.3); }
+.compare-city-label.b { border-color: rgba(240,147,251,0.3); }
+.compare-city-label strong { display: block; font-size: 15px; }
+.compare-city-label span { font-size: 11px; color: var(--text-muted); }
+.compare-planets { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; justify-content: center; }
+.compare-planet-tag {
+    font-size: 10px; padding: 2px 6px; border-radius: 50px;
+    background: rgba(201,160,255,0.1); color: var(--accent-light);
+}
+.compare-meta-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; font-size: 12px; color: var(--text-muted);
+    border-top: 1px solid var(--border); margin-top: 4px; margin-bottom: 4px;
+}
+.compare-insights { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+.compare-insight-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px; font-size: 12px;
+    line-height: 1.6;
+}
+.compare-insight-card h5 {
+    font-family: var(--font-display); color: var(--accent-light);
+    margin-bottom: 6px; font-size: 13px;
+}
+.compare-vibe {
+    font-size: 11px; color: var(--text-muted); font-style: italic;
+    margin-bottom: 6px;
+}
+.compare-winner {
+    text-align: center; padding: 10px; border-radius: var(--radius-sm);
+    background: rgba(201,160,255,0.08); font-size: 14px; margin-top: 4px;
+}
+.city-card-actions {
+    display: flex; gap: 8px; margin-top: 10px; align-items: center;
+}
+.city-card-actions .btn-city-detail { flex: 1; }
+.btn-compare {
+    background: none; border: 1px solid var(--border);
+    border-radius: var(--radius-xs); padding: 7px 10px;
+    font-size: 14px; cursor: pointer; color: var(--text-muted);
+    transition: var(--transition); flex-shrink: 0;
+}
+.btn-compare:hover { border-color: var(--accent); color: var(--accent); }
+
+@media (max-width: 480px) {
+    .compare-insights { grid-template-columns: 1fr; }
+}
+
+/* ════════════ NATAL AI INTERPRETATION ════════════ */
+.natal-ai-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 20px; margin-top: 16px;
+}
+.natal-section-title {
+    font-family: var(--font-display); color: var(--accent-light);
+    font-size: 14px; margin-bottom: 12px; font-weight: 600;
+}
+.natal-ai-summary {
+    font-size: 14px; line-height: 1.7; color: var(--text);
+    margin-bottom: 16px;
+}
+.natal-ai-planet {
+    padding: 12px; border-radius: var(--radius-sm);
+    background: rgba(201,160,255,0.06); margin-bottom: 14px;
+}
+.natal-ai-planet strong { display: block; margin-bottom: 4px; color: var(--accent-light); }
+.natal-ai-planet p { font-size: 13px; color: var(--text-muted); margin: 0; }
+.natal-themes { margin-bottom: 14px; }
+.natal-themes h5 { font-size: 13px; color: var(--accent-light); margin-bottom: 8px; font-weight: 600; }
+.natal-themes-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+.natal-theme-tag {
+    padding: 4px 12px; border-radius: 50px; font-size: 12px;
+    background: rgba(201,160,255,0.12); color: var(--accent-light);
+    border: 1px solid rgba(201,160,255,0.2);
+}
+.natal-strengths-challenges {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;
+}
+.natal-strengths-challenges h5 { font-size: 13px; color: var(--accent-light); margin-bottom: 8px; font-weight: 600; }
+.natal-strengths-challenges ul { list-style: none; padding: 0; margin: 0; }
+.natal-strengths-challenges li { font-size: 12px; color: var(--text-muted); padding: 4px 0; }
+.natal-strengths-challenges li::before { content: '✦ '; color: var(--accent); }
+.natal-ai-advice, .natal-ai-soul {
+    padding: 12px; border-radius: var(--radius-sm);
+    background: rgba(255,215,110,0.05); margin-bottom: 10px;
+    border-left: 3px solid var(--gold);
+}
+.natal-ai-advice h5, .natal-ai-soul h5 { font-size: 13px; color: var(--accent-light); margin-bottom: 6px; font-weight: 600; }
+.natal-ai-advice p, .natal-ai-soul p { font-size: 13px; line-height: 1.6; margin: 0; }
+.natal-ai-btn { margin-bottom: 12px; }
+
+@media (max-width: 480px) {
+    .natal-strengths-challenges { grid-template-columns: 1fr; }
+}
+

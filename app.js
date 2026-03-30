@@ -306,6 +306,7 @@ const AuthSystem = {
                 <button class="btn-nav-primary" data-modal="signup-modal" type="button">Ücretsiz Başla</button>
             `;
         }
+        if (typeof updateTransitCard === 'function') updateTransitCard();
     },
 
     // AI history tracking
@@ -412,6 +413,7 @@ let allRenderedCities = [];
 let currentFilter = 'all';
 let currentSearch = '';
 let compareSlots = [null, null];
+let _lastNatalChart = null;
 let showMarkers = true;
 let showLines = true;
 let showHeatmap = false;
@@ -454,6 +456,7 @@ function navigateTo(pageId) {
     if (pageId === 'natal') filterNatalCities('');
     if (pageId === 'retrograde') loadRetrogradeCalendar();
     if (pageId === 'dashboard') loadDashboard();
+    if (pageId === 'transit') initTransitForm();
     
     // Track visited pages (remove "Yeni" badges)
     try {
@@ -1793,6 +1796,93 @@ function filterNatalCities(query) {
     if (toShow.length > 0) select.value = toShow[0].value;
 }
 
+// ═══════════════════════════════════════
+// TRANSIT RAPOR
+// ═══════════════════════════════════════
+function openTransitPage() {
+    if (!isPremiumUser()) {
+        showToast('Transit Rapor Premium özelliği ✨');
+        navigateTo('pricing');
+        return;
+    }
+    navigateTo('transit');
+}
+
+function initTransitForm() {
+    const user = AuthSystem.getUser ? AuthSystem.getUser() : null;
+    if (user?.birthDate) {
+        const el = document.getElementById('transit-birth-date');
+        if (el && !el.value) el.value = user.birthDate;
+    }
+}
+
+async function showTransitReport() {
+    if (!isPremiumUser()) {
+        showToast('Bu özellik Premium kullanıcılara özel ✨');
+        navigateTo('pricing');
+        return;
+    }
+    const birthDate = document.getElementById('transit-birth-date')?.value;
+    const birthTime = document.getElementById('transit-birth-time')?.value;
+    const birthPlace = document.getElementById('transit-birth-place')?.value;
+    const sunSign = document.getElementById('transit-sun-sign')?.value;
+    if (!sunSign) { showToast('Güneş burcunu seç'); return; }
+
+    const formEl = document.getElementById('transit-form');
+    const resultEl = document.getElementById('transit-result');
+    if (formEl) formEl.style.display = 'none';
+    showAILoading(resultEl, 'Transit analizleri hesaplanıyor...');
+
+    try {
+        const data = await callAI('transit', { birthDate, birthTime, birthPlace, sunSign, isPremium: true });
+        renderTransitReport(resultEl, data);
+    } catch (err) {
+        showAIError(resultEl, err.message);
+        if (formEl) formEl.style.display = '';
+    }
+}
+
+function renderTransitReport(container, data) {
+    const effectClass = e => e === 'positive' ? 'good' : e === 'challenging' ? 'challenging' : 'neutral';
+    const effectLabel = e => e === 'positive' ? 'Olumlu' : e === 'challenging' ? 'Zorlayıcı' : 'Nötr';
+
+    const transitCards = (data.transits || []).map(t => `
+        <div class="timing-card">
+            <div class="timing-header">
+                <span class="timing-icon">🪐</span>
+                <span class="timing-title">${sanitize(t.title || t.planet)}</span>
+                <span class="timing-quality ${effectClass(t.effect)}">${effectLabel(t.effect)}</span>
+            </div>
+            <div class="timing-desc">${sanitize(t.description)}</div>
+            <div style="color:var(--accent-light);font-size:13px;margin-top:6px">💡 ${sanitize(t.advice)}</div>
+            <div class="timing-date" style="margin-top:4px">Süre: ${sanitize(t.duration)}</div>
+        </div>
+    `).join('');
+
+    container.innerHTML = `
+        <div class="transit-overall">
+            <h4>Bu Dönem Genel Enerji</h4>
+            <p>${sanitize(data.overallEnergy || '')}</p>
+            ${data.bestDays ? `<div class="transit-best-days">⭐ Güçlü günler: <strong>${sanitize(data.bestDays)}</strong></div>` : ''}
+        </div>
+        <h4 style="margin:16px 0 12px;font-family:var(--font-display)">Aktif Transitler</h4>
+        ${transitCards}
+        <button class="btn-ghost reset-btn" onclick="document.getElementById('transit-form').style.display='';document.getElementById('transit-result').innerHTML=''" style="margin-top:16px;width:100%">📊 Yeni Rapor</button>
+    `;
+}
+
+function updateTransitCard() {
+    const card = document.getElementById('transit-feature-card');
+    if (!card) return;
+    const badge = card.querySelector('.lock-badge');
+    if (isPremiumUser()) {
+        card.classList.remove('glass-locked');
+        if (badge) badge.remove();
+    } else {
+        if (!card.classList.contains('glass-locked')) card.classList.add('glass-locked');
+    }
+}
+
 function showNatalChart() {
     const birthDate = document.getElementById('natal-birth-date').value;
     const birthTime = document.getElementById('natal-birth-time').value;
@@ -1807,6 +1897,7 @@ function showNatalChart() {
     setTimeout(() => {
         const birthLocation = AstroEngine.calculate(birthDate, birthTime, birthCity || 'istanbul', [], { climate: 'any', size: 'any', nature: 'any', region: 'any' });
         const natal = birthLocation.natalChart;
+        _lastNatalChart = natal;
         const houses = birthLocation.houses;
         const aspects = birthLocation.natalAspects || [];
         const planetOrder = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto'];
@@ -1876,9 +1967,62 @@ function showNatalChart() {
             ${houseRows ? `<div class="natal-section"><h4 class="natal-section-title">🏠 Ev Başlangıçları</h4><div class="natal-grid">${houseRows}</div></div>` : ''}
             ${aspectRows ? `<div class="natal-section"><h4 class="natal-section-title">✦ Açılar (Aspektler)</h4><div class="natal-grid">${aspectRows}</div></div>` : ''}
             ${!premium ? '<div class="natal-premium-hint">🔒 Derece, dakika, ev ve aspekt bilgileri için <a href="javascript:void(0)" onclick="navigateTo(\'pricing\')">Premium\'a geç</a></div>' : ''}
+            <button class="btn-primary natal-ai-btn" onclick="showNatalAIInterpretation()" style="margin-bottom:12px;width:100%">✨ AI Kişilik Yorumu</button>
+            <div id="natal-ai-result"></div>
             <button class="btn-ghost reset-btn" onclick="resetAIPage('natal-form','natal-result')">🪐 Tekrar Hesapla</button>
         `;
     }, 500);
+}
+
+async function showNatalAIInterpretation() {
+    const container = document.getElementById('natal-ai-result');
+    if (!container) return;
+    if (!_lastNatalChart) { showToast('Önce doğum haritanı hesapla'); return; }
+
+    showAILoading(container, 'Kişilik analizi yapılıyor...');
+
+    const planetOrder = ['sun','moon','mercury','venus','mars','jupiter','saturn','uranus','neptune','pluto'];
+    const planetsForAPI = {};
+    for (const key of planetOrder) {
+        const pos = _lastNatalChart[key];
+        if (pos) planetsForAPI[key] = { sign: pos.sign, degree: pos.degree };
+    }
+
+    try {
+        const data = await callAI('natal-interpretation', {
+            planets: planetsForAPI,
+            sunSign: _lastNatalChart.sun?.sign,
+            moonSign: _lastNatalChart.moon?.sign,
+            ascendant: _lastNatalChart.ascendant?.sign || null
+        });
+        renderNatalAIResult(container, data);
+    } catch (err) {
+        showAIError(container, err.message);
+    }
+}
+
+function renderNatalAIResult(container, data) {
+    const themes = (data.lifeThemes || []).map(t => `<span class="natal-theme-tag">${sanitize(t)}</span>`).join('');
+    const strengths = (data.strengths || []).map(s => `<li>${sanitize(s)}</li>`).join('');
+    const challenges = (data.challenges || []).map(c => `<li>${sanitize(c)}</li>`).join('');
+
+    container.innerHTML = `
+        <div class="natal-ai-card">
+            <h4 class="natal-section-title">✨ AI Kişilik Analizi</h4>
+            <p class="natal-ai-summary">${sanitize(data.summary || '')}</p>
+            ${data.strongestPlanet ? `<div class="natal-ai-planet">
+                <strong>🪐 En Güçlü Gezegen: ${sanitize(data.strongestPlanet)}</strong>
+                <p>${sanitize(data.strongestPlanetReason || '')}</p>
+            </div>` : ''}
+            ${themes ? `<div class="natal-themes"><h5>Temel Temalar</h5><div class="natal-themes-wrap">${themes}</div></div>` : ''}
+            ${(data.strengths?.length || data.challenges?.length) ? `<div class="natal-strengths-challenges">
+                ${data.strengths?.length ? `<div><h5>Güçlü Yönler</h5><ul>${strengths}</ul></div>` : ''}
+                ${data.challenges?.length ? `<div><h5>Zorluklar</h5><ul>${challenges}</ul></div>` : ''}
+            </div>` : ''}
+            ${data.advice ? `<div class="natal-ai-advice"><h5>💡 Tavsiye</h5><p>${sanitize(data.advice)}</p></div>` : ''}
+            ${data.soulPurpose ? `<div class="natal-ai-soul"><h5>🌌 Ruhsal Amaç</h5><p>${sanitize(data.soulPurpose)}</p></div>` : ''}
+        </div>
+    `;
 }
 
 // ═══════════════════════════════════════
@@ -2154,7 +2298,10 @@ function createCityCard(city, idx, globalRank) {
         </div>
         <div class="result-tags">${tags}</div>
         <div class="result-reason">${city.reason}</div>
-        <button class="btn-city-detail" onclick="event.stopPropagation();showCityDetail('${city.city.replace(/'/g,"\\'")}','${city.country.replace(/'/g,"\\'")}',${city.score},'${(city.influences||[]).map(i=>i.planet).join(", ")}')">✨ AI Detay</button>
+        <div class="city-card-actions">
+            <button class="btn-city-detail" onclick="event.stopPropagation();showCityDetail('${city.city.replace(/'/g,"\\'")}','${city.country.replace(/'/g,"\\'")}',${city.score},'${(city.influences||[]).map(i=>i.planet).join(", ")}')">✨ AI Detay</button>
+            <button class="btn-compare" onclick="event.stopPropagation();addToComparisonByIndex(${allRenderedCities.indexOf(city)})" title="Karşılaştır">⚖️</button>
+        </div>
     `;
     return card;
 }
@@ -2544,6 +2691,11 @@ function getMoveAdvice(transit) {
 // ═══════════════════════════════════════
 // COMPARISON
 // ═══════════════════════════════════════
+function addToComparisonByIndex(idx) {
+    const city = allRenderedCities[idx];
+    if (city) addToComparison(city);
+}
+
 function addToComparison(city) {
     const compareBtn = document.querySelector('[data-tab="compare-tab"]');
     if (compareBtn) switchTab(compareBtn);
@@ -2586,36 +2738,86 @@ function renderComparison() {
         const climateEmoji = { warm: '☀️ Sıcak', moderate: '🌤️ Ilıman', cold: '❄️ Soğuk' };
         const sizeEmoji = { mega: '🏙️ Metropol', medium: '🌆 Orta', small: '🏘️ Küçük' };
 
-        resultEl.innerHTML = categories.map(c => `
-            <div class="compare-row">
-                <span class="compare-label">${c.label}</span>
-                <div class="compare-bar-wrap">
-                    <span class="compare-val" style="color:var(--accent)">${c.aVal}</span>
-                    <div class="compare-bar left" style="width:${c.aVal}%"></div>
-                    <div class="compare-bar right" style="width:${c.bVal}%"></div>
-                    <span class="compare-val" style="color:var(--rose)">${c.bVal}</span>
+        const aPlanets = (a.influences || []).slice(0, 3).map(i => `<span class="compare-planet-tag">${i.symbol} ${i.planet}</span>`).join('');
+        const bPlanets = (b.influences || []).slice(0, 3).map(i => `<span class="compare-planet-tag">${i.symbol} ${i.planet}</span>`).join('');
+
+        resultEl.innerHTML = `
+            <div class="compare-header">
+                <div class="compare-city-label a">
+                    <strong>${sanitize(a.city)}</strong>
+                    <span>${sanitize(a.country)}</span>
+                    <div class="compare-planets">${aPlanets}</div>
+                </div>
+                <div class="compare-city-label b">
+                    <strong>${sanitize(b.city)}</strong>
+                    <span>${sanitize(b.country)}</span>
+                    <div class="compare-planets">${bPlanets}</div>
                 </div>
             </div>
-        `).join('') + `
-            <div class="compare-row">
-                <span class="compare-label">İklim</span>
-                <div class="compare-bar-wrap">
-                    <span class="compare-val" style="font-size:11px">${climateEmoji[a.climate] || a.climate}</span>
-                    <span style="flex:1"></span>
-                    <span class="compare-val" style="font-size:11px">${climateEmoji[b.climate] || b.climate}</span>
+            ${categories.map(c => `
+                <div class="compare-row">
+                    <span class="compare-label">${c.label}</span>
+                    <div class="compare-bar-wrap">
+                        <span class="compare-val" style="color:var(--accent)">${c.aVal}</span>
+                        <div class="compare-bar left" style="width:${c.aVal}%"></div>
+                        <div class="compare-bar right" style="width:${c.bVal}%"></div>
+                        <span class="compare-val" style="color:var(--rose)">${c.bVal}</span>
+                    </div>
                 </div>
+            `).join('')}
+            <div class="compare-meta-row">
+                <span>${climateEmoji[a.climate] || a.climate || ''} ${sizeEmoji[a.size] || ''}</span>
+                <span style="color:var(--text-muted)">vs</span>
+                <span>${climateEmoji[b.climate] || b.climate || ''} ${sizeEmoji[b.size] || ''}</span>
             </div>
-            <div class="compare-row">
-                <span class="compare-label">Boyut</span>
-                <div class="compare-bar-wrap">
-                    <span class="compare-val" style="font-size:11px">${sizeEmoji[a.size] || a.size}</span>
-                    <span style="flex:1"></span>
-                    <span class="compare-val" style="font-size:11px">${sizeEmoji[b.size] || b.size}</span>
-                </div>
+            <div id="compare-ai-section">
+                <button class="btn-ghost" onclick="loadCompareInsights()" style="width:100%;margin-top:8px">✨ AI Karşılaştırma Yorumu</button>
             </div>
         `;
     } else {
         resultEl.innerHTML = '';
+    }
+}
+
+async function loadCompareInsights() {
+    const aiSection = document.getElementById('compare-ai-section');
+    if (!aiSection) return;
+    const a = compareSlots[0], b = compareSlots[1];
+    if (!a || !b) return;
+
+    const natal = results?.natalChart;
+    const sunSign = natal?.sun?.sign || '';
+    const moonSign = natal?.moon?.sign || '';
+
+    aiSection.innerHTML = `<div style="text-align:center;padding:16px;color:var(--text-muted)"><div class="dream-loading-dots"><span>.</span><span>.</span><span>.</span></div><p style="font-size:13px;margin-top:8px">Her iki şehir için AI analiz hazırlanıyor...</p></div>`;
+
+    try {
+        const [insightA, insightB] = await Promise.all([
+            callAI('city-insight', { city: a.city, country: a.country, score: a.score, influences: (a.influences || []).map(i => i.planet).join(', '), sunSign, moonSign, preferences: selectedPreferences }),
+            callAI('city-insight', { city: b.city, country: b.country, score: b.score, influences: (b.influences || []).map(i => i.planet).join(', '), sunSign, moonSign, preferences: selectedPreferences })
+        ]);
+
+        const winner = a.score > b.score ? a.city : b.score > a.score ? b.city : null;
+
+        aiSection.innerHTML = `
+            <div class="compare-insights">
+                <div class="compare-insight-card">
+                    <h5>${sanitize(a.city)}</h5>
+                    ${insightA.vibe ? `<p class="compare-vibe">${sanitize(insightA.vibe)}</p>` : ''}
+                    <p>${sanitize(insightA.whyThisCity || insightA.energy || '')}</p>
+                </div>
+                <div class="compare-insight-card">
+                    <h5>${sanitize(b.city)}</h5>
+                    ${insightB.vibe ? `<p class="compare-vibe">${sanitize(insightB.vibe)}</p>` : ''}
+                    <p>${sanitize(insightB.whyThisCity || insightB.energy || '')}</p>
+                </div>
+            </div>
+            <div class="compare-winner">
+                ${winner ? `🏆 <strong>${sanitize(winner)}</strong> senin için daha uyumlu görünüyor!` : '⚖️ İki şehir oldukça dengeli!'}
+            </div>
+        `;
+    } catch (err) {
+        aiSection.innerHTML = `<div class="ai-error"><p>${err.message}</p></div>`;
     }
 }
 
