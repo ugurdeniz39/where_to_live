@@ -398,6 +398,19 @@ a:hover { color: var(--accent-light); }
     .tarot-spread { flex-direction: column; align-items: center; gap: 16px; }
     .tarot-deck .tarot-card-slot { width: min(220px, 60vw); }
     .tarot-deck { flex-wrap: nowrap; flex-direction: column; align-items: center; gap: 12px; }
+    .tarot-ceremony.celtic-layout { overflow-x: auto; }
+    .tarot-deck.tarot-layout-celtic-cross {
+        display: grid;
+        flex-wrap: initial;
+        flex-direction: initial;
+        min-width: 760px;
+        max-width: none;
+        gap: 10px;
+        padding: 0 6px 12px;
+    }
+    .tarot-deck.tarot-layout-celtic-cross .tarot-card-slot {
+        width: 118px;
+    }
     .wellness-grid { grid-template-columns: 1fr; }
     .crystal-support-grid { grid-template-columns: 1fr; }
     .dream-symbols-grid { grid-template-columns: 1fr; }
@@ -1723,6 +1736,34 @@ textarea::placeholder { color: var(--text-dim); }
     position: relative; z-index: 2; perspective: 1200px;
     padding: 0 8px;
 }
+
+/* Celtic Cross layout */
+.tarot-ceremony.celtic-layout { overflow-x: auto; overflow-y: visible; }
+.tarot-deck.tarot-layout-celtic-cross {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(120px, 1fr));
+    grid-template-rows: repeat(5, auto);
+    column-gap: 14px;
+    row-gap: 12px;
+    min-width: 860px;
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 8px 12px 20px;
+}
+.tarot-deck.tarot-layout-celtic-cross .tarot-card-slot {
+    width: min(155px, 18vw);
+    justify-self: center;
+}
+.tarot-deck.tarot-layout-celtic-cross .tarot-celtic-1 { grid-column: 2; grid-row: 3; }
+.tarot-deck.tarot-layout-celtic-cross .tarot-celtic-2 { grid-column: 2; grid-row: 2; }
+.tarot-deck.tarot-layout-celtic-cross .tarot-celtic-3 { grid-column: 2; grid-row: 4; }
+.tarot-deck.tarot-layout-celtic-cross .tarot-celtic-4 { grid-column: 1; grid-row: 3; }
+.tarot-deck.tarot-layout-celtic-cross .tarot-celtic-5 { grid-column: 3; grid-row: 3; }
+.tarot-deck.tarot-layout-celtic-cross .tarot-celtic-6 { grid-column: 5; grid-row: 1; }
+.tarot-deck.tarot-layout-celtic-cross .tarot-celtic-7 { grid-column: 5; grid-row: 2; }
+.tarot-deck.tarot-layout-celtic-cross .tarot-celtic-8 { grid-column: 5; grid-row: 3; }
+.tarot-deck.tarot-layout-celtic-cross .tarot-celtic-9 { grid-column: 5; grid-row: 4; }
+.tarot-deck.tarot-layout-celtic-cross .tarot-celtic-10 { grid-column: 5; grid-row: 5; }
 
 /* Card slot */
 .tarot-card-slot {

@@ -3431,7 +3431,7 @@ function resolveTarotCardsForSpread(cards, spreadConfig) {
 
 function renderTarotSlots(spreadConfig) {
     return spreadConfig.positions.map((position, i) => `
-        <div class="tarot-card-slot" data-index="${i}">
+        <div class="tarot-card-slot${getTarotSlotClass(selectedSpread, i)}" data-index="${i}">
             <div class="tarot-card-3d">
                 <div class="tarot-face tarot-back">
                     <div class="tarot-back-design">
@@ -3444,6 +3444,11 @@ function renderTarotSlots(spreadConfig) {
             <div class="tarot-slot-label">${position}</div>
         </div>
     `).join('');
+}
+
+function getTarotSlotClass(spreadKey, index) {
+    if (spreadKey !== 'celtic-cross') return '';
+    return ` tarot-celtic-slot tarot-celtic-${index + 1}`;
 }
 
 function selectSpread(btn) {
@@ -3471,13 +3476,13 @@ async function showTarot() {
 
     // Phase 1: Show the mystical card table with face-down cards
     resultEl.innerHTML = `
-        <div class="tarot-ceremony">
+        <div class="tarot-ceremony${selectedSpread === 'celtic-cross' ? ' celtic-layout' : ''}">
             <div class="tarot-particles" id="tarot-particles"></div>
             <div class="tarot-table-title">
                 <div class="tarot-glow-text">✦ Kartlar Karılıyor ✦</div>
                 <p class="tarot-sub-msg">Enerjini kartlara yönlendir...</p>
             </div>
-            <div class="tarot-deck" id="tarot-deck">
+            <div class="tarot-deck tarot-layout-${selectedSpread}" id="tarot-deck">
                 ${renderTarotSlots(spreadConfig)}
             </div>
             <div class="tarot-ceremony-hint" id="tarot-hint">Kartlar hazırlanıyor...</div>
