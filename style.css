@@ -1857,6 +1857,13 @@ textarea::placeholder { color: var(--text-dim); }
 .tarot-overall p { font-size: 15px; line-height: 1.8; color: var(--text); margin-bottom: 16px; }
 .tarot-advice { font-size: 14px; color: var(--accent-light); padding: 16px; background: rgba(201,160,255,0.06); border-radius: var(--radius-sm); }
 .tarot-energy { margin-bottom: 20px; }
+.tarot-answer {
+    margin: 0 auto 18px; max-width: 420px;
+    padding: 10px 14px; border-radius: 12px;
+    background: rgba(201,160,255,0.1);
+    border: 1px solid rgba(201,160,255,0.2);
+    color: var(--accent-light); font-size: 14px;
+}
 .energy-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); display: block; margin-bottom: 4px; }
 .energy-value { font-size: 20px; font-weight: 700; background: var(--gradient-main); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 

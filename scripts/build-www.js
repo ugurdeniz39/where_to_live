@@ -75,7 +75,8 @@ const nativeConfig = `
     // Capacitor native app config — ALWAYS use remote API in native builds
     window.__ASTROMAP_CONFIG = {
         isNative: true,
-        apiBase: 'https://wheretolive-nine.vercel.app'
+        apiBase: 'https://wheretolive-nine.vercel.app',
+        openVipAccess: true
     };
 </script>`;
 
@@ -96,7 +97,7 @@ for (const jsFile of jsFiles) {
     if (!fs.existsSync(jsPath)) continue;
     const originalSize = fs.statSync(jsPath).size;
     try {
-        execSync(`npx terser "${jsPath}" --compress --mangle --output "${jsPath}"`, { stdio: 'pipe' });
+        execSync(`npx terser "${jsPath}" --compress --mangle --format ascii_only=false --output "${jsPath}"`, { stdio: 'pipe' });
         const newSize = fs.statSync(jsPath).size;
         const saved = originalSize - newSize;
         savedBytes += saved;

@@ -81,16 +81,16 @@ const i18n = {
 
     translations: {
         tr: {
-            home: 'Ana Sayfa', daily: 'Gunluk Yorum', compatibility: 'Uyum Testi',
-            moon: 'Ay Takvimi', tarot: 'Tarot', crystal: 'Kristal', dream: 'Ruya',
-            fortune: 'Fal', retrograde: 'Retro', about: 'Hakkinda', pricing: 'Premium',
-            natal: 'Dogum Haritasi', login: 'Giris Yap', signup: 'Ucretsiz Basla',
-            loading: 'Yukleniyor...', error: 'Bir hata olustu',
-            offline: 'Internet baglantiniz yok', retry: 'Tekrar dene',
-            share: 'Paylas', download: 'Indir', back: 'Geri',
-            calculate: 'Hesapla', submit: 'Gonder', cancel: 'Iptal',
-            dailyLimit: 'Gunluk ucretsiz hakkiniz doldu',
-            premiumRequired: 'Bu ozellik Premium kullanicilara ozel',
+            home: 'Ana Sayfa', daily: 'Günlük Yorum', compatibility: 'Uyum Testi',
+            moon: 'Ay Takvimi', tarot: 'Tarot', crystal: 'Kristal', dream: 'Rüya',
+            fortune: 'Fal', retrograde: 'Retro', about: 'Hakkında', pricing: 'Premium',
+            natal: 'Doğum Haritası', login: 'Giriş Yap', signup: 'Ücretsiz Başla',
+            loading: 'Yükleniyor...', error: 'Bir hata oluştu',
+            offline: 'İnternet bağlantınız yok', retry: 'Tekrar dene',
+            share: 'Paylaş', download: 'İndir', back: 'Geri',
+            calculate: 'Hesapla', submit: 'Gönder', cancel: 'İptal',
+            dailyLimit: 'Günlük ücretsiz hakkınız doldu',
+            premiumRequired: 'Bu özellik Premium kullanıcılara özel',
         },
         en: {
             home: 'Home', daily: 'Daily Horoscope', compatibility: 'Compatibility',
@@ -122,7 +122,7 @@ const i18n = {
 function switchLang(lang) {
     i18n.setLang(lang);
     document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
-    showToast(lang === 'tr' ? 'Dil: Turkce' : 'Language: English');
+    showToast(lang === 'tr' ? 'Dil: Türkçe' : 'Language: English');
     // Note: Full page translation would require reload or dynamic text replacement
     // For now, just sets the preference — AI responses will use this language
 }
@@ -269,6 +269,7 @@ const AuthSystem = {
         const hashed = await this._hash(password);
         if (user.password !== hashed) throw new Error('Yanlış şifre');
         const session = { ...user, password: undefined, loginAt: Date.now() };
+        if (isOpenVipAccessEnabled()) session.plan = 'vip';
         localStorage.setItem(this._key, JSON.stringify(session));
         return session;
     },
@@ -277,7 +278,15 @@ const AuthSystem = {
         const users = this._getAllUsers();
         if (users.find(u => u.email === email)) throw new Error('Bu e-posta zaten kayıtlı');
         const hashed = await this._hash(password);
-        const user = { id: 'u_' + Date.now(), name, email, password: hashed, birthDate, createdAt: Date.now(), plan: 'free' };
+        const user = {
+            id: 'u_' + Date.now(),
+            name,
+            email,
+            password: hashed,
+            birthDate,
+            createdAt: Date.now(),
+            plan: isOpenVipAccessEnabled() ? 'vip' : 'free'
+        };
         users.push(user);
         localStorage.setItem('astromap_users', JSON.stringify(users));
         const session = { ...user, password: undefined, loginAt: Date.now() };
@@ -570,14 +579,14 @@ const UsageLimiter = {
     },
 
     getRemaining() {
-        if (window.__ASTROMAP_CONFIG?.isNative) return Infinity;
+        if (window.__ASTROMAP_CONFIG?.isNative || isOpenVipAccessEnabled()) return Infinity;
         const user = AuthSystem.getUser();
         if (user && (user.plan === 'premium' || user.plan === 'vip')) return Infinity;
         return Math.max(0, this.FREE_DAILY_LIMIT - this._getData().count);
     },
 
     consume() {
-        if (window.__ASTROMAP_CONFIG?.isNative) return true;
+        if (window.__ASTROMAP_CONFIG?.isNative || isOpenVipAccessEnabled()) return true;
         const user = AuthSystem.getUser();
         if (user && (user.plan === 'premium' || user.plan === 'vip')) return true;
         const data = this._getData();
@@ -595,6 +604,10 @@ const UsageLimiter = {
 // ═══════════════════════════════════════
 // PREMIUM CHECK
 // ═══════════════════════════════════════
+function isOpenVipAccessEnabled() {
+    return window.__ASTROMAP_CONFIG?.openVipAccess !== false;
+}
+
 // ═══════════════════════════════════════
 // DARK/LIGHT MODE TOGGLE
 // ═══════════════════════════════════════
@@ -624,7 +637,7 @@ function toggleDarkLight() {
 }
 
 function isPremiumUser() {
-    if (window.__ASTROMAP_CONFIG?.isNative) return true;
+    if (window.__ASTROMAP_CONFIG?.isNative || isOpenVipAccessEnabled()) return true;
     const user = AuthSystem.getUser();
     return user && (user.plan === 'premium' || user.plan === 'vip');
 }
@@ -672,7 +685,7 @@ async function callAI(endpoint, body, useCache = true) {
             staleCache._offline = true;
             return staleCache;
         }
-        throw new Error('Internet baglantiniz yok. Lutfen bagantinizi kontrol edin.');
+        throw new Error('İnternet bağlantınız yok. Lütfen bağlantınızı kontrol edin.');
     }
 
     // Check content type before parsing
@@ -731,7 +744,7 @@ function showAIError(container, msg) {
         <div class="ai-error">
             <span class="ai-error-icon">${isLimitError ? '🔒' : '⚠️'}</span>
             <p>${msg || 'Bir hata oluştu. Lütfen tekrar dene.'}</p>
-            ${isLimitError ? `<button class="btn-primary" onclick="navigateTo('pricing')" style="margin-top:12px">Premium'a Gec</button>` : ''}
+            ${isLimitError ? `<button class="btn-primary" onclick="navigateTo('pricing')" style="margin-top:12px">Premium'a Geç</button>` : ''}
         </div>
     `;
 }
@@ -2925,7 +2938,7 @@ function shareResults() {
 async function downloadShareCard() {
     const el = document.getElementById('share-card-inner');
     if (typeof html2canvas !== 'function') {
-        showToast('Ekran goruntsu alinamadi.');
+        showToast('Ekran görüntüsü alınamadı.');
         return;
     }
     try {
@@ -2936,10 +2949,10 @@ async function downloadShareCard() {
         if (window.Capacitor?.Plugins?.Share) {
             try {
                 await window.Capacitor.Plugins.Share.share({
-                    title: 'AstroMap Sonuclarim',
-                    text: 'AstroMap ile yildizlarimin beni nereye cagirdigini kesfettim!',
+                    title: 'AstroMap Sonuçlarım',
+                    text: 'AstroMap ile yıldızlarımın beni nereye çağırdığını keşfettim!',
                     url: 'https://astromap.app',
-                    dialogTitle: 'Sonuclarini Paylas'
+                    dialogTitle: 'Sonuçlarını Paylaş'
                 });
                 return;
             } catch {}
@@ -2951,7 +2964,7 @@ async function downloadShareCard() {
         link.href = dataUrl;
         link.click();
     } catch {
-        showToast('Ekran goruntsu alinamadi.');
+        showToast('Ekran görüntüsü alınamadı.');
     }
 }
 
@@ -3355,7 +3368,83 @@ function highlightCard(index) {
 // ═══════════════════════════════════════
 // AI TAROT — REAL CARD DRAWING CEREMONY
 // ═══════════════════════════════════════
+const TAROT_SPREADS = {
+    'three-card': {
+        count: 3,
+        positions: ['Geçmiş', 'Şimdi', 'Gelecek'],
+        hint: 'Kartlarına tıkla ve çevir'
+    },
+    'yes-no': {
+        count: 1,
+        positions: ['Cevap'],
+        hint: 'Kartına tıkla ve cevabı açığa çıkar'
+    },
+    'relationship': {
+        count: 3,
+        positions: ['Sen', 'O', 'Aranızdaki Enerji'],
+        hint: 'İlişki kartlarını sırayla çevir'
+    },
+    'celtic-cross': {
+        count: 10,
+        positions: [
+            'Mevcut Durum',
+            'Engel',
+            'Bilinçaltı',
+            'Geçmiş',
+            'Olası Gelecek',
+            'Yakın Gelecek',
+            'Tutum',
+            'Çevre',
+            'Umut & Korku',
+            'Sonuç'
+        ],
+        hint: 'Tüm kartları açıp büyük resmi gör'
+    }
+};
+
 let selectedSpread = 'three-card';
+
+function getSelectedTarotSpread() {
+    return TAROT_SPREADS[selectedSpread] || TAROT_SPREADS['three-card'];
+}
+
+function normalizeTarotPosition(value) {
+    return (value || '')
+        .toString()
+        .toLocaleLowerCase('tr-TR')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/ı/g, 'i')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+}
+
+function resolveTarotCardsForSpread(cards, spreadConfig) {
+    const byPosition = new Map(
+        (cards || []).map(card => [normalizeTarotPosition(card?.position), card])
+    );
+    return spreadConfig.positions.map((position, index) => {
+        const normalized = normalizeTarotPosition(position);
+        return byPosition.get(normalized) || cards[index] || { position };
+    });
+}
+
+function renderTarotSlots(spreadConfig) {
+    return spreadConfig.positions.map((position, i) => `
+        <div class="tarot-card-slot" data-index="${i}">
+            <div class="tarot-card-3d">
+                <div class="tarot-face tarot-back">
+                    <div class="tarot-back-design">
+                        <div class="tarot-back-pattern"></div>
+                        <span class="tarot-back-symbol">✦</span>
+                    </div>
+                </div>
+                <div class="tarot-face tarot-front"></div>
+            </div>
+            <div class="tarot-slot-label">${position}</div>
+        </div>
+    `).join('');
+}
 
 function selectSpread(btn) {
     // Premium check for celtic-cross
@@ -3374,6 +3463,7 @@ async function showTarot() {
     const question = document.getElementById('tarot-question').value;
     if (!birthDate) { showToast('Lütfen doğum tarihini gir'); return; }
 
+    const spreadConfig = getSelectedTarotSpread();
     const sunSign = getSunSignFromDate(birthDate);
     const resultEl = document.getElementById('tarot-result');
     document.getElementById('tarot-form').style.display = 'none';
@@ -3388,42 +3478,7 @@ async function showTarot() {
                 <p class="tarot-sub-msg">Enerjini kartlara yönlendir...</p>
             </div>
             <div class="tarot-deck" id="tarot-deck">
-                <div class="tarot-card-slot" data-index="0">
-                    <div class="tarot-card-3d">
-                        <div class="tarot-face tarot-back">
-                            <div class="tarot-back-design">
-                                <div class="tarot-back-pattern"></div>
-                                <span class="tarot-back-symbol">✦</span>
-                            </div>
-                        </div>
-                        <div class="tarot-face tarot-front"></div>
-                    </div>
-                    <div class="tarot-slot-label">Geçmiş</div>
-                </div>
-                <div class="tarot-card-slot" data-index="1">
-                    <div class="tarot-card-3d">
-                        <div class="tarot-face tarot-back">
-                            <div class="tarot-back-design">
-                                <div class="tarot-back-pattern"></div>
-                                <span class="tarot-back-symbol">✦</span>
-                            </div>
-                        </div>
-                        <div class="tarot-face tarot-front"></div>
-                    </div>
-                    <div class="tarot-slot-label">Şimdi</div>
-                </div>
-                <div class="tarot-card-slot" data-index="2">
-                    <div class="tarot-card-3d">
-                        <div class="tarot-face tarot-back">
-                            <div class="tarot-back-design">
-                                <div class="tarot-back-pattern"></div>
-                                <span class="tarot-back-symbol">✦</span>
-                            </div>
-                        </div>
-                        <div class="tarot-face tarot-front"></div>
-                    </div>
-                    <div class="tarot-slot-label">Gelecek</div>
-                </div>
+                ${renderTarotSlots(spreadConfig)}
             </div>
             <div class="tarot-ceremony-hint" id="tarot-hint">Kartlar hazırlanıyor...</div>
         </div>
@@ -3442,11 +3497,28 @@ async function showTarot() {
 
     try {
         const data = await callAI('tarot', { birthDate, sunSign, question, spread: selectedSpread, _t: Date.now() }, false);
-        const cards = data.cards || [];
-        const posEmojis = { 'Geçmiş': '⏳', 'Şimdi': '✨', 'Gelecek': '🔮' };
+        const cards = resolveTarotCardsForSpread(data.cards || [], spreadConfig);
+        const posEmojis = {
+            'Geçmiş': '⏳',
+            'Şimdi': '✨',
+            'Gelecek': '🔮',
+            'Cevap': '🗝️',
+            'Sen': '🧍',
+            'O': '💞',
+            'Aranızdaki Enerji': '⚡',
+            'Mevcut Durum': '🧭',
+            'Engel': '🧱',
+            'Bilinçaltı': '🌊',
+            'Olası Gelecek': '🌠',
+            'Yakın Gelecek': '🕰️',
+            'Tutum': '🧠',
+            'Çevre': '🌍',
+            'Umut & Korku': '🎭',
+            'Sonuç': '🏁'
+        };
 
         // Phase 3: Cards are ready — prompt user to click
-        document.getElementById('tarot-hint').textContent = '✦ Kartlarına tıkla ve çevir ✦';
+        document.getElementById('tarot-hint').textContent = `✦ ${spreadConfig.hint} ✦`;
         document.getElementById('tarot-hint').classList.add('hint-ready');
 
         // Fill card fronts with data
@@ -3493,6 +3565,7 @@ function showTarotOverall(data, resultEl) {
             <span class="energy-label">Baskın Enerji</span>
             <span class="energy-value">${data.energy || '✦'}</span>
         </div>
+        ${data.answer ? `<div class="tarot-answer"><strong>Net Cevap:</strong> ${sanitize(data.answer)}</div>` : ''}
         <h3>Kartların Mesajı</h3>
         <p class="tarot-overall-text"></p>
         <div class="tarot-advice"><strong>💫 Tavsiye:</strong> <span class="tarot-advice-text"></span></div>
@@ -3703,38 +3776,76 @@ async function pickFortuneImage(source) {
     document.getElementById(inputId)?.click();
 }
 
-function handleFortuneImage(input) {
-    const file = input.files[0];
-    if (!file) return;
-    if (fortuneImages.length >= 6) { showToast('En fazla 6 fotoğraf yükleyebilirsin'); input.value = ''; return; }
-    if (file.size > 5 * 1024 * 1024) { showToast("Dosya 5MB'den büyük olamaz"); input.value = ''; return; }
-    if (!file.type.startsWith('image/')) { showToast('Sadece resim dosyası yükleyebilirsin'); input.value = ''; return; }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        // Resize image to max 1024px to reduce payload
-        const img = new Image();
-        img.onload = () => {
-            const maxDim = 1024;
-            let w = img.width, h = img.height;
-            if (w > maxDim || h > maxDim) {
-                const ratio = Math.min(maxDim / w, maxDim / h);
-                w = Math.round(w * ratio);
-                h = Math.round(h * ratio);
-            }
-            const canvas = document.createElement('canvas');
-            canvas.width = w; canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, w, h);
-            fortuneImages.push(canvas.toDataURL('image/jpeg', 0.85));
-
-            // Show preview
-            renderFortunePreview();
-            document.getElementById('fortune-submit-btn').disabled = false;
+function resizeFortuneImage(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const maxDim = 1024;
+                let w = img.width;
+                let h = img.height;
+                if (w > maxDim || h > maxDim) {
+                    const ratio = Math.min(maxDim / w, maxDim / h);
+                    w = Math.round(w * ratio);
+                    h = Math.round(h * ratio);
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
+            };
+            img.onerror = () => reject(new Error('Görsel okunamadı'));
+            img.src = e.target.result;
         };
-        img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+        reader.onerror = () => reject(new Error('Dosya okunamadı'));
+        reader.readAsDataURL(file);
+    });
+}
+
+async function handleFortuneImage(input) {
+    const files = Array.from(input.files || []);
+    if (files.length === 0) return;
+    if (fortuneImages.length >= 6) {
+        showToast('En fazla 6 fotoğraf yükleyebilirsin');
+        input.value = '';
+        return;
+    }
+
+    const remaining = 6 - fortuneImages.length;
+    const filesToAdd = files.slice(0, remaining);
+    let addedCount = 0;
+
+    for (const file of filesToAdd) {
+        if (file.size > 5 * 1024 * 1024) {
+            showToast(`"${file.name}" 5MB'den büyük, atlandı`);
+            continue;
+        }
+        if (!file.type.startsWith('image/')) {
+            showToast(`"${file.name}" resim değil, atlandı`);
+            continue;
+        }
+        try {
+            const resized = await resizeFortuneImage(file);
+            fortuneImages.push(resized);
+            addedCount++;
+        } catch {
+            showToast(`"${file.name}" yüklenemedi`);
+        }
+    }
+
+    if (files.length > remaining) {
+        showToast(`Maksimum 6 fotoğraf kabul edilir. ${files.length - remaining} dosya eklenmedi.`);
+    }
+
+    if (addedCount > 0) {
+        renderFortunePreview();
+        document.getElementById('fortune-submit-btn').disabled = false;
+    }
+
+    input.value = '';
 }
 
 function renderFortunePreview() {
@@ -3742,12 +3853,12 @@ function renderFortunePreview() {
     if (fortuneImages.length === 0) {
         preview.innerHTML = `
             <div class="fortune-drop-icon">📸</div>
-            <p class="fortune-drop-text">Fincanin fotografini yukle</p>
+            <p class="fortune-drop-text">Fincanın fotoğrafını yükle</p>
             <div class="fortune-upload-buttons">
-                <button type="button" class="btn-fortune-upload" onclick="pickFortuneImage('gallery')">Galeriden Sec</button>
-                <button type="button" class="btn-fortune-upload btn-fortune-camera" onclick="pickFortuneImage('camera')">Fotograf Cek</button>
+                <button type="button" class="btn-fortune-upload" onclick="pickFortuneImage('gallery')">Galeriden Seç</button>
+                <button type="button" class="btn-fortune-upload btn-fortune-camera" onclick="pickFortuneImage('camera')">Fotoğraf Çek</button>
             </div>
-            <small>JPG, PNG — max 5MB — en fazla 6 fotoğraf</small>
+            <small>1 ila 6 fotoğraf yükleyebilirsin (JPG, PNG — max 5MB)</small>
         `;
         document.getElementById('fortune-submit-btn').disabled = true;
         return;
@@ -3767,7 +3878,7 @@ function renderFortunePreview() {
                 </div>
             ` : ''}
         </div>
-        ${fortuneImages.length < 3 ? '<p class="fortune-hint" style="text-align:center;font-size:13px;opacity:0.7;margin-top:8px;">En az 3 fotograf ile en iyi sonucu alirsin</p>' : ''}
+        <p class="fortune-hint" style="text-align:center;font-size:13px;opacity:0.7;margin-top:8px;">1 foto da olur, farklı açılardan 3-6 foto daha iyi sonuç verir.</p>
     `;
 }
 
@@ -3802,11 +3913,11 @@ function removeFortuneImage(e) {
         });
 
         dropzone.addEventListener('drop', (e) => {
-            const file = e.dataTransfer?.files?.[0];
-            if (!file || !file.type.startsWith('image/')) return;
+            const droppedFiles = Array.from(e.dataTransfer?.files || []).filter(f => f.type.startsWith('image/'));
+            if (droppedFiles.length === 0) return;
             const input = document.getElementById('fortune-file');
             const dt = new DataTransfer();
-            dt.items.add(file);
+            droppedFiles.forEach(file => dt.items.add(file));
             input.files = dt.files;
             handleFortuneImage(input);
         });
@@ -4868,18 +4979,18 @@ function showOnboardingIfNeeded() {
             <div class="onboarding-slides" id="onboarding-slides">
                 <div class="onboarding-slide active">
                     <div class="onboarding-visual">✦</div>
-                    <h2>Yildizlarin Seni Nereye Cagiriyor?</h2>
-                    <p>Dogum haritani dunya haritasina yansitiyoruz. 558 sehir, 10 gezegen, senin kozmik yol haritan.</p>
+                    <h2>Yıldızların Seni Nereye Çağırıyor?</h2>
+                    <p>Doğum haritanı dünya haritasına yansıtıyoruz. 558 şehir, 10 gezegen, senin kozmik yol haritan.</p>
                 </div>
                 <div class="onboarding-slide">
                     <div class="onboarding-visual">🃏</div>
                     <h2>AI ile Mistik Rehberlik</h2>
-                    <p>Tarot, kahve fali, ruya yorumu, kristal rehberi — yapay zeka ile kisisellestirilmis derin okumalar.</p>
+                    <p>Tarot, kahve falı, rüya yorumu, kristal rehberi — yapay zeka ile kişiselleştirilmiş derin okumalar.</p>
                 </div>
                 <div class="onboarding-slide">
                     <div class="onboarding-visual">🌟</div>
-                    <h2>Her Gun Yeni Kesfet</h2>
-                    <p>Gunluk burc yorumu, ay takvimi, retrograt takibi — yildizlarin sana ne soyluyor her gun ogren.</p>
+                    <h2>Her Gün Yeni Keşfet</h2>
+                    <p>Günlük burç yorumu, ay takvimi, retrograt takibi — yıldızların sana ne söylüyor her gün öğren.</p>
                 </div>
             </div>
             <div class="onboarding-dots">
@@ -4915,7 +5026,7 @@ function goOnboardingSlide(idx) {
     slides.forEach((s, i) => s.classList.toggle('active', i === idx));
     dots.forEach((d, i) => d.classList.toggle('active', i === idx));
     const btn = document.getElementById('onboarding-next-btn');
-    if (btn) btn.textContent = idx === 2 ? 'Basla' : 'Devam';
+    if (btn) btn.textContent = idx === 2 ? 'Başla' : 'Devam';
 }
 
 function nextOnboardingSlide() {
@@ -4956,7 +5067,7 @@ function selectFeedbackMood(btn) {
 
 function submitFeedback(e) {
     e.preventDefault();
-    if (!_feedbackMood) { showToast('Lutfen bir duygu sec'); return; }
+    if (!_feedbackMood) { showToast('Lütfen bir duygu seç'); return; }
     const feature = document.getElementById('feedback-feature').value;
     const message = document.getElementById('feedback-message').value.trim();
 
@@ -4973,7 +5084,7 @@ function submitFeedback(e) {
     }).catch(() => {});
 
     closeModal('feedback-modal');
-    showToast('Tesekkurler! Geri bildirimin bize ulasti 💜');
+    showToast('Teşekkürler! Geri bildirimin bize ulaştı 💜');
 }
 
 // ═══════════════════════════════════════
@@ -4981,7 +5092,7 @@ function submitFeedback(e) {
 // ═══════════════════════════════════════
 function generateReferralCode() {
     const user = AuthSystem.getUser();
-    if (!user) { showToast('Referans kodu icin giris yap'); navigateTo('pricing'); return null; }
+    if (!user) { showToast('Referans kodu için giriş yap'); navigateTo('pricing'); return null; }
     // Generate deterministic code from user id
     const code = 'ASTRO' + (user.id || user.email || '').slice(-6).toUpperCase().replace(/[^A-Z0-9]/g, 'X');
     return code;
@@ -4991,13 +5102,13 @@ function shareReferralLink() {
     const code = generateReferralCode();
     if (!code) return;
     const url = 'https://wheretolive-nine.vercel.app/?ref=' + code;
-    const text = 'AstroMap ile yildizlarimin beni nereye cagirdigini kesfettim! Sen de dene:';
+    const text = 'AstroMap ile yıldızlarımın beni nereye çağırdığını keşfettim! Sen de dene:';
 
     if (navigator.share) {
         navigator.share({ title: 'AstroMap', text, url }).catch(() => {});
     } else {
         navigator.clipboard.writeText(url).then(() => {
-            showToast('Referans linki kopyalandi!');
+            showToast('Referans linki kopyalandı!');
         }).catch(() => {
             showToast('Link: ' + url);
         });

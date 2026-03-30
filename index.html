@@ -94,12 +94,12 @@
             {
                 "@type": "Question",
                 "name": "AstroMap nedir?",
-                "acceptedAnswer": { "@type": "Answer", "text": "AstroMap, yapay zeka destekli astroloji ve astrokartografi platformudur. Gunluk burc yorumu, tarot, kristal rehberi, ruya yorumu ve kahve fali gibi ozellikler sunar." }
+                "acceptedAnswer": { "@type": "Answer", "text": "AstroMap, yapay zeka destekli astroloji ve astrokartografi platformudur. Günlük burç yorumu, tarot, kristal rehberi, rüya yorumu ve kahve falı gibi özellikler sunar." }
             },
             {
                 "@type": "Question",
-                "name": "AstroMap ucretsiz mi?",
-                "acceptedAnswer": { "@type": "Answer", "text": "Evet, AstroMap temel ozellikleri ucretsiz kullanabilirsiniz. Premium ve VIP planlar ek ozellikler sunar." }
+                "name": "AstroMap ücretsiz mi?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Evet, AstroMap temel özellikleri ücretsiz kullanabilirsiniz. Premium ve VIP planlar ek özellikler sunar." }
             }
         ]
     }
@@ -697,16 +697,16 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
             <div class="form-group">
                 <label>Fincan Fotoğrafı</label>
                 <div class="fortune-dropzone" id="fortune-dropzone">
-                    <input type="file" id="fortune-file" accept="image/*" hidden onchange="handleFortuneImage(this)">
+                    <input type="file" id="fortune-file" accept="image/*" multiple hidden onchange="handleFortuneImage(this)">
                     <input type="file" id="fortune-camera" accept="image/*" capture="environment" hidden onchange="handleFortuneImage(this)">
                     <div id="fortune-preview" class="fortune-preview">
                         <div class="fortune-drop-icon">📸</div>
-                        <p class="fortune-drop-text">Fincanin fotografini yukle</p>
+                        <p class="fortune-drop-text">Fincanın fotoğrafını yükle</p>
                         <div class="fortune-upload-buttons">
-                            <button type="button" class="btn-fortune-upload" onclick="pickFortuneImage('gallery')">Galeriden Sec</button>
-                            <button type="button" class="btn-fortune-upload btn-fortune-camera" onclick="pickFortuneImage('camera')">Fotograf Cek</button>
+                            <button type="button" class="btn-fortune-upload" onclick="pickFortuneImage('gallery')">Galeriden Seç</button>
+                            <button type="button" class="btn-fortune-upload btn-fortune-camera" onclick="pickFortuneImage('camera')">Fotoğraf Çek</button>
                         </div>
-                        <small>JPG, PNG — max 5MB</small>
+                        <small>1 ila 6 fotoğraf yükleyebilirsin (JPG, PNG — max 5MB)</small>
                     </div>
                 </div>
             </div>
@@ -1143,10 +1143,10 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
     <div class="modal-content" style="max-width:480px">
         <button class="modal-close" onclick="closeModal('feedback-modal')">✕</button>
         <h2 style="font-family:var(--font-display);margin-bottom:16px">💬 Geri Bildirim</h2>
-        <p style="color:var(--text-muted);font-size:14px;margin-bottom:20px">Deneyimini gelistirmemize yardimci ol!</p>
+        <p style="color:var(--text-muted);font-size:14px;margin-bottom:20px">Deneyimini geliştirmemize yardımcı ol!</p>
         <form onsubmit="submitFeedback(event)">
             <div class="form-group">
-                <label>Nasil hissediyorsun?</label>
+                <label>Nasıl hissediyorsun?</label>
                 <div class="feedback-emojis" id="feedback-mood">
                     <button type="button" class="feedback-emoji" data-mood="love" onclick="selectFeedbackMood(this)">😍</button>
                     <button type="button" class="feedback-emoji" data-mood="happy" onclick="selectFeedbackMood(this)">😊</button>
