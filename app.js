@@ -453,10 +453,13 @@ function navigateTo(pageId) {
 
     // Load page data
     if (pageId === 'moon') loadMoonCalendar();
-    if (pageId === 'natal') filterNatalCities('');
+    if (pageId === 'natal') { filterNatalCities(''); ProfileMemory.fillAll(); }
     if (pageId === 'retrograde') loadRetrogradeCalendar();
     if (pageId === 'dashboard') loadDashboard();
-    if (pageId === 'transit') initTransitForm();
+    if (pageId === 'transit') { initTransitForm(); ProfileMemory.fillAll(); }
+    if (pageId === 'daily') ProfileMemory.fillAll();
+    if (pageId === 'compatibility') ProfileMemory.fillAll();
+    if (pageId === 'today') loadTodayPage();
     
     // Track visited pages (remove "Yeni" badges)
     try {
@@ -476,6 +479,76 @@ function navigateTo(pageId) {
         announcer.textContent = pageName + ' sayfası açıldı';
     }
 }
+
+// ═══════════════════════════════════════
+// PROFILE MEMORY — auto-fill birth data
+// ═══════════════════════════════════════
+const ProfileMemory = {
+    _key: 'astromap_profile',
+
+    save(data) {
+        try {
+            const existing = this.get();
+            const merged = { ...existing, ...data };
+            localStorage.setItem(this._key, JSON.stringify(merged));
+            // Also update user record if logged in
+            const user = AuthSystem.getUser();
+            if (user) {
+                const updated = { ...user, ...data };
+                localStorage.setItem(AuthSystem._key, JSON.stringify(updated));
+            }
+        } catch(e) {}
+    },
+
+    get() {
+        try {
+            const saved = JSON.parse(localStorage.getItem(this._key) || '{}');
+            const user = AuthSystem.getUser();
+            // Merge user.birthDate from auth if available
+            if (user?.birthDate && !saved.birthDate) saved.birthDate = user.birthDate;
+            return saved;
+        } catch { return {}; }
+    },
+
+    // Fill all forms on a page with saved profile data
+    fillAll() {
+        const p = this.get();
+        if (!p.birthDate && !p.name) return;
+        const fill = (id, val) => {
+            if (!val) return;
+            const el = document.getElementById(id);
+            if (el && !el.value) el.value = val;
+        };
+        // Daily horoscope form
+        fill('daily-name', p.name);
+        fill('daily-birth-date', p.birthDate);
+        fill('daily-birth-time', p.birthTime);
+        // Natal chart form
+        fill('natal-birth-date', p.birthDate);
+        fill('natal-birth-time', p.birthTime);
+        // Transit form
+        fill('transit-birth-date', p.birthDate);
+        fill('transit-birth-time', p.birthTime);
+        fill('transit-birth-place', p.birthCity);
+        // Compatibility form (person 1)
+        fill('compat-date-1', p.birthDate);
+        fill('compat-time-1', p.birthTime);
+        // Crystal, Dream, Tarot forms
+        fill('crystal-name', p.name);
+        fill('tarot-name', p.name);
+        // Wizard (astrocartography)
+        fill('wizard-name', p.name);
+        fill('birth-date', p.birthDate);
+        fill('birth-time', p.birthTime);
+        // Sun sign selects
+        if (p.sunSign) {
+            ['transit-sun-sign', 'daily-sun-sign'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = p.sunSign;
+            });
+        }
+    }
+};
 
 // ═══════════════════════════════════════
 // FREEMIUM USAGE LIMITER
@@ -619,6 +692,11 @@ async function callAI(endpoint, body, useCache = true) {
 
     // Track in history
     AuthSystem.addToHistory(endpoint, body);
+
+    // Increment total AI use counter for rating prompt
+    const totalUses = parseInt(localStorage.getItem('astromap_total_uses') || '0') + 1;
+    localStorage.setItem('astromap_total_uses', String(totalUses));
+    if (typeof checkRatingPrompt === 'function') checkRatingPrompt();
 
     _pendingRequests.delete(endpoint);
     return sanitized;
@@ -1451,6 +1529,9 @@ async function showDailyHoroscope() {
     if (!name) { showToast('Lütfen adını gir'); return; }
     if (!gender) { showToast('Lütfen cinsiyetini seç'); return; }
 
+    // Save to profile for auto-fill on future visits
+    ProfileMemory.save({ name, birthDate, birthTime: birthTime || undefined, gender });
+
     const period = selectedHoroscopePeriod || 'daily';
     const periodLabel = { daily: 'Günlük', weekly: 'Haftalık', monthly: 'Aylık', yearly: 'Yıllık' }[period] || 'Günlük';
     const sunSign = getSunSignFromDate(birthDate);
@@ -1828,6 +1909,8 @@ async function showTransitReport() {
     const sunSign = document.getElementById('transit-sun-sign')?.value;
     if (!sunSign) { showToast('Güneş burcunu seç'); return; }
 
+    ProfileMemory.save({ birthDate, birthTime: birthTime || undefined, birthCity: birthPlace || undefined, sunSign });
+
     const formEl = document.getElementById('transit-form');
     const resultEl = document.getElementById('transit-result');
     if (formEl) formEl.style.display = 'none';
@@ -1895,6 +1978,7 @@ function showNatalChart() {
     resultEl.innerHTML = '<div class="ai-loading"><div class="ai-loading-spinner">🪐</div><p>Doğum haritanız hesaplanıyor...</p></div>';
 
     setTimeout(() => {
+        ProfileMemory.save({ birthDate, birthTime: birthTime || undefined, birthCity: birthCity || undefined });
         const birthLocation = AstroEngine.calculate(birthDate, birthTime, birthCity || 'istanbul', [], { climate: 'any', size: 'any', nature: 'any', region: 'any' });
         const natal = birthLocation.natalChart;
         _lastNatalChart = natal;
@@ -4261,6 +4345,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auth: restore session UI
     AuthSystem.updateUI();
 
+    // Auto-fill forms from saved profile
+    ProfileMemory.fillAll();
+
     // Init push notifications (native + web)
     initPushNotifications();
     initWebPush();
@@ -4464,6 +4551,185 @@ function handleBackButton(e) {
 }
 
 // ═══════════════════════════════════════
+// ═══════════════════════════════════════
+// BUGÜN (DAILY DIGEST PAGE)
+// ═══════════════════════════════════════
+function loadTodayPage() {
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const sub = document.getElementById('today-date-sub');
+    if (sub) sub.textContent = dateStr;
+
+    // Energy banner
+    _renderTodayEnergyBanner();
+
+    // Moon card
+    _renderTodayMoon();
+
+    const profile = ProfileMemory.get();
+    const noProfile = document.getElementById('today-no-profile');
+    const content = document.getElementById('today-content');
+
+    if (profile.birthDate) {
+        if (noProfile) noProfile.classList.add('hidden');
+        if (content) content.classList.remove('hidden');
+        // Pre-fill sign badge
+        const sunSign = getSunSignFromDate(profile.birthDate);
+        const badge = document.getElementById('today-sign-badge');
+        if (badge && sunSign) {
+            const signSymbols = { 'Koç':'♈','Boğa':'♉','İkizler':'♊','Yengeç':'♋','Aslan':'♌','Başak':'♍','Terazi':'♎','Akrep':'♏','Yay':'♐','Oğlak':'♑','Kova':'♒','Balık':'♓' };
+            badge.textContent = `${signSymbols[sunSign] || '✦'} ${sunSign}`;
+        }
+        // Reset action blocks on fresh page load
+        const horoEl = document.getElementById('today-horoscope');
+        const tarotEl = document.getElementById('today-tarot');
+        if (horoEl && !horoEl.dataset.loaded) {
+            horoEl.innerHTML = `<button class="btn-primary" onclick="loadTodayHoroscope()" style="width:100%"><span class="btn-sparkle">🌟</span> Günlük Yorumumu Al</button>`;
+        }
+        if (tarotEl && !tarotEl.dataset.loaded) {
+            tarotEl.innerHTML = `<button class="btn-primary" onclick="loadTodayTarot()" style="width:100%"><span class="btn-sparkle">🃏</span> Günün Kartını Çek</button>`;
+        }
+    } else {
+        if (noProfile) noProfile.classList.remove('hidden');
+        if (content) content.classList.add('hidden');
+        // Pre-fill name from profile if available
+        const nameEl = document.getElementById('today-name');
+        if (nameEl && profile.name) nameEl.value = profile.name;
+    }
+}
+
+function _renderTodayEnergyBanner() {
+    const el = document.getElementById('today-energy-banner');
+    if (!el) return;
+    const moon = AstroEngine.calculateMoonPhase(new Date());
+    const today = new Date();
+    const dayPlanets = ['Güneş', 'Ay', 'Mars', 'Merkür', 'Jüpiter', 'Venüs', 'Satürn'];
+    const dayEmojis = ['☉', '🌙', '♂', '☿', '♃', '♀', '♄'];
+    const dayIdx = today.getDay();
+    el.innerHTML = `
+        <div class="today-energy-inner">
+            <div class="today-energy-moon">
+                <span class="today-moon-emoji">${moon.phaseEmoji}</span>
+                <div><small>${moon.phaseName}</small><br><small>${moon.moonSignSymbol} ${moon.moonSign}</small></div>
+            </div>
+            <div class="today-energy-divider"></div>
+            <div class="today-energy-planet">
+                <span class="today-planet-emoji">${dayEmojis[dayIdx]}</span>
+                <div><small>${dayPlanets[dayIdx]} Günü</small><br><small style="opacity:.7">${moon.illumination}% aydınlık</small></div>
+            </div>
+        </div>
+    `;
+}
+
+function _renderTodayMoon() {
+    const el = document.getElementById('today-moon');
+    if (!el) return;
+    const moon = AstroEngine.calculateMoonPhase(new Date());
+    const rituals = {
+        'Yeni Ay': 'Niyet belirle, yeni başlangıçlar için mükemmel gün.',
+        'Hilal': 'Harekete geç, planlarını uygulamaya başla.',
+        'İlk Dördün': 'Engelleri aş, kararlılıkla ilerle.',
+        'Şişen Ay': 'Enerji yükseliyor, ilişkilere odaklan.',
+        'Dolunay': 'Tamamlama zamanı, neyi bırakman gerektiğini düşün.',
+        'Sönümleyen Dolunay': 'Minnettarlık ve değerlendirme vakti.',
+        'Son Dördün': 'Temizlik ve bırakma enerjisi.',
+        'Sönümleyen Hilal': 'Dinlen, içe dön, bir sonraki döngüye hazırlan.'
+    };
+    const ritual = rituals[moon.phaseName] || 'Kozmik enerjiyi hisset ve dinle.';
+    el.innerHTML = `
+        <div class="today-moon-info">
+            <span style="font-size:32px">${moon.phaseEmoji}</span>
+            <div>
+                <strong>${moon.phaseName}</strong>
+                <small style="display:block;color:var(--text-muted);margin-top:2px">${moon.moonSignSymbol} ${moon.moonSign} · %${moon.illumination} aydınlık</small>
+            </div>
+        </div>
+        <p class="today-moon-ritual">${ritual}</p>
+        <button class="btn-ghost" onclick="navigateTo('moon')" style="width:100%;margin-top:8px;font-size:13px">Ay Takvimini Gör →</button>
+    `;
+}
+
+function saveTodayProfile() {
+    const birthDate = document.getElementById('today-birth-date')?.value;
+    const name = document.getElementById('today-name')?.value;
+    if (!birthDate) { showToast('Doğum tarihini gir'); return; }
+    ProfileMemory.save({ birthDate, name: name || undefined });
+    ProfileMemory.fillAll();
+    loadTodayPage();
+    showToast('Profil kaydedildi ✨');
+}
+
+async function loadTodayHoroscope() {
+    const profile = ProfileMemory.get();
+    if (!profile.birthDate) return;
+    const el = document.getElementById('today-horoscope');
+    if (!el) return;
+    showAILoading(el, 'Günlük yorumun hazırlanıyor...');
+    const sunSign = getSunSignFromDate(profile.birthDate);
+    try {
+        const data = await callAI('daily-horoscope', {
+            name: profile.name || 'Sevgili',
+            gender: profile.gender || 'kadın',
+            birthDate: profile.birthDate,
+            birthTime: profile.birthTime || '12:00',
+            period: 'daily'
+        });
+        el.dataset.loaded = '1';
+        const score = data.energyScore || data.score || 75;
+        const hue = Math.min(120, (score / 100) * 140);
+        el.innerHTML = `
+            <div class="today-horo-sign">${sunSign}</div>
+            ${data.opening ? `<p class="today-horo-text">${sanitize(data.opening)}</p>` : ''}
+            ${data.love ? `<div class="today-horo-area"><span>❤️</span><p>${sanitize(data.love)}</p></div>` : ''}
+            ${data.career ? `<div class="today-horo-area"><span>💼</span><p>${sanitize(data.career)}</p></div>` : ''}
+            ${data.advice ? `<div class="today-horo-advice">💡 ${sanitize(data.advice)}</div>` : ''}
+            <div class="today-horo-score">
+                <span>Enerji</span>
+                <div class="today-score-bar"><div class="today-score-fill" style="width:${score}%;background:hsl(${hue},65%,50%)"></div></div>
+                <span>${score}%</span>
+            </div>
+            <button class="btn-ghost" onclick="navigateTo('daily')" style="width:100%;margin-top:10px;font-size:13px">Detaylı Yorum →</button>
+        `;
+    } catch (err) {
+        showAIError(el, err.message);
+        el.dataset.loaded = '';
+    }
+}
+
+async function loadTodayTarot() {
+    const el = document.getElementById('today-tarot');
+    if (!el) return;
+    showAILoading(el, 'Günün kartı çekiliyor...');
+    const profile = ProfileMemory.get();
+    const sunSign = profile.birthDate ? getSunSignFromDate(profile.birthDate) : '';
+    try {
+        const data = await callAI('tarot', {
+            question: 'Bugün için ne bilmem gerekiyor?',
+            spread: 'yes-no',
+            name: profile.name || 'sevgili',
+            gender: profile.gender || 'kadın',
+            birthDate: profile.birthDate || '',
+            sunSign
+        });
+        el.dataset.loaded = '1';
+        const cards = data.cards || [];
+        const card = cards[0] || {};
+        el.innerHTML = `
+            <div class="today-tarot-card">
+                <div class="today-tarot-name">${sanitize(card.name || data.card || '🃏')}</div>
+                <div class="today-tarot-position" style="color:var(--text-muted);font-size:12px;margin-bottom:8px">${sanitize(card.position || 'Günün Enerjisi')}</div>
+                <p class="today-tarot-meaning">${sanitize(card.meaning || card.interpretation || data.summary || '')}</p>
+                ${card.advice || data.advice ? `<div class="today-horo-advice">💡 ${sanitize(card.advice || data.advice)}</div>` : ''}
+            </div>
+            <button class="btn-ghost" onclick="navigateTo('tarot')" style="width:100%;margin-top:10px;font-size:13px">Tam Tarot Okuma →</button>
+        `;
+    } catch (err) {
+        showAIError(el, err.message);
+        el.dataset.loaded = '';
+    }
+}
+
+// ═══════════════════════════════════════
 // DAILY ENERGY CARD (Home banner)
 // ═══════════════════════════════════════
 function renderDailyEnergyCard() {
@@ -4517,6 +4783,80 @@ function renderDailyEnergyCard() {
 // ONBOARDING (Swipeable 3-screen intro)
 // ═══════════════════════════════════════
 let _onboardingPage = 0;
+
+// ═══════════════════════════════════════
+// APP RATING PROMPT
+// ═══════════════════════════════════════
+function checkRatingPrompt() {
+    // Don't show if already rated or dismissed
+    if (localStorage.getItem('astromap_rated') || localStorage.getItem('astromap_rate_dismissed')) return;
+    // Show after 5th AI use
+    const uses = parseInt(localStorage.getItem('astromap_total_uses') || '0');
+    if (uses < 5) return;
+    // Only show once per session
+    if (sessionStorage.getItem('astromap_rate_shown')) return;
+    sessionStorage.setItem('astromap_rate_shown', '1');
+    setTimeout(showRatingPrompt, 1500);
+}
+
+function showRatingPrompt() {
+    if (document.querySelector('.rating-overlay')) return;
+    let selectedStars = 0;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'rating-overlay';
+    overlay.innerHTML = `
+        <div class="rating-card">
+            <div class="rating-emoji">⭐</div>
+            <div class="rating-title">Bizi Beğeniyor musun?</div>
+            <div class="rating-sub">AstroMap'i kullanmak nasıl bir deneyim? Görüşün bizim için çok değerli!</div>
+            <div class="rating-stars">
+                ${[1,2,3,4,5].map(i => `<span class="rating-star" data-star="${i}" onclick="selectRatingStar(${i})">★</span>`).join('')}
+            </div>
+            <div class="rating-actions">
+                <button class="btn-primary" id="rating-submit-btn" onclick="submitRating()" style="opacity:.5;pointer-events:none">Değerlendir</button>
+                <span class="rating-skip" onclick="dismissRating()">Şimdi değil</span>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+}
+
+function selectRatingStar(n) {
+    const stars = document.querySelectorAll('.rating-star');
+    stars.forEach((s, i) => s.classList.toggle('active', i < n));
+    const btn = document.getElementById('rating-submit-btn');
+    if (btn) { btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; }
+    document.querySelector('.rating-overlay').dataset.stars = n;
+}
+
+function submitRating() {
+    const overlay = document.querySelector('.rating-overlay');
+    const stars = parseInt(overlay?.dataset.stars || '0');
+    if (!stars) return;
+    localStorage.setItem('astromap_rated', '1');
+    overlay?.remove();
+    if (stars >= 4) {
+        // High rating → open Play Store
+        showToast('Teşekkürler! Yorum bırakıyoruz... ⭐');
+        setTimeout(() => {
+            const url = window.__ASTROMAP_CONFIG?.isNative
+                ? 'market://details?id=com.astromap.app'
+                : 'https://play.google.com/store/apps/details?id=com.astromap.app';
+            window.open(url, '_blank');
+        }, 800);
+    } else {
+        // Low rating → open feedback form
+        showToast('Geri bildiriminiz için teşekkürler 🙏');
+        setTimeout(() => openFeedbackForm(), 1000);
+    }
+    Analytics.track('app_rated', { stars });
+}
+
+function dismissRating() {
+    document.querySelector('.rating-overlay')?.remove();
+    localStorage.setItem('astromap_rate_dismissed', '1');
+}
 
 function showOnboardingIfNeeded() {
     if (localStorage.getItem('astromap_onboarded')) return;

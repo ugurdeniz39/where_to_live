@@ -130,6 +130,7 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
                 <button class="nav-drawer-close" onclick="closeMobileNav()" type="button" aria-label="Menüyü kapat">✕</button>
             </div>
             <a class="nav-link active" href="javascript:void(0)" data-page="home" data-nav="home" role="menuitem" tabindex="0">🏠 Ana Sayfa</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="today" data-nav="today" role="menuitem" tabindex="0">☀️ Bugün</a>
             <a class="nav-link" href="javascript:void(0)" data-page="daily" data-nav="daily" role="menuitem" tabindex="0">🌟 Günlük Yorum</a>
             <a class="nav-link" href="javascript:void(0)" data-page="compatibility" data-nav="compatibility" role="menuitem" tabindex="0">💕 Uyum Testi</a>
             <a class="nav-link" href="javascript:void(0)" data-page="moon" data-nav="moon" role="menuitem" tabindex="0">🌙 Ay Takvimi</a>
@@ -459,6 +460,67 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
         <div class="faq-item" onclick="toggleFaq(this)">
             <div class="faq-question">Ödeme güvenli mi? Hangi yöntemler kabul ediliyor?</div>
             <div class="faq-answer">Ödemeler güvenli altyapı üzerinden gerçekleşir. Kart bilgileriniz hiçbir zaman bizde saklanmaz.</div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════ PAGE: BUGÜN (DAILY DIGEST) ══════════════════ -->
+<section id="page-today" class="page">
+    <div class="page-container">
+        <h1 class="page-title">☀️ <em>Bugün</em></h1>
+        <p class="page-subtitle" id="today-date-sub"></p>
+
+        <!-- Energy Card -->
+        <div id="today-energy-banner" class="today-energy-banner"></div>
+
+        <!-- Quick Actions if no profile -->
+        <div id="today-no-profile" class="today-no-profile hidden">
+            <p>Kişiselleştirilmiş içerik için doğum tarihini gir:</p>
+            <div class="form-row">
+                <div class="form-group form-group-half">
+                    <label>Doğum Tarihi</label>
+                    <input type="date" id="today-birth-date" value="1995-06-15">
+                </div>
+                <div class="form-group form-group-half">
+                    <label>Adın</label>
+                    <input type="text" id="today-name" placeholder="Adın...">
+                </div>
+            </div>
+            <button class="btn-primary" onclick="saveTodayProfile()" style="width:100%">Kişiselleştir ✨</button>
+        </div>
+
+        <!-- Personalized content -->
+        <div id="today-content" class="today-content hidden">
+            <!-- Horoscope section -->
+            <div class="today-section">
+                <div class="today-section-header">
+                    <span>🌟 Günlük Burcun</span>
+                    <span id="today-sign-badge" class="today-sign-badge"></span>
+                </div>
+                <div id="today-horoscope" class="today-ai-block">
+                    <button class="btn-primary" onclick="loadTodayHoroscope()" style="width:100%">
+                        <span class="btn-sparkle">🌟</span> Günlük Yorumumu Al
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tarot section -->
+            <div class="today-section">
+                <div class="today-section-header">
+                    <span>🃏 Günün Kartı</span>
+                </div>
+                <div id="today-tarot" class="today-ai-block">
+                    <button class="btn-primary" onclick="loadTodayTarot()" style="width:100%">
+                        <span class="btn-sparkle">🃏</span> Günün Kartını Çek
+                    </button>
+                </div>
+            </div>
+
+            <!-- Moon section -->
+            <div class="today-section">
+                <div class="today-section-header"><span>🌙 Ay Enerjisi</span></div>
+                <div id="today-moon" class="today-moon-card"></div>
+            </div>
         </div>
     </div>
 </section>

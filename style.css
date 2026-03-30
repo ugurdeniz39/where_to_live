@@ -3613,3 +3613,114 @@ body.light-theme .dash-stat-num { color: #7c3aed; }
     .natal-strengths-challenges { grid-template-columns: 1fr; }
 }
 
+/* ════════════ BUGÜN (DAILY DIGEST) ════════════ */
+.today-energy-banner {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 16px; margin-bottom: 20px;
+}
+.today-energy-inner {
+    display: flex; align-items: center; gap: 16px;
+}
+.today-energy-moon, .today-energy-planet {
+    display: flex; align-items: center; gap: 10px; flex: 1;
+}
+.today-moon-emoji, .today-planet-emoji {
+    font-size: 28px; flex-shrink: 0;
+}
+.today-energy-divider {
+    width: 1px; height: 40px; background: var(--border); flex-shrink: 0;
+}
+.today-energy-inner small { color: var(--text-muted); font-size: 12px; }
+
+.today-no-profile {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 20px; margin-bottom: 20px;
+    text-align: center;
+}
+.today-no-profile p { color: var(--text-muted); margin-bottom: 16px; }
+
+.today-content { display: flex; flex-direction: column; gap: 16px; }
+
+.today-section {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 16px;
+}
+.today-section-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px; font-family: var(--font-display);
+    font-size: 15px; font-weight: 600;
+}
+.today-sign-badge {
+    font-size: 13px; padding: 3px 10px; border-radius: 50px;
+    background: rgba(201,160,255,0.12); color: var(--accent-light);
+}
+.today-ai-block { min-height: 40px; }
+
+.today-horo-sign {
+    font-family: var(--font-display); font-size: 18px;
+    color: var(--accent-light); margin-bottom: 10px; font-weight: 700;
+}
+.today-horo-text { font-size: 14px; line-height: 1.7; margin-bottom: 12px; }
+.today-horo-area {
+    display: flex; gap: 10px; align-items: flex-start;
+    margin-bottom: 8px; font-size: 13px; color: var(--text-muted);
+}
+.today-horo-area span { flex-shrink: 0; }
+.today-horo-advice {
+    font-size: 13px; padding: 8px 12px; border-radius: var(--radius-xs);
+    background: rgba(201,160,255,0.06); color: var(--accent-light);
+    margin-top: 10px;
+}
+.today-horo-score {
+    display: flex; align-items: center; gap: 8px; margin-top: 12px;
+    font-size: 12px; color: var(--text-muted);
+}
+.today-score-bar {
+    flex: 1; height: 6px; background: var(--border);
+    border-radius: 3px; overflow: hidden;
+}
+.today-score-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
+
+.today-tarot-card { text-align: center; padding: 4px 0; }
+.today-tarot-name {
+    font-family: var(--font-display); font-size: 18px;
+    color: var(--accent-light); margin-bottom: 4px; font-weight: 700;
+}
+.today-tarot-meaning { font-size: 13px; line-height: 1.7; color: var(--text-muted); }
+
+.today-moon-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 16px;
+}
+.today-moon-info {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 10px;
+}
+.today-moon-info strong { font-family: var(--font-display); font-size: 15px; }
+.today-moon-ritual { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+/* ════════════ APP RATING PROMPT ════════════ */
+.rating-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    z-index: 20000; display: flex; align-items: center; justify-content: center;
+    padding: 20px; animation: fadeIn 0.2s ease;
+}
+.rating-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 28px 24px;
+    max-width: 340px; width: 100%; text-align: center;
+    animation: slideUp 0.3s ease;
+}
+.rating-emoji { font-size: 48px; margin-bottom: 12px; }
+.rating-title { font-family: var(--font-display); font-size: 20px; margin-bottom: 8px; }
+.rating-sub { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.6; }
+.rating-stars { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; }
+.rating-star {
+    font-size: 32px; cursor: pointer; transition: transform 0.15s;
+    filter: grayscale(1) opacity(0.4);
+}
+.rating-star.active { filter: none; transform: scale(1.15); }
+.rating-actions { display: flex; flex-direction: column; gap: 8px; }
+.rating-actions .btn-primary { width: 100%; }
+.rating-skip { font-size: 13px; color: var(--text-muted); cursor: pointer; padding: 6px; }
+.rating-skip:hover { color: var(--text); }
+
