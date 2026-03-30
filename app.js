@@ -2305,39 +2305,38 @@ function renderCityList(cities) {
 
     listEl.appendChild(fragment);
 
-    // Lazy-load more cards on scroll (mobile optimization)
+    // Auto-load more cards on scroll via IntersectionObserver
     if (filtered.length > initialBatch) {
-        const loadMore = document.createElement('button');
-        loadMore.className = 'btn-ghost load-more-btn';
-        loadMore.style.cssText = 'width:100%;margin:12px 0;padding:12px;font-size:13px;';
-        loadMore.textContent = `+ ${filtered.length - initialBatch} şehir daha göster`;
-        loadMore.onclick = function() {
-            loadMore.textContent = 'Yükleniyor...';
-            // Render remaining in small batches to prevent freeze
-            const remaining = filtered.slice(initialBatch);
-            let batchIdx = 0;
-            const batchSize = isMobile ? 10 : 30;
-            function renderBatch() {
-                const batch = remaining.slice(batchIdx, batchIdx + batchSize);
-                if (batch.length === 0) { loadMore.remove(); return; }
-                const frag = document.createDocumentFragment();
-                batch.forEach((city, i) => {
-                    const idx = initialBatch + batchIdx + i;
-                    const globalRank = allRenderedCities.indexOf(city) + 1;
-                    const card = createCityCard(city, idx, globalRank);
-                    frag.appendChild(card);
-                });
-                listEl.insertBefore(frag, loadMore);
-                batchIdx += batchSize;
-                if (batchIdx >= remaining.length) { loadMore.remove(); }
-                else {
-                    loadMore.textContent = `+ ${remaining.length - batchIdx} şehir daha göster`;
-                    if (!isMobile) requestAnimationFrame(renderBatch);
-                }
+        let loadedIdx = initialBatch;
+        const batchSize = isMobile ? 10 : 25;
+
+        const sentinel = document.createElement('div');
+        sentinel.className = 'scroll-sentinel';
+        sentinel.innerHTML = `<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:13px">
+            <span class="scroll-sentinel-text">${filtered.length - loadedIdx} şehir daha...</span>
+        </div>`;
+        listEl.appendChild(sentinel);
+
+        const observer = new IntersectionObserver((entries) => {
+            if (!entries[0].isIntersecting) return;
+            const frag = document.createDocumentFragment();
+            const end = Math.min(loadedIdx + batchSize, filtered.length);
+            for (let i = loadedIdx; i < end; i++) {
+                const globalRank = allRenderedCities.indexOf(filtered[i]) + 1;
+                frag.appendChild(createCityCard(filtered[i], i, globalRank));
             }
-            renderBatch();
-        };
-        listEl.appendChild(loadMore);
+            listEl.insertBefore(frag, sentinel);
+            loadedIdx = end;
+            if (loadedIdx >= filtered.length) {
+                observer.disconnect();
+                sentinel.remove();
+            } else {
+                const txt = sentinel.querySelector('.scroll-sentinel-text');
+                if (txt) txt.textContent = `${filtered.length - loadedIdx} şehir daha...`;
+            }
+        }, { rootMargin: '200px' });
+
+        observer.observe(sentinel);
     }
 }
 

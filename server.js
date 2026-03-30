@@ -13,6 +13,7 @@ const OpenAI = require('openai');
 const Iyzipay = require('iyzipay');
 const path = require('path');
 const fs = require('fs');
+const { getSupabase } = require('./api/_lib/supabase');
 
 // ═══════════════════════════════════════
 // PERSISTENT PAYMENT STORAGE (JSON file)
@@ -329,20 +330,33 @@ app.post('/api/analytics', (req, res) => {
         const { event, data, session, page } = req.body;
         if (!event || typeof event !== 'string') return res.status(400).json({ error: 'event gerekli' });
 
+        const ip = req.ip || req.socket?.remoteAddress;
+
+        // Supabase (fire-and-forget — don't block response)
+        const sb = getSupabase();
+        if (sb) {
+            sb.from('analytics').insert({
+                event: event.slice(0, 100),
+                data: typeof data === 'object' ? data : {},
+                session_id: (session || '').slice(0, 50),
+                page: (page || '').slice(0, 100),
+                ip
+            }).then(() => {}).catch(() => {});
+            return res.json({ ok: true });
+        }
+
+        // Fallback: JSONL file
         const entry = {
             event: event.slice(0, 100),
             data: typeof data === 'object' ? data : {},
             session: (session || '').slice(0, 50),
             page: (page || '').slice(0, 100),
             ts: new Date().toISOString(),
-            ip: req.ip || req.socket?.remoteAddress
+            ip
         };
-
-        // Append to JSONL file (one JSON per line)
         const dir = path.dirname(ANALYTICS_FILE);
         if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
         fs.appendFileSync(ANALYTICS_FILE, JSON.stringify(entry) + '\n', 'utf-8');
-
         res.json({ ok: true });
     } catch (err) {
         console.error('Analytics error:', err.message);
@@ -350,16 +364,31 @@ app.post('/api/analytics', (req, res) => {
     }
 });
 
-app.get('/api/analytics/summary', (req, res) => {
+app.get('/api/analytics/summary', async (req, res) => {
     const adminToken = process.env.ADMIN_TOKEN || 'astromap-admin-2024';
     if (req.query.token !== adminToken) return res.status(403).json({ error: 'Yetkisiz erisim' });
     try {
+        const sb = getSupabase();
+        if (sb) {
+            const { data, count } = await sb.from('analytics')
+                .select('event, page, session_id', { count: 'exact' })
+                .order('created_at', { ascending: false })
+                .limit(10000);
+            const events = {}, pages = {};
+            const sessions = new Set();
+            for (const e of (data || [])) {
+                events[e.event] = (events[e.event] || 0) + 1;
+                if (e.page) pages[e.page] = (pages[e.page] || 0) + 1;
+                if (e.session_id) sessions.add(e.session_id);
+            }
+            return res.json({ total: count || 0, uniqueSessions: sessions.size, events, pages, source: 'supabase' });
+        }
+        // Fallback: JSONL file
         if (!fs.existsSync(ANALYTICS_FILE)) return res.json({ total: 0, events: {} });
         const lines = fs.readFileSync(ANALYTICS_FILE, 'utf-8').trim().split('\n').filter(Boolean);
-        const events = {};
-        const pages = {};
+        const events = {}, pages = {};
         const sessions = new Set();
-        for (const line of lines.slice(-10000)) { // Last 10k events
+        for (const line of lines.slice(-10000)) {
             try {
                 const e = JSON.parse(line);
                 events[e.event] = (events[e.event] || 0) + 1;
@@ -367,7 +396,7 @@ app.get('/api/analytics/summary', (req, res) => {
                 if (e.session) sessions.add(e.session);
             } catch {}
         }
-        res.json({ total: lines.length, uniqueSessions: sessions.size, events, pages });
+        res.json({ total: lines.length, uniqueSessions: sessions.size, events, pages, source: 'file' });
     } catch (err) {
         res.json({ total: 0, events: {}, error: err.message });
     }
@@ -393,15 +422,28 @@ function savePushTokens(tokens) {
     } catch (err) { console.error('Push token kayıt hatası:', err.message); }
 }
 
-app.post('/api/push/register', (req, res) => {
+app.post('/api/push/register', async (req, res) => {
     try {
         const { token, subscription, platform, user } = req.body;
         if (!token && !subscription) return res.status(400).json({ error: 'Token veya subscription gerekli' });
 
-        const tokens = loadPushTokens();
         const identifier = token || JSON.stringify(subscription);
 
-        // Deduplicate
+        const sb = getSupabase();
+        if (sb) {
+            await sb.from('push_tokens').upsert({
+                identifier,
+                token: token || null,
+                subscription: subscription || null,
+                platform: platform || 'unknown',
+                user_email: user || 'anonymous',
+                last_seen: new Date().toISOString()
+            }, { onConflict: 'identifier' });
+            return res.json({ ok: true });
+        }
+
+        // Fallback: JSON file
+        const tokens = loadPushTokens();
         const exists = tokens.find(t => t.identifier === identifier);
         if (exists) {
             exists.lastSeen = new Date().toISOString();
@@ -417,9 +459,7 @@ app.post('/api/push/register', (req, res) => {
                 lastSeen: new Date().toISOString()
             });
         }
-
         savePushTokens(tokens);
-        console.log(`📱 Push token kaydedildi: ${platform} — ${(user || 'anonymous').slice(0, 30)}`);
         res.json({ ok: true, total: tokens.length });
     } catch (err) {
         console.error('Push register error:', err.message);
@@ -1131,7 +1171,7 @@ app.post('/api/checkout/init', async (req, res) => {
 // ═══════════════════════════════════════
 // API: iyzico Checkout — Callback
 // ═══════════════════════════════════════
-app.post('/api/checkout/callback', express.urlencoded({ extended: true }), (req, res) => {
+app.post('/api/checkout/callback', express.urlencoded({ extended: true }), async (req, res) => {
     const { token } = req.body;
     if (!token) return res.redirect('/?checkout=fail&msg=Token+bulunamadı');
 
@@ -1159,27 +1199,43 @@ app.post('/api/checkout/callback', express.urlencoded({ extended: true }), (req,
                 lastFourDigits: result.lastFourDigits
             });
 
-            // Store payment in memory (production: use a real DB like PostgreSQL/MongoDB)
             const planKey = result.basketItems?.[0]?.id || 'premium-monthly';
             const isYearly = planKey.includes('yearly');
             const planTier = planKey.includes('vip') ? 'vip' : 'premium';
             const expiresAt = new Date();
             expiresAt.setMonth(expiresAt.getMonth() + (isYearly ? 12 : 1));
+            const email = result.buyer?.email || 'unknown';
 
-            // Store payment persistently (JSON file + memory)
-            if (!global.payments) global.payments = loadPayments();
-            global.payments.push({
-                paymentId: result.paymentId,
-                email: result.buyer?.email || 'unknown',
-                plan: planTier,
-                period: isYearly ? 'yearly' : 'monthly',
-                amount: result.paidPrice,
-                currency: result.currency,
-                activatedAt: new Date().toISOString(),
-                expiresAt: expiresAt.toISOString(),
-                status: 'active'
-            });
-            savePayments(global.payments);
+            // Store payment — Supabase (preferred) or JSON file (fallback)
+            const sb = getSupabase();
+            if (sb) {
+                const { error: dbErr } = await sb.from('payments').insert({
+                    payment_id: result.paymentId,
+                    email,
+                    plan: planTier,
+                    period: isYearly ? 'yearly' : 'monthly',
+                    amount: parseFloat(result.paidPrice) || 0,
+                    currency: result.currency || 'TRY',
+                    expires_at: expiresAt.toISOString(),
+                    status: 'active'
+                });
+                if (dbErr) console.error('Supabase payment insert error:', dbErr.message);
+            } else {
+                // Fallback: JSON file
+                if (!global.payments) global.payments = loadPayments();
+                global.payments.push({
+                    paymentId: result.paymentId,
+                    email,
+                    plan: planTier,
+                    period: isYearly ? 'yearly' : 'monthly',
+                    amount: result.paidPrice,
+                    currency: result.currency,
+                    activatedAt: new Date().toISOString(),
+                    expiresAt: expiresAt.toISOString(),
+                    status: 'active'
+                });
+                savePayments(global.payments);
+            }
 
             console.log(`✅ Premium aktif: ${planTier} (${isYearly ? 'yıllık' : 'aylık'}) — Bitiş: ${expiresAt.toLocaleDateString('tr-TR')}`);
 
@@ -1197,9 +1253,28 @@ app.post('/api/checkout/callback', express.urlencoded({ extended: true }), (req,
 // ═══════════════════════════════════════
 // API: Premium Status Check
 // ═══════════════════════════════════════
-app.post('/api/premium-status', (req, res) => {
+app.post('/api/premium-status', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'E-posta gerekli' });
+
+    const sb = getSupabase();
+    if (sb) {
+        try {
+            const { data } = await sb.from('payments')
+                .select('plan, period, expires_at')
+                .eq('email', email)
+                .eq('status', 'active')
+                .gt('expires_at', new Date().toISOString())
+                .order('activated_at', { ascending: false })
+                .limit(1);
+            const payment = data?.[0];
+            if (!payment) return res.json({ premium: false, plan: 'free' });
+            return res.json({ premium: true, plan: payment.plan, period: payment.period, expiresAt: payment.expires_at });
+        } catch (err) {
+            console.error('Supabase premium-status error:', err.message);
+            // Fall through to JSON fallback
+        }
+    }
 
     if (!global.payments) return res.json({ premium: false, plan: 'free' });
 

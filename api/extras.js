@@ -1,4 +1,5 @@
 const { corsHeaders, askGPT, parseJSON } = require('./_lib/openai');
+const { getSupabase } = require('./_lib/supabase');
 
 // Combined serverless function for analytics, push, premium-status, transit, natal-interpretation
 // Routed via vercel.json rewrites based on URL path
@@ -21,6 +22,19 @@ module.exports = async (req, res) => {
         if (req.method === 'POST') {
             const { event, data, session, page } = req.body || {};
             if (!event || typeof event !== 'string') return res.status(400).json({ error: 'event gerekli' });
+
+            const sb = getSupabase();
+            if (sb) {
+                sb.from('analytics').insert({
+                    event: event.slice(0, 100),
+                    data: typeof data === 'object' ? data : {},
+                    session_id: (session || '').slice(0, 50),
+                    page: (page || '').slice(0, 100)
+                }).then(() => {}).catch(() => {});
+                return res.json({ ok: true });
+            }
+
+            // In-memory fallback
             global._analyticsEvents.push({
                 event: event.slice(0, 100),
                 data: typeof data === 'object' ? data : {},
@@ -35,6 +49,23 @@ module.exports = async (req, res) => {
         const adminToken = process.env.ADMIN_TOKEN || 'astromap-admin-2024';
         const queryToken = (req.query && req.query.token) || new URL(req.url, 'http://localhost').searchParams.get('token');
         if (queryToken !== adminToken) return res.status(403).json({ error: 'Yetkisiz erisim' });
+
+        const sb = getSupabase();
+        if (sb) {
+            const { data, count } = await sb.from('analytics')
+                .select('event, page, session_id', { count: 'exact' })
+                .order('created_at', { ascending: false })
+                .limit(10000);
+            const events = {}, pages = {};
+            const sessions = new Set();
+            for (const e of (data || [])) {
+                events[e.event] = (events[e.event] || 0) + 1;
+                if (e.page) pages[e.page] = (pages[e.page] || 0) + 1;
+                if (e.session_id) sessions.add(e.session_id);
+            }
+            return res.json({ total: count || 0, uniqueSessions: sessions.size, events, pages, source: 'supabase' });
+        }
+        // In-memory fallback
         const events = {}, pages = {};
         const sessions = new Set();
         for (const e of global._analyticsEvents) {
@@ -42,7 +73,7 @@ module.exports = async (req, res) => {
             if (e.page) pages[e.page] = (pages[e.page] || 0) + 1;
             if (e.session) sessions.add(e.session);
         }
-        return res.json({ total: global._analyticsEvents.length, uniqueSessions: sessions.size, events, pages });
+        return res.json({ total: global._analyticsEvents.length, uniqueSessions: sessions.size, events, pages, source: 'memory' });
     }
 
     // ── Push Notifications ──
@@ -51,6 +82,21 @@ module.exports = async (req, res) => {
             const { token, subscription, platform, user } = req.body || {};
             if (!token && !subscription) return res.status(400).json({ error: 'Token veya subscription gerekli' });
             const identifier = token || JSON.stringify(subscription);
+
+            const sb = getSupabase();
+            if (sb) {
+                await sb.from('push_tokens').upsert({
+                    identifier,
+                    token: token || null,
+                    subscription: subscription || null,
+                    platform: platform || 'unknown',
+                    user_email: user || 'anonymous',
+                    last_seen: new Date().toISOString()
+                }, { onConflict: 'identifier' });
+                return res.json({ ok: true });
+            }
+
+            // In-memory fallback
             const exists = global._pushTokens.find(t => t.identifier === identifier);
             if (exists) {
                 exists.lastSeen = new Date().toISOString();
@@ -68,9 +114,17 @@ module.exports = async (req, res) => {
         const adminToken2 = process.env.ADMIN_TOKEN || 'astromap-admin-2024';
         const queryToken2 = (req.query && req.query.token) || new URL(req.url, 'http://localhost').searchParams.get('token');
         if (queryToken2 !== adminToken2) return res.status(403).json({ error: 'Yetkisiz erisim' });
+
+        const sb = getSupabase();
+        if (sb) {
+            const { data, count } = await sb.from('push_tokens').select('platform', { count: 'exact' });
+            const platforms = {};
+            (data || []).forEach(t => { platforms[t.platform] = (platforms[t.platform] || 0) + 1; });
+            return res.json({ total: count || 0, platforms, source: 'supabase' });
+        }
         const platforms = {};
         global._pushTokens.forEach(t => { platforms[t.platform] = (platforms[t.platform] || 0) + 1; });
-        return res.json({ total: global._pushTokens.length, platforms });
+        return res.json({ total: global._pushTokens.length, platforms, source: 'memory' });
     }
 
     // ── Premium Status ──
@@ -78,6 +132,22 @@ module.exports = async (req, res) => {
         if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
         const { email } = req.body || {};
         if (!email) return res.status(400).json({ error: 'E-posta gerekli' });
+
+        const sb = getSupabase();
+        if (sb) {
+            const { data } = await sb.from('payments')
+                .select('plan, period, expires_at')
+                .eq('email', email)
+                .eq('status', 'active')
+                .gt('expires_at', new Date().toISOString())
+                .order('activated_at', { ascending: false })
+                .limit(1);
+            const payment = data?.[0];
+            if (!payment) return res.json({ premium: false, plan: 'free' });
+            return res.json({ premium: true, plan: payment.plan, period: payment.period, expiresAt: payment.expires_at });
+        }
+
+        // In-memory fallback
         if (!global.payments) return res.json({ premium: false, plan: 'free' });
         const payment = global.payments
             .filter(p => p.email === email && p.status === 'active')
@@ -135,7 +205,6 @@ Yanıtını SADECE şu JSON formatında ver, başka hiçbir şey yazma:
         const raw = await askGPT(systemPrompt, userPrompt, 700, 0.8);
         const result = parseJSON(raw);
 
-        // Enforce max 10 cache entries
         if (global._transitCache.size >= 10) {
             global._transitCache.delete(global._transitCache.keys().next().value);
         }
