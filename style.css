@@ -894,6 +894,16 @@ a:hover { color: var(--accent-light); }
 .btn-social:hover { border-color: var(--accent-dark); background: var(--bg-card-hover); }
 .btn-social.apple { background: white; color: #000; border-color: white; }
 .btn-social.apple:hover { background: #f0f0f0; }
+.btn-demo {
+    width: 100%; padding: 13px; border: none; border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    color: #fff; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: var(--transition);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-family: var(--font); letter-spacing: 0.3px; margin-bottom: 10px;
+    box-shadow: 0 4px 20px rgba(168, 85, 247, 0.35);
+}
+.btn-demo:hover { filter: brightness(1.15); transform: translateY(-1px); }
 .auth-switch { text-align: center; margin-top: 20px; font-size: 14px; color: var(--text-muted); }
 .auth-switch a { color: var(--accent); font-weight: 600; cursor: pointer; }
 

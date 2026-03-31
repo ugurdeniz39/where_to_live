@@ -649,7 +649,7 @@ const _pendingRequests = new Set();
 async function callAI(endpoint, body, useCache = true) {
     // Prevent duplicate concurrent requests to same endpoint
     if (_pendingRequests.has(endpoint)) {
-        throw new Error('Bu istek zaten gonderiliyor, lutfen bekle...');
+        throw new Error('Bu istek zaten gönderiliyor, lütfen bekle...');
     }
     Analytics.track('ai_request', { endpoint });
     // Check cache first
@@ -1202,6 +1202,23 @@ function showToast(msg, duration = 3000) {
 // ═══════════════════════════════════════
 // AUTH (Real localStorage auth)
 // ═══════════════════════════════════════
+function demoLogin() {
+    const session = {
+        id: 'demo_user',
+        name: 'Demo Kullanıcı',
+        email: 'demo@astromap.app',
+        birthDate: '1990-05-15',
+        plan: 'vip',
+        loginAt: Date.now(),
+        isDemo: true
+    };
+    localStorage.setItem(AuthSystem._key, JSON.stringify(session));
+    showToast('Demo moduna hoş geldin! Tüm özellikler açık ✨');
+    closeModal('login-modal');
+    AuthSystem.updateUI();
+    SoundFX.play('success');
+}
+
 async function handleLogin(e) {
     e.preventDefault();
     try {

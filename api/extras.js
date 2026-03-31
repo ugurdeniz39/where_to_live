@@ -1,5 +1,6 @@
 const { corsHeaders, askGPT, parseJSON } = require('./_lib/openai');
 const { getSupabase } = require('./_lib/supabase');
+const { getDB } = require('./_lib/db');
 
 // Combined serverless function for analytics, push, premium-status, transit, natal-interpretation
 // Routed via vercel.json rewrites based on URL path
@@ -23,9 +24,15 @@ module.exports = async (req, res) => {
             const { event, data, session, page } = req.body || {};
             if (!event || typeof event !== 'string') return res.status(400).json({ error: 'event gerekli' });
 
-            const sb = getSupabase();
-            if (sb) {
-                sb.from('analytics').insert({
+            const db = getDB() || getSupabase();
+            if (db && db.query) {
+                db.query(
+                    'INSERT INTO analytics (event, data, session_id, page) VALUES ($1, $2, $3, $4)',
+                    [event.slice(0, 100), JSON.stringify(typeof data === 'object' ? data : {}), (session || '').slice(0, 50), (page || '').slice(0, 100)]
+                ).catch(() => {});
+                return res.json({ ok: true });
+            } else if (db) {
+                db.from('analytics').insert({
                     event: event.slice(0, 100),
                     data: typeof data === 'object' ? data : {},
                     session_id: (session || '').slice(0, 50),
@@ -48,11 +55,24 @@ module.exports = async (req, res) => {
         // GET summary
         const adminToken = process.env.ADMIN_TOKEN || 'astromap-admin-2024';
         const queryToken = (req.query && req.query.token) || new URL(req.url, 'http://localhost').searchParams.get('token');
-        if (queryToken !== adminToken) return res.status(403).json({ error: 'Yetkisiz erisim' });
+        if (queryToken !== adminToken) return res.status(403).json({ error: 'Yetkisiz erişim' });
 
-        const sb = getSupabase();
-        if (sb) {
-            const { data, count } = await sb.from('analytics')
+        const db = getDB() || getSupabase();
+        if (db && db.query) {
+            const [rowsRes, countRes] = await Promise.all([
+                db.query('SELECT event, page, session_id FROM analytics ORDER BY created_at DESC LIMIT 10000'),
+                db.query('SELECT COUNT(*) as total FROM analytics')
+            ]);
+            const events = {}, pages = {};
+            const sessions = new Set();
+            for (const e of rowsRes.rows) {
+                events[e.event] = (events[e.event] || 0) + 1;
+                if (e.page) pages[e.page] = (pages[e.page] || 0) + 1;
+                if (e.session_id) sessions.add(e.session_id);
+            }
+            return res.json({ total: parseInt(countRes.rows[0].total), uniqueSessions: sessions.size, events, pages, source: 'neon' });
+        } else if (db) {
+            const { data, count } = await db.from('analytics')
                 .select('event, page, session_id', { count: 'exact' })
                 .order('created_at', { ascending: false })
                 .limit(10000);
@@ -83,9 +103,19 @@ module.exports = async (req, res) => {
             if (!token && !subscription) return res.status(400).json({ error: 'Token veya subscription gerekli' });
             const identifier = token || JSON.stringify(subscription);
 
-            const sb = getSupabase();
-            if (sb) {
-                await sb.from('push_tokens').upsert({
+            const db = getDB() || getSupabase();
+            if (db && db.query) {
+                await db.query(
+                    `INSERT INTO push_tokens (identifier, token, subscription, platform, user_email, last_seen)
+                     VALUES ($1, $2, $3, $4, $5, NOW())
+                     ON CONFLICT (identifier) DO UPDATE SET
+                       token = EXCLUDED.token, platform = EXCLUDED.platform,
+                       user_email = EXCLUDED.user_email, last_seen = NOW()`,
+                    [identifier, token || null, subscription ? JSON.stringify(subscription) : null, platform || 'unknown', user || 'anonymous']
+                );
+                return res.json({ ok: true });
+            } else if (db) {
+                await db.from('push_tokens').upsert({
                     identifier,
                     token: token || null,
                     subscription: subscription || null,
@@ -113,11 +143,19 @@ module.exports = async (req, res) => {
         // GET stats
         const adminToken2 = process.env.ADMIN_TOKEN || 'astromap-admin-2024';
         const queryToken2 = (req.query && req.query.token) || new URL(req.url, 'http://localhost').searchParams.get('token');
-        if (queryToken2 !== adminToken2) return res.status(403).json({ error: 'Yetkisiz erisim' });
+        if (queryToken2 !== adminToken2) return res.status(403).json({ error: 'Yetkisiz erişim' });
 
-        const sb = getSupabase();
-        if (sb) {
-            const { data, count } = await sb.from('push_tokens').select('platform', { count: 'exact' });
+        const db2 = getDB() || getSupabase();
+        if (db2 && db2.query) {
+            const [statsRes, countRes] = await Promise.all([
+                db2.query('SELECT platform, COUNT(*) as cnt FROM push_tokens GROUP BY platform'),
+                db2.query('SELECT COUNT(*) as total FROM push_tokens')
+            ]);
+            const platforms = {};
+            statsRes.rows.forEach(r => { platforms[r.platform] = parseInt(r.cnt); });
+            return res.json({ total: parseInt(countRes.rows[0].total), platforms, source: 'neon' });
+        } else if (db2) {
+            const { data, count } = await db2.from('push_tokens').select('platform', { count: 'exact' });
             const platforms = {};
             (data || []).forEach(t => { platforms[t.platform] = (platforms[t.platform] || 0) + 1; });
             return res.json({ total: count || 0, platforms, source: 'supabase' });
@@ -133,9 +171,19 @@ module.exports = async (req, res) => {
         const { email } = req.body || {};
         if (!email) return res.status(400).json({ error: 'E-posta gerekli' });
 
-        const sb = getSupabase();
-        if (sb) {
-            const { data } = await sb.from('payments')
+        const db = getDB() || getSupabase();
+        if (db && db.query) {
+            const result = await db.query(
+                `SELECT plan, period, expires_at FROM payments
+                 WHERE email = $1 AND status = 'active' AND expires_at > NOW()
+                 ORDER BY activated_at DESC LIMIT 1`,
+                [email]
+            );
+            const payment = result.rows[0];
+            if (!payment) return res.json({ premium: false, plan: 'free' });
+            return res.json({ premium: true, plan: payment.plan, period: payment.period, expiresAt: payment.expires_at });
+        } else if (db) {
+            const { data } = await db.from('payments')
                 .select('plan, period, expires_at')
                 .eq('email', email)
                 .eq('status', 'active')

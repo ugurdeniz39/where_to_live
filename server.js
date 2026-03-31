@@ -14,6 +14,7 @@ const Iyzipay = require('iyzipay');
 const path = require('path');
 const fs = require('fs');
 const { getSupabase } = require('./api/_lib/supabase');
+const { getDB } = require('./api/_lib/db');
 
 // ═══════════════════════════════════════
 // PERSISTENT PAYMENT STORAGE (JSON file)
@@ -332,10 +333,18 @@ app.post('/api/analytics', (req, res) => {
 
         const ip = req.ip || req.socket?.remoteAddress;
 
-        // Supabase (fire-and-forget — don't block response)
-        const sb = getSupabase();
-        if (sb) {
-            sb.from('analytics').insert({
+        // DB (fire-and-forget — don't block response)
+        const db = getDB() || getSupabase();
+        if (db && db.query) {
+            // Neon/pg
+            db.query(
+                'INSERT INTO analytics (event, data, session_id, page, ip) VALUES ($1, $2, $3, $4, $5)',
+                [event.slice(0, 100), JSON.stringify(typeof data === 'object' ? data : {}), (session || '').slice(0, 50), (page || '').slice(0, 100), ip || null]
+            ).catch(() => {});
+            return res.json({ ok: true });
+        } else if (db) {
+            // Supabase fallback
+            db.from('analytics').insert({
                 event: event.slice(0, 100),
                 data: typeof data === 'object' ? data : {},
                 session_id: (session || '').slice(0, 50),
@@ -366,11 +375,26 @@ app.post('/api/analytics', (req, res) => {
 
 app.get('/api/analytics/summary', async (req, res) => {
     const adminToken = process.env.ADMIN_TOKEN || 'astromap-admin-2024';
-    if (req.query.token !== adminToken) return res.status(403).json({ error: 'Yetkisiz erisim' });
+    if (req.query.token !== adminToken) return res.status(403).json({ error: 'Yetkisiz erişim' });
     try {
-        const sb = getSupabase();
-        if (sb) {
-            const { data, count } = await sb.from('analytics')
+        const db = getDB() || getSupabase();
+        if (db && db.query) {
+            // Neon/pg
+            const [rowsRes, countRes] = await Promise.all([
+                db.query('SELECT event, page, session_id FROM analytics ORDER BY created_at DESC LIMIT 10000'),
+                db.query('SELECT COUNT(*) as total FROM analytics')
+            ]);
+            const events = {}, pages = {};
+            const sessions = new Set();
+            for (const e of rowsRes.rows) {
+                events[e.event] = (events[e.event] || 0) + 1;
+                if (e.page) pages[e.page] = (pages[e.page] || 0) + 1;
+                if (e.session_id) sessions.add(e.session_id);
+            }
+            return res.json({ total: parseInt(countRes.rows[0].total), uniqueSessions: sessions.size, events, pages, source: 'neon' });
+        } else if (db) {
+            // Supabase fallback
+            const { data, count } = await db.from('analytics')
                 .select('event, page, session_id', { count: 'exact' })
                 .order('created_at', { ascending: false })
                 .limit(10000);
@@ -429,9 +453,21 @@ app.post('/api/push/register', async (req, res) => {
 
         const identifier = token || JSON.stringify(subscription);
 
-        const sb = getSupabase();
-        if (sb) {
-            await sb.from('push_tokens').upsert({
+        const db = getDB() || getSupabase();
+        if (db && db.query) {
+            // Neon/pg
+            await db.query(
+                `INSERT INTO push_tokens (identifier, token, subscription, platform, user_email, last_seen)
+                 VALUES ($1, $2, $3, $4, $5, NOW())
+                 ON CONFLICT (identifier) DO UPDATE SET
+                   token = EXCLUDED.token, platform = EXCLUDED.platform,
+                   user_email = EXCLUDED.user_email, last_seen = NOW()`,
+                [identifier, token || null, subscription ? JSON.stringify(subscription) : null, platform || 'unknown', user || 'anonymous']
+            );
+            return res.json({ ok: true });
+        } else if (db) {
+            // Supabase fallback
+            await db.from('push_tokens').upsert({
                 identifier,
                 token: token || null,
                 subscription: subscription || null,
@@ -469,7 +505,7 @@ app.post('/api/push/register', async (req, res) => {
 
 app.get('/api/push/stats', (req, res) => {
     const adminToken = process.env.ADMIN_TOKEN || 'astromap-admin-2024';
-    if (req.query.token !== adminToken) return res.status(403).json({ error: 'Yetkisiz erisim' });
+    if (req.query.token !== adminToken) return res.status(403).json({ error: 'Yetkisiz erişim' });
     const tokens = loadPushTokens();
     const platforms = {};
     tokens.forEach(t => { platforms[t.platform] = (platforms[t.platform] || 0) + 1; });
@@ -498,7 +534,7 @@ app.post('/api/daily-horoscope', async (req, res) => {
         if (!birthDate) return res.status(400).json({ error: 'Doğum tarihi gerekli' });
 
         const lang = req.body.lang || 'tr';
-        const langInstruction = lang === 'en' ? 'Write ALL your response in ENGLISH.' : 'Turkce yaz.';
+        const langInstruction = lang === 'en' ? 'Write ALL your response in ENGLISH.' : 'Türkçe yaz.';
 
         const today = new Date().toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         const periodLabel = { weekly: 'Haftalık', monthly: 'Aylık', yearly: 'Yıllık' }[period] || 'Günlük';
@@ -633,43 +669,43 @@ app.post('/api/crystal-guide', async (req, res) => {
         if (!birthDate) return res.status(400).json({ error: 'Doğum tarihi gerekli' });
 
         const lang = req.body.lang || 'tr';
-        const langInstruction = lang === 'en' ? 'Write ALL your response in ENGLISH.' : 'Turkce yaz.';
+        const langInstruction = lang === 'en' ? 'Write ALL your response in ENGLISH.' : 'Türkçe yaz.';
 
         const today = new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' });
 
-        const systemPrompt = `Sen kristal terapi, cakra dengeleme, aromaterapi ve butunsel wellness konusunda 20 yillik deneyime sahip bir spirituel rehbersin. ${langInstruction}
-Sicak, sefkatli ve bilge bir ton kullan. Kisiyi guclendiren, rahatlatici bir dil kullan.
+        const systemPrompt = `Sen kristal terapi, çakra dengeleme, aromaterapi ve bütünsel wellness konusunda 20 yıllık deneyime sahip bir spiritüel rehbersin. ${langInstruction}
+Sıcak, şefkatli ve bilge bir ton kullan. Kişiyi güçlendiren, rahatlatıcı bir dil kullan.
 
-ONEMLI KURALLAR:
-- Her seferinde FARKLI kristaller oner. Ametist, Rozekuvars gibi bilinen kristalleri BAZEN oner, ama Labradorit, Moldavit, Sunstone, Larimar, Selenite, Karneol, Sitrin, Akuamarin, Lepidolit, Rodokrozit gibi cesitli kristalleri de kullan.
-- Ruh haline GERCEKTEN uygun kristal sec — "stresli" diyen birine rahatlatici, "enerjisiz" diyen birine enerji veren.
-- Cakra bilgisi SPESIFIK olsun — hangi cakra neden bloke, nasil acilir.
-- Meditasyon suresi ve mantra kisisellestirilmis olsun.
-- Renk onerileri burcun elementine uygun olsun.
+ÖNEMLİ KURALLAR:
+- Her seferinde FARKLI kristaller öner. Ametist, Rozekuvars gibi bilinen kristalleri BAZEN öner, ama Labradorit, Moldavit, Sunstone, Larimar, Selenite, Karneol, Sitrin, Akuamarin, Lepidolit, Rodokrozit gibi çeşitli kristalleri de kullan.
+- Ruh haline GERÇEKTEN uygun kristal seç — "stresli" diyen birine rahatlatıcı, "enerjisiz" diyen birine enerji veren.
+- Çakra bilgisi SPESİFİK olsun — hangi çakra neden bloke, nasıl açılır.
+- Meditasyon süresi ve mantra kişiselleştirilmiş olsun.
+- Renk önerileri burcun elementine uygun olsun.
 
-Yanitini MUTLAKA asagidaki JSON formatinda ver, baska hicbir sey yazma:
+Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
 {
-  "mainCrystal": { "name": "Ana kristal adi", "emoji": "uygun emoji", "color": "#hex renk", "benefit": "Bu kristalin sana faydasi, 2-3 cumle. SPESIFIK.", "howToUse": "Nasil kullanilir — nereye koyulmali, ne zaman tutulmali, 2 cumle", "cleansingTip": "Bu kristali nasil temizlersin, 1 cumle" },
+  "mainCrystal": { "name": "Ana kristal adı", "emoji": "uygun emoji", "color": "#hex renk", "benefit": "Bu kristalin sana faydası, 2-3 cümle. SPESİFİK.", "howToUse": "Nasıl kullanılır — nereye koyulmalı, ne zaman tutulmalı, 2 cümle", "cleansingTip": "Bu kristali nasıl temizlersin, 1 cümle" },
   "supportCrystals": [
-    { "name": "Destek kristal 1", "emoji": "emoji", "benefit": "Kisa fayda, 1-2 cumle" },
-    { "name": "Destek kristal 2", "emoji": "emoji", "benefit": "Kisa fayda, 1-2 cumle" },
-    { "name": "Destek kristal 3", "emoji": "emoji", "benefit": "Kisa fayda, 1-2 cumle" }
+    { "name": "Destek kristal 1", "emoji": "emoji", "benefit": "Kısa fayda, 1-2 cümle" },
+    { "name": "Destek kristal 2", "emoji": "emoji", "benefit": "Kısa fayda, 1-2 cümle" },
+    { "name": "Destek kristal 3", "emoji": "emoji", "benefit": "Kısa fayda, 1-2 cümle" }
   ],
-  "chakra": { "name": "Odaklanman gereken cakra", "color": "#hex", "location": "Cakranin vucuttaki yeri", "blockReason": "Bu cakra neden bloke olabilir, 1 cumle", "tip": "Cakra dengeleme teknigi, 2 cumle" },
-  "colors": { "wear": "Bugün giymeni onerdigim renk ve NEDEN", "avoid": "Kacinman gereken renk ve NEDEN", "home": "Evinde bulundurman gereken renk" },
-  "meditation": { "duration": "X dakika", "focus": "Meditasyon odagi, 1 cumle", "mantra": "Tekrar edilecek mantra — TURKCE ve anlamli", "technique": "Nefes teknigi veya pozisyon, 1 cumle" },
-  "tea": { "name": "Bitki cayi adi", "benefit": "Faydasi, 1 cumle", "recipe": "Nasil demlenir, 1 cumle" },
-  "oil": { "name": "Esansiyel yag adi", "usage": "Nasil kullanilir, 1 cumle", "blend": "Hangi yagla karistirilabilir" },
-  "moonRitual": "Bugunun ay fazina gore yapilabilecek rituel, 3 cumle. SPESIFIK adimlar ver.",
-  "dailyPractice": "Bugune ozel 3 adimlik mini wellness rutini",
-  "affirmation": "Guclendirici ve OZGUN bir olumlama cumlesi — klise olmasin"
+  "chakra": { "name": "Odaklanman gereken çakra", "color": "#hex", "location": "Çakranın vücuttaki yeri", "blockReason": "Bu çakra neden bloke olabilir, 1 cümle", "tip": "Çakra dengeleme tekniği, 2 cümle" },
+  "colors": { "wear": "Bugün giymeni önerdiğim renk ve NEDEN", "avoid": "Kaçınman gereken renk ve NEDEN", "home": "Evinde bulundurman gereken renk" },
+  "meditation": { "duration": "X dakika", "focus": "Meditasyon odağı, 1 cümle", "mantra": "Tekrar edilecek mantra — TÜRKÇE ve anlamlı", "technique": "Nefes tekniği veya pozisyon, 1 cümle" },
+  "tea": { "name": "Bitki çayı adı", "benefit": "Faydası, 1 cümle", "recipe": "Nasıl demlenir, 1 cümle" },
+  "oil": { "name": "Esansiyel yağ adı", "usage": "Nasıl kullanılır, 1 cümle", "blend": "Hangi yağla karıştırılabilir" },
+  "moonRitual": "Bugünün ay fazına göre yapılabilecek ritüel, 3 cümle. SPESİFİK adımlar ver.",
+  "dailyPractice": "Bugüne özel 3 adımlık mini wellness rutini",
+  "affirmation": "Güçlendirici ve ÖZGÜN bir olumlama cümlesi — klişe olmasın"
 }`;
 
         const userPrompt = `Tarih: ${today}.
-Kisi: Dogum ${birthDate}, Gunes burcu: ${sunSign || 'bilinmiyor'}, Ay burcu: ${moonSign || 'bilinmiyor'}.
-Su anki ruh hali: ${mood || 'genel denge arayisi'}.
-Bu kisi icin BUGUNUN enerjisine ozel, derinlemesine kristal ve wellness rehberligi ver.
-Her oneri spesifik ve uygulanabilir olsun.`;
+Kişi: Doğum ${birthDate}, Güneş burcu: ${sunSign || 'bilinmiyor'}, Ay burcu: ${moonSign || 'bilinmiyor'}.
+Şu anki ruh hali: ${mood || 'genel denge arayışı'}.
+Bu kişi için BUGÜNÜN enerjisine özel, derinlemesine kristal ve wellness rehberliği ver.
+Her öneri spesifik ve uygulanabilir olsun.`;
 
         const cacheKey = `crystal_${birthDate}_${sunSign}_${mood || 'general'}_${new Date().toDateString()}`;
         const cached = getCachedResponse(cacheKey, 'crystal');
@@ -693,7 +729,7 @@ app.post('/api/tarot', async (req, res) => {
         const { birthDate, sunSign, question, spread } = req.body;
 
         const lang = req.body.lang || 'tr';
-        const langInstruction = lang === 'en' ? 'Write ALL your response in ENGLISH.' : 'Turkce yaz.';
+        const langInstruction = lang === 'en' ? 'Write ALL your response in ENGLISH.' : 'Türkçe yaz.';
 
         // ── Spread configurations ──
         const SPREADS = {
@@ -959,7 +995,7 @@ app.post('/api/dream', async (req, res) => {
         if (!dream) return res.status(400).json({ error: 'Rüya açıklaması gerekli' });
 
         const lang = req.body.lang || 'tr';
-        const langInstruction = lang === 'en' ? 'Write ALL your response in ENGLISH.' : 'Turkce yaz.';
+        const langInstruction = lang === 'en' ? 'Write ALL your response in ENGLISH.' : 'Türkçe yaz.';
 
         const systemPrompt = `Sen Jungcu psikoloji ve astroloji bilgisiyle rüya yorumlayan derin bir spiritüel rehbersin. ${langInstruction}
 Gizemli, derin ama şefkatli bir ton kullan. Rüyayı sadece yüzeysel sembollerle değil,
@@ -1183,7 +1219,7 @@ app.post('/api/checkout/callback', express.urlencoded({ extended: true }), async
         locale: Iyzipay.LOCALE.TR,
         conversationId,
         token
-    }, (err, result) => {
+    }, async (err, result) => {
         if (err) {
             console.error('iyzico Callback Error:', err);
             return res.redirect('/?checkout=fail&msg=Doğrulama+hatası');
@@ -1206,10 +1242,20 @@ app.post('/api/checkout/callback', express.urlencoded({ extended: true }), async
             expiresAt.setMonth(expiresAt.getMonth() + (isYearly ? 12 : 1));
             const email = result.buyer?.email || 'unknown';
 
-            // Store payment — Supabase (preferred) or JSON file (fallback)
-            const sb = getSupabase();
-            if (sb) {
-                const { error: dbErr } = await sb.from('payments').insert({
+            // Store payment — Neon/Supabase (preferred) or JSON file (fallback)
+            const db = getDB() || getSupabase();
+            if (db && db.query) {
+                // Neon/pg
+                await db.query(
+                    `INSERT INTO payments (payment_id, email, plan, period, amount, currency, expires_at, status)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')
+                     ON CONFLICT (payment_id) DO NOTHING`,
+                    [result.paymentId, email, planTier, isYearly ? 'yearly' : 'monthly',
+                     parseFloat(result.paidPrice) || 0, result.currency || 'TRY', expiresAt.toISOString()]
+                ).catch(err => console.error('Neon payment insert error:', err.message));
+            } else if (db) {
+                // Supabase fallback
+                const { error: dbErr } = await db.from('payments').insert({
                     payment_id: result.paymentId,
                     email,
                     plan: planTier,
@@ -1257,10 +1303,26 @@ app.post('/api/premium-status', async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'E-posta gerekli' });
 
-    const sb = getSupabase();
-    if (sb) {
+    const db = getDB() || getSupabase();
+    if (db && db.query) {
         try {
-            const { data } = await sb.from('payments')
+            // Neon/pg
+            const result = await db.query(
+                `SELECT plan, period, expires_at FROM payments
+                 WHERE email = $1 AND status = 'active' AND expires_at > NOW()
+                 ORDER BY activated_at DESC LIMIT 1`,
+                [email]
+            );
+            const payment = result.rows[0];
+            if (!payment) return res.json({ premium: false, plan: 'free' });
+            return res.json({ premium: true, plan: payment.plan, period: payment.period, expiresAt: payment.expires_at });
+        } catch (err) {
+            console.error('Neon premium-status error:', err.message);
+        }
+    } else if (db) {
+        try {
+            // Supabase fallback
+            const { data } = await db.from('payments')
                 .select('plan, period, expires_at')
                 .eq('email', email)
                 .eq('status', 'active')
@@ -1272,7 +1334,6 @@ app.post('/api/premium-status', async (req, res) => {
             return res.json({ premium: true, plan: payment.plan, period: payment.period, expiresAt: payment.expires_at });
         } catch (err) {
             console.error('Supabase premium-status error:', err.message);
-            // Fall through to JSON fallback
         }
     }
 
