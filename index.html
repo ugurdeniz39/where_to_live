@@ -594,7 +594,7 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
 <section id="page-tarot" class="page">
     <div class="page-container">
         <h1 class="page-title">🃏 AI Tarot <em>Okuması</em></h1>
-        <p class="page-subtitle">Kartlar senin için ne söylüyor? 3 kartlık Geçmiş-Şimdi-Gelecek spreadi.</p>
+        <p class="page-subtitle">Mistik bir an için dur. Kartlar enerjini okusun.</p>
 
         <div id="tarot-form" class="tarot-form">
             <div class="tarot-form-card">
@@ -605,25 +605,37 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
                     <label>Açılım Türü</label>
                     <div class="spread-selector">
                         <button class="spread-btn selected" data-spread="three-card" onclick="selectSpread(this)" type="button">
-                            <span class="spread-icon">🃏🃏🃏</span>
+                            <span class="spread-count">3</span>
+                            <div class="spread-cards three">
+                                <i></i><i></i><i></i>
+                            </div>
                             <span class="spread-name">Üç Kart</span>
                             <span class="spread-desc">Geçmiş · Şimdi · Gelecek</span>
                         </button>
                         <button class="spread-btn" data-spread="yes-no" onclick="selectSpread(this)" type="button">
-                            <span class="spread-icon">🃏</span>
-                            <span class="spread-name">Evet/Hayır</span>
-                            <span class="spread-desc">Tek kart · Hızlı cevap</span>
+                            <span class="spread-count">1</span>
+                            <div class="spread-cards one">
+                                <i></i>
+                            </div>
+                            <span class="spread-name">Evet / Hayır</span>
+                            <span class="spread-desc">Tek kart · Net cevap</span>
                         </button>
                         <button class="spread-btn" data-spread="relationship" onclick="selectSpread(this)" type="button">
-                            <span class="spread-icon">🃏💕🃏</span>
+                            <span class="spread-count">3</span>
+                            <div class="spread-cards three">
+                                <i></i><i></i><i></i>
+                            </div>
                             <span class="spread-name">İlişki</span>
                             <span class="spread-desc">Sen · O · Enerji</span>
                         </button>
                         <button class="spread-btn premium-spread" data-spread="celtic-cross" onclick="selectSpread(this)" type="button">
-                            <span class="spread-icon">🔮</span>
+                            <span class="spread-count">10</span>
+                            <div class="spread-cards cross">
+                                <i></i><i></i><i></i><i></i><i></i>
+                            </div>
                             <span class="spread-name">Kelt Haçı</span>
                             <span class="spread-desc">10 kart · Derin analiz</span>
-                            <span class="spread-lock">Premium</span>
+                            <span class="spread-lock">VIP</span>
                         </button>
                     </div>
                 </div>

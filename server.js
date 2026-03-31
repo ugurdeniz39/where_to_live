@@ -792,7 +792,7 @@ app.post('/api/tarot', async (req, res) => {
 
         // ── Build dynamic prompt based on spread ──
         const cardsList = picked.map((card, i) =>
-            `{ "position": "${spreadConfig.positions[i]}", "name": "Kartın Türkçe adı", "nameEn": "English name", "emoji": "uygun emoji", "meaning": "Bu kartın ${spreadConfig.positions[i]} pozisyonundaki DERİN anlamı, 3-4 cümle.", "reversed": ${reversals[i]}, "keywords": ["anahtar1", "anahtar2", "anahtar3"] }`
+            `{ "position": "${spreadConfig.positions[i]}", "name": "Kartın Türkçe adı", "nameEn": "${card}", "emoji": "uygun tek emoji", "arcanaType": "Büyük Arcana veya Küçük Arcana", "romanNumeral": "Büyük Arcana için romen rakamı örn: XIV (Büyük Arcana değilse null)", "meaning": "Bu kartın ${spreadConfig.positions[i]} pozisyonundaki DERİN anlamı, 3-4 cümle.", "reversed": ${reversals[i]}, "keywords": ["kısa anahtar 1", "kısa anahtar 2", "kısa anahtar 3"] }`
         ).join(',\n    ');
 
         const pickedList = picked.map((card, i) =>

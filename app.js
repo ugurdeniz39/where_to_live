@@ -3451,8 +3451,10 @@ function renderTarotSlots(spreadConfig) {
         <div class="tarot-card-slot${getTarotSlotClass(selectedSpread, i)}" data-index="${i}">
             <div class="tarot-card-3d">
                 <div class="tarot-face tarot-back">
-                    <div class="tarot-back-design">
-                        <div class="tarot-back-pattern"></div>
+                    <div class="tarot-back-inner">
+                        <div class="tarot-back-frame"></div>
+                        <div class="tarot-back-star"></div>
+                        <div class="tarot-back-corners"><span>✦</span><span>✦</span><span>✦</span><span>✦</span></div>
                         <span class="tarot-back-symbol">✦</span>
                     </div>
                 </div>
@@ -3549,10 +3551,18 @@ async function showTarot() {
             const front = slot.querySelector('.tarot-front');
             front.innerHTML = `
                 <div class="tarot-front-content ${c.reversed ? 'reversed' : ''}">
-                    <div class="tarot-position">${posEmojis[c.position] || '✦'} ${c.position}</div>
-                    <div class="tarot-emoji">${c.emoji || '🃏'}</div>
-                    <div class="tarot-name">${c.name || 'Kart'}${c.reversed ? ' ↺' : ''}</div>
+                    <div class="tarot-card-arcana-badge">${c.arcanaType || ''}${c.romanNumeral ? ` · ${c.romanNumeral}` : ''}</div>
+                    <div class="tarot-card-illus">
+                        <span class="tarot-emoji">${c.emoji || '🃏'}</span>
+                    </div>
+                    <div class="tarot-card-nameplate">
+                        <div class="tarot-name">${c.name || 'Kart'}${c.reversed ? ' ↺' : ''}</div>
+                        ${c.nameEn ? `<div class="tarot-name-en">${c.nameEn}</div>` : ''}
+                    </div>
+                    <div class="tarot-card-divider"></div>
                     <div class="tarot-meaning">${c.meaning || ''}</div>
+                    ${(c.keywords || []).length ? `<div class="tarot-keywords">${(c.keywords || []).slice(0,3).map(k => `<span class="tarot-kw">${k}</span>`).join('')}</div>` : ''}
+                    <div class="tarot-position-tag">${posEmojis[c.position] || '✦'} ${c.position}</div>
                 </div>
             `;
 
@@ -3583,14 +3593,19 @@ function showTarotOverall(data, resultEl) {
     const overallEl = document.createElement('div');
     overallEl.className = 'tarot-overall animate-in';
     overallEl.innerHTML = `
+        <div class="tarot-overall-header">
+            <span class="tarot-overall-star">🌌</span>
+            <h3>Kartların Sana Söyledikleri</h3>
+            <div class="tarot-overall-sub">Kozmik Mesaj</div>
+        </div>
         <div class="tarot-energy">
             <span class="energy-label">Baskın Enerji</span>
             <span class="energy-value">${data.energy || '✦'}</span>
         </div>
-        ${data.answer ? `<div class="tarot-answer"><strong>Net Cevap:</strong> ${sanitize(data.answer)}</div>` : ''}
-        <h3>Kartların Mesajı</h3>
+        ${data.answer ? `<div class="tarot-answer">🗝️ ${sanitize(data.answer)}</div>` : ''}
         <p class="tarot-overall-text"></p>
-        <div class="tarot-advice"><strong>💫 Tavsiye:</strong> <span class="tarot-advice-text"></span></div>
+        <div class="tarot-advice"><strong>💫 Tavsiye</strong><br><span class="tarot-advice-text"></span></div>
+        ${data.warning ? `<div class="tarot-warning">⚠️ ${sanitize(data.warning)}</div>` : ''}
     `;
     resultEl.appendChild(overallEl);
 
@@ -3611,8 +3626,8 @@ function showTarotOverall(data, resultEl) {
 function spawnTarotParticles(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    const symbols = ['✦', '⭐', '✧', '◇', '⋆', '☆', '✵', '⊹'];
-    for (let i = 0; i < 30; i++) {
+    const symbols = ['✦', '✧', '⊹', '⋆', '◈', '✵', '⟡', '✸', '◇', '❋', '⭐', '⬡'];
+    for (let i = 0; i < 40; i++) {
         const p = document.createElement('span');
         p.className = 'tarot-particle';
         p.textContent = symbols[Math.floor(Math.random() * symbols.length)];
