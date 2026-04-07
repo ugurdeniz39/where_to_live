@@ -1,10 +1,10 @@
-# AstroMap v4 — AI Destekli Astrokartografi & Mistisizm Platformu
+# Zemara v4 — AI Destekli Astrokartografi & Mistisizm Platformu
 
 > Yildizlarin seni nereye cagiriyor?
 
-AstroMap, dogum haritanizi dunya haritasina yansitan, GPT-4o-mini destekli premium bir astroloji platformudur. 558 sehir, 10 gezegen, 4 tarot acilimi, kahve fali, kristal rehberi ve daha fazlasi.
+Zemara, dogum haritanizi dunya haritasina yansitan, GPT-4o-mini destekli premium bir astroloji platformudur. 558 sehir, 10 gezegen, 4 tarot acilimi, kahve fali, kristal rehberi ve daha fazlasi.
 
-**Canli:** [wheretolive-nine.vercel.app](https://wheretolive-nine.vercel.app)
+**Canli:** [zemara.app](https://zemara.app)
 
 ---
 
@@ -90,7 +90,7 @@ ALLOWED_ORIGINS=http://localhost:3000            # CORS
 ## Proje Yapisi
 
 ```
-astromap/
+zemara/
 ├── index.html              # Ana SPA sayfasi (tum sayfa icerikleri)
 ├── app.js                  # Frontend controller (~4500 satir)
 ├── style.css               # Tasarim sistemi (~3300 satir)
@@ -194,6 +194,6 @@ Bu proje ozel kullanim icindir. Tum haklari saklidir.
 ---
 
 <p align="center">
-  <strong>AstroMap</strong> — Antik bilgelik, modern teknoloji.<br>
+  <strong>Zemara</strong> — Antik bilgelik, modern teknoloji.<br>
   <em>Yildizlar ve cografyanin bulustugu nokta.</em>
 </p>

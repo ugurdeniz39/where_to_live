@@ -1,4 +1,4 @@
-# AstroMap — Deployment Rehberi
+# Zemara — Deployment Rehberi
 
 ## Ortam Degiskenleri
 
@@ -67,10 +67,10 @@ cd android && ./gradlew assembleDebug    # APK olustur
 ```bash
 # Keystore olustur (sadece 1 kez)
 keytool -genkeypair -v \
-  -keystore android/app/astromap-release.keystore \
+  -keystore android/app/zemara-release.keystore \
   -keyalg RSA -keysize 2048 -validity 10000 \
-  -alias astromap -storepass SIFRENIZ -keypass SIFRENIZ \
-  -dname "CN=AstroMap, O=AstroMap, L=Istanbul, C=TR"
+  -alias zemara -storepass SIFRENIZ -keypass SIFRENIZ \
+  -dname "CN=Zemara, O=Zemara, L=Istanbul, C=TR"
 
 # Release build
 npm run build:web

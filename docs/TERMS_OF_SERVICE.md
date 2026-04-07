@@ -1,14 +1,14 @@
-# AstroMap - Kullanim Kosullari
+# Zemara - Kullanim Kosullari
 
 **Son guncelleme:** Mart 2026
 
-Bu kullanim kosullari, AstroMap uygulamasini ("Uygulama") kullaniminizi duzenlemektedir. Uygulamayi kullanarak bu kosullari kabul etmis sayilirsiniz.
+Bu kullanim kosullari, Zemara uygulamasini ("Uygulama") kullaniminizi duzenlemektedir. Uygulamayi kullanarak bu kosullari kabul etmis sayilirsiniz.
 
 ---
 
 ## 1. Hizmet Tanimi
 
-AstroMap, yapay zeka destekli astroloji hizmetleri sunan bir uygulamadir. Sunulan hizmetler arasinda burc yorumlari, tarot okumalari, kahve fali, kristal rehberi, ruya yorumu, dogum haritasi analizi ve astrokartografi bulunmaktadir.
+Zemara, yapay zeka destekli astroloji hizmetleri sunan bir uygulamadir. Sunulan hizmetler arasinda burc yorumlari, tarot okumalari, kahve fali, kristal rehberi, ruya yorumu, dogum haritasi analizi ve astrokartografi bulunmaktadir.
 
 Uygulama, yapay zeka teknolojisi ve astronomik hesaplamalar kullanarak icerik uretmektedir. Sunulan icerikler bilgilendirme ve eglence amaclidir.
 
@@ -29,7 +29,7 @@ Uygulamayi kullanirken asagidaki kurallara uymayai kabul edersiniz:
 ## 3. Odeme Kosullari
 
 ### 3.1 Odeme Altyapisi
-Tum odeme islemleri iyzico odeme altyapisi uzerinden gerceklestirilmektedir. AstroMap, kredi karti veya banka bilgilerinizi dogrudan gormez, islemez veya saklamaz.
+Tum odeme islemleri iyzico odeme altyapisi uzerinden gerceklestirilmektedir. Zemara, kredi karti veya banka bilgilerinizi dogrudan gormez, islemez veya saklamaz.
 
 ### 3.2 Abonelik Planlari
 - Premium ve VIP abonelikler aylik veya yillik olarak faturalandirilir.
@@ -44,18 +44,18 @@ Tum odeme islemleri iyzico odeme altyapisi uzerinden gerceklestirilmektedir. Ast
 
 ## 4. Sorumluluk Reddi
 
-**AstroMap tarafindan sunulan tum astroloji, tarot, kahve fali ve diger mistik icerikler yalnizca eglence ve genel bilgilendirme amaclidir.**
+**Zemara tarafindan sunulan tum astroloji, tarot, kahve fali ve diger mistik icerikler yalnizca eglence ve genel bilgilendirme amaclidir.**
 
 - Sunulan icerikler profesyonel tavsiye (tibbi, finansal, hukuki veya psikolojik) yerine gecmez.
 - Onemli yasam kararlari icin mutlaka ilgili uzman profesyonellere danisiniz.
-- AstroMap, sunulan yorumlarin dogrulugu, eksiksizligi veya uygunlugu konusunda hicbir garanti vermez.
+- Zemara, sunulan yorumlarin dogrulugu, eksiksizligi veya uygunlugu konusunda hicbir garanti vermez.
 - Yapay zeka tarafindan uretilen icerikler otomatik olarak olusturulur ve hata icerebilir.
 
 ---
 
 ## 5. Fikri Mulkiyet
 
-- AstroMap uygulamasi, tasarimi, icerigi, logosu ve tum ilgili fikri mulkiyet haklari AstroMap'e aittir.
+- Zemara uygulamasi, tasarimi, icerigi, logosu ve tum ilgili fikri mulkiyet haklari Zemara'e aittir.
 - Kullanicilar, uygulama icerigini kopyalayamaz, dagitamaz, degistiremez veya ticari amacla kullanamazlar.
 - Kullanicilarin uygulama uzerinden olusturdugu kisisel icerikler (ornegin kaydedilen yorumlar) kullaniciya aittir.
 
@@ -65,16 +65,16 @@ Tum odeme islemleri iyzico odeme altyapisi uzerinden gerceklestirilmektedir. Ast
 
 Yururlukteki yasalarin izin verdigi azami olcude:
 
-- AstroMap, uygulamanin kullaninandan veya kullanilamamasindan kaynaklanan dogrudan, dolayli, ozel, arizi veya sonuc olarak ortaya cikan hicbir zarardan sorumlu degildir.
-- AstroMap, ucuncu taraf hizmetlerinin (OpenAI, iyzico, Vercel) kesintileri veya hatalari nedeniyle oolusan aksakliklardan sorumlu degildir.
+- Zemara, uygulamanin kullaninandan veya kullanilamamasindan kaynaklanan dogrudan, dolayli, ozel, arizi veya sonuc olarak ortaya cikan hicbir zarardan sorumlu degildir.
+- Zemara, ucuncu taraf hizmetlerinin (OpenAI, iyzico, Vercel) kesintileri veya hatalari nedeniyle oolusan aksakliklardan sorumlu degildir.
 - Hizmet kesintisiz veya hatasiz olacagi garanti edilmez.
-- AstroMap'in toplam sorumlulugu, kullanicinin son 12 ay icerisinde odedigi toplam tutari asamaz.
+- Zemara'in toplam sorumlulugu, kullanicinin son 12 ay icerisinde odedigi toplam tutari asamaz.
 
 ---
 
 ## 7. Hizmetin Sonlandirilmasi
 
-AstroMap, asagidaki durumlarda kullanici hesabini veya erisimini askiya alma veya sonlandirma hakkini sakli tutar:
+Zemara, asagidaki durumlarda kullanici hesabini veya erisimini askiya alma veya sonlandirma hakkini sakli tutar:
 
 - Bu kullanim kosullarinin ihlal edilmesi durumunda.
 - Uygulamanin kotuye kullanimi durumunda.
@@ -100,8 +100,8 @@ Bu kullanim kosullari Turkiye Cumhuriyeti yasalarina tabidir. Uyusmazlik durumun
 
 Kullanim kosullari hakkinda sorulariniz icin:
 
-- **Web:** astromap.app
-- **Gelistirici:** AstroMap
+- **Web:** zemara.app
+- **Gelistirici:** Zemara
 
 ---
 

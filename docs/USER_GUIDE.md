@@ -1,8 +1,8 @@
-# AstroMap — Kullanici Rehberi
+# Zemara — Kullanici Rehberi
 
 ## Uygulama Nedir?
 
-AstroMap, yapay zeka destekli bir astroloji ve mistisizm platformudur. Dogum haritanizi kullanarak size ozel sehir onerileri, burc yorumlari, tarot okumalari ve daha fazlasini sunar.
+Zemara, yapay zeka destekli bir astroloji ve mistisizm platformudur. Dogum haritanizi kullanarak size ozel sehir onerileri, burc yorumlari, tarot okumalari ve daha fazlasini sunar.
 
 ---
 

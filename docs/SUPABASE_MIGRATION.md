@@ -1,4 +1,4 @@
-# AstroMap — Supabase Veritabani Gecisi
+# Zemara — Supabase Veritabani Gecisi
 
 ## Neden?
 Su an odeme verileri JSON dosyasinda tutuluyor. Sunucu yeniden baslatildiginda veya Vercel cold start'ta veriler kaybolabilir.
@@ -111,4 +111,4 @@ JSON dosya fonksiyonlarini (loadPayments, savePayments vb.) Supabase sorgulariyl
 - 500 MB veritabani
 - 50,000 satir/ay API istegi
 - 1 GB dosya depolama
-- AstroMap icin fazlasiyla yeterli
+- Zemara icin fazlasiyla yeterli

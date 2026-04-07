@@ -73,9 +73,9 @@ if (!html.includes('capacitor.js')) {
 const nativeConfig = `
 <script>
     // Capacitor native app config — ALWAYS use remote API in native builds
-    window.__ASTROMAP_CONFIG = {
+    window.__ZEMARA_CONFIG = {
         isNative: true,
-        apiBase: 'https://wheretolive-nine.vercel.app',
+        apiBase: 'https://zemara.app',
         openVipAccess: true
     };
 </script>`;

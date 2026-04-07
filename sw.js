@@ -1,5 +1,5 @@
-// AstroMap Service Worker v6 — Network-first for fresh deploys
-const CACHE_NAME = 'astromap-v8';
+// Zemara Service Worker v8 — Network-first for fresh deploys
+const CACHE_NAME = 'zemara-v8';
 const STATIC_ASSETS = [
     '/',
     '/index.html',

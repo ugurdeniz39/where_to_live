@@ -8,10 +8,10 @@ const iyzipay = new Iyzipay({
 });
 
 const PLANS = {
-    'premium-monthly': { price: '49.00', name: 'AstroMap Premium Aylık' },
-    'premium-yearly':  { price: '490.00', name: 'AstroMap Premium Yıllık' },
-    'vip-monthly':     { price: '99.00', name: 'AstroMap VIP Aylık' },
-    'vip-yearly':      { price: '990.00', name: 'AstroMap VIP Yıllık' }
+    'premium-monthly': { price: '49.00', name: 'Zemara Premium Aylık' },
+    'premium-yearly':  { price: '490.00', name: 'Zemara Premium Yıllık' },
+    'vip-monthly':     { price: '99.00', name: 'Zemara VIP Aylık' },
+    'vip-yearly':      { price: '990.00', name: 'Zemara VIP Yıllık' }
 };
 
 module.exports = async (req, res) => {
@@ -46,7 +46,7 @@ module.exports = async (req, res) => {
                 name: (billing?.name || 'Misafir').split(' ')[0],
                 surname: (billing?.name || 'Kullanıcı').split(' ').slice(1).join(' ') || 'Kullanıcı',
                 gsmNumber: billing?.phone || '+905000000000',
-                email: billing?.email || 'misafir@astromap.app',
+                email: billing?.email || 'misafir@zemara.app',
                 identityNumber: '11111111111',
                 lastLoginDate: new Date().toISOString().replace('T', ' ').slice(0, 19),
                 registrationDate: new Date().toISOString().replace('T', ' ').slice(0, 19),

@@ -13,6 +13,8 @@
   "rewrites": [
     { "source": "/api/checkout/init", "destination": "/api/checkout/init" },
     { "source": "/api/checkout/callback", "destination": "/api/checkout/callback" },
+    { "source": "/api/checkout/ls", "destination": "/api/checkout/ls" },
+    { "source": "/api/checkout/ls-webhook", "destination": "/api/checkout/ls?webhook=1" },
     { "source": "/api/push/:path*", "destination": "/api/extras" },
     { "source": "/api/analytics/:path*", "destination": "/api/extras" },
     { "source": "/api/analytics", "destination": "/api/extras" },

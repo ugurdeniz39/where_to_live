@@ -1,6 +1,6 @@
 {
-  "appId": "com.astromap.app",
-  "appName": "AstroMap",
+  "appId": "com.zemara.app",
+  "appName": "Zemara",
   "webDir": "www",
   "server": {
     "androidScheme": "https",

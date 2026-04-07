@@ -1,6 +1,6 @@
 /**
  * ============================================
- * AstroMap – Mega City Database
+ * Zemara – Mega City Database
  * 81 Türkiye İli + Dünya Ülkeleri
  * 4 ondalık koordinat → DMS saniye seviyesinde doğru
  * ============================================

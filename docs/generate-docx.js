@@ -49,7 +49,7 @@ const doc = new Document({
         {
             properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
             children: [
-                new Paragraph({ spacing: { before: 4000 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: "AstroMap v4", font: "Arial", size: 72, bold: true, color: "7c3aed" })] }),
+                new Paragraph({ spacing: { before: 4000 }, alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Zemara v4", font: "Arial", size: 72, bold: true, color: "7c3aed" })] }),
                 new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 400 }, children: [new TextRun({ text: "Uygulama Dokumantasyonu", font: "Arial", size: 36, color: "666666" })] }),
                 new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: "AI Destekli Astrokartografi & Mistisizm Platformu", font: "Arial", size: 24, color: "999999", italics: true })] }),
                 new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 2000 }, children: [new TextRun({ text: "Mart 2026", font: "Arial", size: 22, color: "999999" })] }),
@@ -71,7 +71,7 @@ const doc = new Document({
             properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
             children: [
                 new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun("1. Teknik Mimari")] }),
-                new Paragraph({ spacing: { after: 200 }, children: [new TextRun("AstroMap, Vanilla JavaScript ile yazilmis tek sayfalik bir web uygulamasidir (SPA). Backend Express.js + OpenAI API, frontend ise HTML/CSS/JS ile calisir. Capacitor ile Android/iOS native uygulamaya donusturulur.")] }),
+                new Paragraph({ spacing: { after: 200 }, children: [new TextRun("Zemara, Vanilla JavaScript ile yazilmis tek sayfalik bir web uygulamasidir (SPA). Backend Express.js + OpenAI API, frontend ise HTML/CSS/JS ile calisir. Capacitor ile Android/iOS native uygulamaya donusturulur.")] }),
 
                 new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun("1.1 Frontend Mimarisi")] }),
                 new Paragraph({ numbering: { reference: "bullets", level: 0 }, children: [new TextRun("Tek index.html dosyasinda tum sayfalar section olarak yer alir")] }),
@@ -122,7 +122,7 @@ const doc = new Document({
 
                 // Section 2: Security
                 new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun("2. Guvenlik")] }),
-                new Paragraph({ spacing: { after: 200 }, children: [new TextRun("AstroMap, katmanli bir guvenlik yaklasimi kullanir. Bu bolum mevcut onlemleri, riskleri ve onerileri kapsar.")] }),
+                new Paragraph({ spacing: { after: 200 }, children: [new TextRun("Zemara, katmanli bir guvenlik yaklasimi kullanir. Bu bolum mevcut onlemleri, riskleri ve onerileri kapsar.")] }),
 
                 new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun("2.1 Mevcut Onlemler")] }),
                 new Table({
@@ -241,6 +241,6 @@ const doc = new Document({
 });
 
 Packer.toBuffer(doc).then(buffer => {
-    fs.writeFileSync("C:/Users/ugurd/Downloads/where_to_live/docs/AstroMap_App_Overview.docx", buffer);
-    console.log("DOCX olusturuldu: docs/AstroMap_App_Overview.docx");
+    fs.writeFileSync("C:/Users/ugurd/Downloads/where_to_live/docs/Zemara_App_Overview.docx", buffer);
+    console.log("DOCX olusturuldu: docs/Zemara_App_Overview.docx");
 });

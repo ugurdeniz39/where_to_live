@@ -1,5 +1,5 @@
 /**
- * AstroMap API Tests
+ * Zemara API Tests
  * Run: node --test tests/server.test.js
  * Requires: Node.js 18+ (built-in test runner)
  * Note: Start server first with `npm start` or set TEST_URL
@@ -145,7 +145,7 @@ describe('Static Files', () => {
         const res = await fetch(`${BASE_URL}/`);
         assert.equal(res.status, 200);
         const text = await res.text();
-        assert.ok(text.includes('AstroMap'));
+        assert.ok(text.includes('Zemara'));
     });
 
     it('serves manifest.json', async () => {

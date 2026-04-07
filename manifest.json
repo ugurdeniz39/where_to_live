@@ -1,6 +1,6 @@
 {
-    "name": "AstroMap — Yıldızların Seni Nereye Çağırıyor?",
-    "short_name": "AstroMap",
+    "name": "Zemara — Yıldızların Seni Nereye Çağırıyor?",
+    "short_name": "Zemara",
     "description": "AI destekli astrokartografi, günlük burç yorumu, tarot, kristal rehberi ve rüya yorumu",
     "start_url": "/",
     "display": "standalone",

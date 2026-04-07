@@ -1,4 +1,4 @@
-# AstroMap — Stripe Uluslararasi Odeme Entegrasyonu
+# Zemara — Stripe Uluslararasi Odeme Entegrasyonu
 
 ## Neden?
 iyzico sadece Turkiye'de calisir. Uluslararasi kullanicilar icin Stripe gerekli.
@@ -31,10 +31,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 app.post('/api/stripe/create-session', async (req, res) => {
     const { plan, email } = req.body;
     const prices = {
-        'premium-monthly': { amount: 499, name: 'AstroMap Premium Monthly' },  // $4.99
-        'premium-yearly': { amount: 4990, name: 'AstroMap Premium Yearly' },
-        'vip-monthly': { amount: 999, name: 'AstroMap VIP Monthly' },
-        'vip-yearly': { amount: 9990, name: 'AstroMap VIP Yearly' }
+        'premium-monthly': { amount: 499, name: 'Zemara Premium Monthly' },  // $4.99
+        'premium-yearly': { amount: 4990, name: 'Zemara Premium Yearly' },
+        'vip-monthly': { amount: 999, name: 'Zemara VIP Monthly' },
+        'vip-yearly': { amount: 9990, name: 'Zemara VIP Yearly' }
     };
     const selected = prices[plan];
     if (!selected) return res.status(400).json({ error: 'Invalid plan' });
@@ -51,8 +51,8 @@ app.post('/api/stripe/create-session', async (req, res) => {
         }],
         mode: 'payment',
         customer_email: email,
-        success_url: 'https://wheretolive-nine.vercel.app/?checkout=success',
-        cancel_url: 'https://wheretolive-nine.vercel.app/?checkout=fail',
+        success_url: 'https://zemara.app/?checkout=success',
+        cancel_url: 'https://zemara.app/?checkout=fail',
     });
 
     res.json({ url: session.url });

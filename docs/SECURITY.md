@@ -1,8 +1,8 @@
-# AstroMap — Guvenlik Dokumantasyonu
+# Zemara — Guvenlik Dokumantasyonu
 
 ## Ozet
 
-AstroMap, kullanici verilerini korumak icin katmanli bir guvenlik yaklasimi kullanir. Bu dokuman mevcut guvenlik onlemlerini, bilinen riskleri ve onerileri kapsar.
+Zemara, kullanici verilerini korumak icin katmanli bir guvenlik yaklasimi kullanir. Bu dokuman mevcut guvenlik onlemlerini, bilinen riskleri ve onerileri kapsar.
 
 ---
 
@@ -116,7 +116,7 @@ form-action 'self' *.iyzipay.com
 
 ### Dikkat Edilmesi Gerekenler
 
-1. **ADMIN_TOKEN**: Varsayilan deger kodda var (`astromap-admin-2024`). Production'da mutlaka degistirilmeli.
+1. **ADMIN_TOKEN**: Varsayilan deger kodda var (`zemara-admin-2024`). Production'da mutlaka degistirilmeli.
 2. **iyzico sandbox**: Varsayilan olarak sandbox modunda. Production'da gercek anahtarlar kullanilmali.
 3. **HTTPS**: Vercel otomatik HTTPS saglar. Lokal gelistirmede HTTP kullanilir.
 4. **OpenAI API anahtari**: Sunucu tarafinda tutuluyor, istemciye asla gonderilmiyor.

@@ -1,11 +1,11 @@
-# AstroMap - Google Play Store Listing
+# Zemara - Google Play Store Listing
 
 ---
 
 ## App Title (max 30 chars)
 
 ```
-AstroMap — AI Astroloji
+Zemara — AI Astroloji
 ```
 
 ---
@@ -21,9 +21,9 @@ Yapay zeka ile burc yorumu, tarot, kahve fali, kristal rehberi ve astrokartograf
 ## Full Description (max 4000 chars)
 
 ```
-AstroMap ile astrolojinin gizemli dnyasini yapay zekanin gucu ile kesfedin!
+Zemara ile astrolojinin gizemli dnyasini yapay zekanin gucu ile kesfedin!
 
-AstroMap, ileri yapay zeka teknolojisi ve NASA yordunge hesaplamalarini bir araya getirerek size en kapsamli astroloji deneyimini sunan Turkiye'nin en gelismis astroloji uygulamasidir.
+Zemara, ileri yapay zeka teknolojisi ve NASA yordunge hesaplamalarini bir araya getirerek size en kapsamli astroloji deneyimini sunan Turkiye'nin en gelismis astroloji uygulamasidir.
 
 --- OZELLIKLER ---
 
@@ -64,13 +64,13 @@ Premium'un tum ozellikleri + oncelikli yapay zeka islemleri, ozel VIP icerikleri
 
 --- TEKNOLOJI ---
 
-AstroMap, OpenAI'in en gelismis yapay zeka modelleri ve NASA yordunge hesaplamalarini kullanarak en dogru ve kisisellestirilmis astroloji deneyimini sunar.
+Zemara, OpenAI'in en gelismis yapay zeka modelleri ve NASA yordunge hesaplamalarini kullanarak en dogru ve kisisellestirilmis astroloji deneyimini sunar.
 
 --- GIZLILIK ---
 
 Gizliliginiz bizim icin on plandadir. Kisisel verileriniz sunucularimizda depolanmaz. Tum tercihleriniz cihazinizda guvenle saklanir. Kahve fali fotograflari analiz sonrasi derhal silinir.
 
-Kozmik yolculugunuza simdi baslayin! AstroMap'i indirin ve yildizlarin sizin icin ne soyledigini kesfedin.
+Kozmik yolculugunuza simdi baslayin! Zemara'i indirin ve yildizlarin sizin icin ne soyledigini kesfedin.
 ```
 
 ---

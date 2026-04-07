@@ -6,4 +6,4 @@ Disallow: /*.json$
 User-agent: Googlebot
 Allow: /manifest.json
 
-Sitemap: https://astromap.app/sitemap.xml
+Sitemap: https://zemara.app/sitemap.xml

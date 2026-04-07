@@ -53,9 +53,9 @@ module.exports = async (req, res) => {
             return res.json({ ok: true });
         }
         // GET summary
-        const adminToken = process.env.ADMIN_TOKEN || 'astromap-admin-2024';
+        const adminToken = process.env.ADMIN_TOKEN;
         const queryToken = (req.query && req.query.token) || new URL(req.url, 'http://localhost').searchParams.get('token');
-        if (queryToken !== adminToken) return res.status(403).json({ error: 'Yetkisiz erişim' });
+        if (!adminToken || queryToken !== adminToken) return res.status(403).json({ error: 'Yetkisiz erişim' });
 
         const db = getDB() || getSupabase();
         if (db && db.query) {
@@ -141,7 +141,7 @@ module.exports = async (req, res) => {
             return res.json({ ok: true, total: global._pushTokens.length });
         }
         // GET stats
-        const adminToken2 = process.env.ADMIN_TOKEN || 'astromap-admin-2024';
+        const adminToken2 = process.env.ADMIN_TOKEN;
         const queryToken2 = (req.query && req.query.token) || new URL(req.url, 'http://localhost').searchParams.get('token');
         if (queryToken2 !== adminToken2) return res.status(403).json({ error: 'Yetkisiz erişim' });
 

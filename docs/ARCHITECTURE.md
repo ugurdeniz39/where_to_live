@@ -1,8 +1,8 @@
-# AstroMap — Teknik Mimari
+# Zemara — Teknik Mimari
 
 ## Genel Bakis
 
-AstroMap, Vanilla JavaScript ile yazilmis tek sayfalik bir web uygulamasidir (SPA). Backend Express.js + OpenAI API, frontend ise HTML/CSS/JS ile calisir. Capacitor ile Android/iOS native uygulamaya donusturulur.
+Zemara, Vanilla JavaScript ile yazilmis tek sayfalik bir web uygulamasidir (SPA). Backend Express.js + OpenAI API, frontend ise HTML/CSS/JS ile calisir. Capacitor ile Android/iOS native uygulamaya donusturulur.
 
 ```
 Kullanici (Mobil/Web)
@@ -26,7 +26,7 @@ Kullanici (Mobil/Web)
 ## Dosya Yapisi
 
 ```
-astromap/
+zemara/
 ├── index.html              # Tek HTML dosyasi — tum sayfalarin icerigi
 ├── app.js                  # Ana uygulama kontrolcusu (~4800 satir)
 ├── style.css               # Tum stiller (~3400 satir)
@@ -177,8 +177,8 @@ cd android && ./gradlew bundleRelease   # Release AAB (Play Store)
 - **Splash Screen**: 2 saniye, koyu arka plan
 
 ### API Baglantisi
-- Native build'de `window.__ASTROMAP_CONFIG.apiBase` set edilir
-- Tum API istekleri `https://wheretolive-nine.vercel.app` uzerinden gider
+- Native build'de `window.__ZEMARA_CONFIG.apiBase` set edilir
+- Tum API istekleri `https://zemara.app` uzerinden gider
 - CORS: `https://localhost` ve `capacitor://localhost` izinli
 
 ---

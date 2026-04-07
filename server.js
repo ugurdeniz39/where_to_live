@@ -1,6 +1,6 @@
 /**
  * ============================================
- * AstroMap v4 — Backend Server
+ * Zemara v4 — Backend Server
  * Express + OpenAI GPT API Routes
  * Optimized with security, caching & rate limiting
  * ============================================
@@ -9,6 +9,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const OpenAI = require('openai');
 const Iyzipay = require('iyzipay');
 const path = require('path');
@@ -69,10 +70,10 @@ const iyzipay = new Iyzipay({
 
 // Plan definitions
 const PLANS = {
-    'premium-monthly': { price: '49.00', name: 'AstroMap Premium Aylık' },
-    'premium-yearly':  { price: '490.00', name: 'AstroMap Premium Yıllık' },
-    'vip-monthly':     { price: '99.00', name: 'AstroMap VIP Aylık' },
-    'vip-yearly':      { price: '990.00', name: 'AstroMap VIP Yıllık' }
+    'premium-monthly': { price: '49.00', name: 'Zemara Premium Aylık' },
+    'premium-yearly':  { price: '490.00', name: 'Zemara Premium Yıllık' },
+    'vip-monthly':     { price: '99.00', name: 'Zemara VIP Aylık' },
+    'vip-yearly':      { price: '990.00', name: 'Zemara VIP Yıllık' }
 };
 
 // CORS — restrict to known origins + allow Capacitor mobile apps
@@ -95,14 +96,35 @@ app.use(cors({
 app.use(express.json({ limit: '5mb' })); // 5MB for fortune coffee cup images (base64)
 
 // ═══════════════════════════════════════
+// RATE LIMITING — AI endpoint'leri koru
+// ═══════════════════════════════════════
+const aiRateLimit = rateLimit({
+    windowMs: 60 * 1000, // 1 dakika
+    max: 15,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Çok fazla istek gönderdin, lütfen 1 dakika bekle.' }
+});
+// Tüm /api/* yollarına uygula
+app.use('/api/fortune', aiRateLimit);
+app.use('/api/horoscope', aiRateLimit);
+app.use('/api/natal', aiRateLimit);
+app.use('/api/transit', aiRateLimit);
+app.use('/api/compatibility', aiRateLimit);
+app.use('/api/tarot', aiRateLimit);
+app.use('/api/dream', aiRateLimit);
+app.use('/api/crystal', aiRateLimit);
+
+// ═══════════════════════════════════════
 // SECURITY HEADERS
 // ═══════════════════════════════════════
 app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('X-XSS-Protection', '0');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     // Content Security Policy
     res.setHeader('Content-Security-Policy', [
         "default-src 'self'",
@@ -110,7 +132,7 @@ app.use((req, res, next) => {
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org https://i.pravatar.cc",
-        "connect-src 'self'",
+        "connect-src 'self' https://zemara.app https://*.vercel.app",
         "frame-src 'self' https://*.iyzipay.com",
         "base-uri 'self'",
         "form-action 'self' https://*.iyzipay.com"
@@ -125,7 +147,7 @@ const rateLimits = new Map();
 const RATE_WINDOW = 60000; // 1 minute
 const RATE_MAX = 20; // max 20 AI requests per minute
 
-function rateLimit(req, res, next) {
+function customRateLimit(req, res, next) {
     const ip = req.ip || req.socket?.remoteAddress;
     const now = Date.now();
     const record = rateLimits.get(ip) || { count: 0, start: now };
@@ -196,8 +218,8 @@ function setCachedResponse(key, data, endpoint) {
     }
 }
 
-// Static files with caching headers
-app.use(express.static(path.join(__dirname), {
+// Static files with caching headers — only serve safe public files
+const staticOptions = {
     maxAge: '1h',
     etag: true,
     lastModified: true,
@@ -212,7 +234,18 @@ app.use(express.static(path.join(__dirname), {
             res.setHeader('Cache-Control', 'public, max-age=86400');
         }
     }
-}));
+};
+// Serve only specific safe directories/files, not the project root
+app.use('/icons', express.static(path.join(__dirname, 'icons'), staticOptions));
+app.use('/manifest.json', express.static(path.join(__dirname, 'manifest.json'), staticOptions));
+app.use('/robots.txt', express.static(path.join(__dirname, 'robots.txt'), staticOptions));
+app.use('/sitemap.xml', express.static(path.join(__dirname, 'sitemap.xml'), staticOptions));
+app.use('/sw.js', express.static(path.join(__dirname, 'sw.js'), staticOptions));
+app.use('/app.js', express.static(path.join(__dirname, 'app.js'), staticOptions));
+app.use('/style.css', express.static(path.join(__dirname, 'style.css'), staticOptions));
+app.use('/astro-engine.js', express.static(path.join(__dirname, 'astro-engine.js'), staticOptions));
+app.use('/cities-database.js', express.static(path.join(__dirname, 'cities-database.js'), staticOptions));
+app.use('/privacy.html', express.static(path.join(__dirname, 'privacy.html'), staticOptions));
 
 // ═══════════════════════════════════════
 // INPUT VALIDATION MIDDLEWARE
@@ -242,7 +275,7 @@ function validateInput(req, res, next) {
 }
 
 // Apply rate limiting and input validation to all API routes
-app.use('/api', rateLimit);
+app.use('/api', customRateLimit);
 app.use('/api', validateInput);
 
 // ═══════════════════════════════════════
@@ -331,7 +364,11 @@ app.post('/api/analytics', (req, res) => {
         const { event, data, session, page } = req.body;
         if (!event || typeof event !== 'string') return res.status(400).json({ error: 'event gerekli' });
 
-        const ip = req.ip || req.socket?.remoteAddress;
+        const rawIp = req.ip || req.socket?.remoteAddress || '';
+        // GDPR/KVKK: Anonymize IP — zero out last octet (IPv4) or last 80 bits (IPv6)
+        const ip = rawIp.includes(':')
+            ? rawIp.replace(/:[0-9a-f]{0,4}:[0-9a-f]{0,4}:[0-9a-f]{0,4}:[0-9a-f]{0,4}:[0-9a-f]{0,4}$/i, ':0:0:0:0:0')
+            : rawIp.replace(/\.\d+$/, '.0');
 
         // DB (fire-and-forget — don't block response)
         const db = getDB() || getSupabase();
@@ -349,7 +386,7 @@ app.post('/api/analytics', (req, res) => {
                 data: typeof data === 'object' ? data : {},
                 session_id: (session || '').slice(0, 50),
                 page: (page || '').slice(0, 100),
-                ip
+                ip  // Already anonymized above
             }).then(() => {}).catch(() => {});
             return res.json({ ok: true });
         }
@@ -374,8 +411,8 @@ app.post('/api/analytics', (req, res) => {
 });
 
 app.get('/api/analytics/summary', async (req, res) => {
-    const adminToken = process.env.ADMIN_TOKEN || 'astromap-admin-2024';
-    if (req.query.token !== adminToken) return res.status(403).json({ error: 'Yetkisiz erişim' });
+    const adminToken = process.env.ADMIN_TOKEN;
+    if (!adminToken || req.query.token !== adminToken) return res.status(403).json({ error: 'Yetkisiz erişim' });
     try {
         const db = getDB() || getSupabase();
         if (db && db.query) {
@@ -504,8 +541,8 @@ app.post('/api/push/register', async (req, res) => {
 });
 
 app.get('/api/push/stats', (req, res) => {
-    const adminToken = process.env.ADMIN_TOKEN || 'astromap-admin-2024';
-    if (req.query.token !== adminToken) return res.status(403).json({ error: 'Yetkisiz erişim' });
+    const adminToken = process.env.ADMIN_TOKEN;
+    if (!adminToken || req.query.token !== adminToken) return res.status(403).json({ error: 'Yetkisiz erişim' });
     const tokens = loadPushTokens();
     const platforms = {};
     tokens.forEach(t => { platforms[t.platform] = (platforms[t.platform] || 0) + 1; });
@@ -726,7 +763,7 @@ Her öneri spesifik ve uygulanabilir olsun.`;
 // ═══════════════════════════════════════
 app.post('/api/tarot', async (req, res) => {
     try {
-        const { birthDate, sunSign, question, spread } = req.body;
+        const { birthDate, sunSign, question, spread, forOther } = req.body;
 
         const lang = req.body.lang || 'tr';
         const langInstruction = lang === 'en' ? 'Write ALL your response in ENGLISH.' : 'Türkçe yaz.';
@@ -755,7 +792,7 @@ app.post('/api/tarot', async (req, res) => {
                 count: 10,
                 positions: ['Mevcut Durum', 'Engel', 'Bilinçaltı', 'Geçmiş', 'Olası Gelecek', 'Yakın Gelecek', 'Tutum', 'Çevre', 'Umut & Korku', 'Sonuç'],
                 desc: 'Kelt Haçı — 10 kartlık derinlemesine analiz',
-                tokens: 1800
+                tokens: 3200
             }
         };
 
@@ -824,7 +861,11 @@ Yanıtını MUTLAKA aşağıdaki JSON formatında ver:
   "warning": "Dikkat çekilen nokta, 1 cümle"${spread === 'yes-no' ? ',\n  "answer": "EVET veya HAYIR veya BEKLE — net bir cevap"' : ''}
 }`;
 
-        const userPrompt = `Danışan: Doğum ${birthDate || 'bilinmiyor'}, Güneş burcu: ${sunSign || 'bilinmiyor'}.
+        const subjectLine = forOther
+            ? `Fal bakılan kişi: ${forOther.name || 'bilinmiyor'}, Doğum: ${forOther.birthDate || 'bilinmiyor'}, Güneş burcu: ${forOther.sunSign || sunSign || 'bilinmiyor'}.`
+            : `Danışan: Doğum ${birthDate || 'bilinmiyor'}, Güneş burcu: ${sunSign || 'bilinmiyor'}.`;
+
+        const userPrompt = `${subjectLine}
 ${question ? `SORUSU: "${question}"` : 'Hayatının genel akışı hakkında derin bir okuma isteniyor.'}
 
 Açılım: ${spreadConfig.desc}
@@ -1043,33 +1084,55 @@ Yüzeysel kalma — bilinçaltının gerçekten ne söylemeye çalıştığını
 // ═══════════════════════════════════════
 app.post('/api/fortune', async (req, res) => {
     try {
-        const { images, image, cup, sunSign, status } = req.body;
-        // Support both array (new) and single image (backward compat)
+        const { images, image, cup, sunSign, status, fortuneType = 'coffee', forOther } = req.body;
         const imageList = images && images.length > 0 ? images : (image ? [image] : []);
-        if (imageList.length === 0) return res.status(400).json({ error: 'Fincan fotoğrafı gerekli' });
+        if (imageList.length === 0) return res.status(400).json({ error: 'Fotoğraf gerekli' });
         if (imageList.length > 6) return res.status(400).json({ error: 'En fazla 6 fotoğraf gönderilebilir' });
-        // Validate all images
         for (const img of imageList) {
-            if (!img.startsWith('data:image/')) {
-                return res.status(400).json({ error: 'Geçersiz resim formatı. Lütfen fotoğraf yükleyin.' });
-            }
-            const base64Size = img.length * 0.75;
-            if (base64Size > 4 * 1024 * 1024) {
-                return res.status(400).json({ error: 'Resim çok büyük. Lütfen daha küçük bir fotoğraf deneyin.' });
-            }
+            if (!img.startsWith('data:image/')) return res.status(400).json({ error: 'Geçersiz resim formatı.' });
+            if (img.length * 0.75 > 4 * 1024 * 1024) return res.status(400).json({ error: 'Resim çok büyük (max 4MB).' });
         }
 
         const multiPhoto = imageList.length > 1;
-        const systemPrompt = `Sen deneyimli bir Türk kahve falcısısın. Geleneksel Türk kahve falı geleneğine hakimsin.
+        const subjectDesc = forOther ? `Fal bakılan kişi: ${forOther.name || 'başka biri'}, burcu: ${forOther.sunSign || 'bilinmiyor'}.` : `Kişinin burcu: ${sunSign || 'bilinmiyor'}. Medeni durumu: ${status === 'single' ? 'Bekar' : status === 'married' ? 'Evli' : 'İlişkide'}.`;
+
+        // ── Type-specific prompts ──
+        const TYPE_CONFIG = {
+            coffee: {
+                role: 'Sen deneyimli bir Türk kahve falcısısın. Geleneksel Türk kahve falı geleneğine hakimsin.',
+                imageDesc: multiPhoto ? 'Birden fazla açıdan çekilmiş kahve fincanı fotoğraflarını birlikte değerlendir — tabanı, duvarları, kenarları tüm açılardan incele.' : 'Fotoğraftaki kahve fincanını detaylı incele — tabanı, duvarları, kenarları.',
+                validation: 'ÖNCELİKLE fotoğrafın gerçekten bir kahve fincanı olup olmadığını kontrol et. Fincan değilse "general" alanında bunu belirt ve kibarca fincan fotoğrafı istediğini açıkla.',
+                symbolsLabel: 'Kahve izlerindeki semboller',
+                actionVerb: 'kahve falı yorumla'
+            },
+            palm: {
+                role: 'Sen deneyimli bir el falcısısın. Chiromancy (el falı) geleneğine ve çizgi analizine hakimsin.',
+                imageDesc: multiPhoto ? 'Birden fazla açıdan çekilmiş el fotoğraflarını incele — ana çizgiler, tepe bölgeleri, parmak yapısı.' : 'Fotoğraftaki eli detaylı incele — yaşam çizgisi, kalp çizgisi, akıl çizgisi, kader çizgisi ve tepe bölgeleri.',
+                validation: 'ÖNCELİKLE fotoğrafın gerçekten bir el (avuç içi açık) fotoğrafı olup olmadığını kontrol et. El fotoğrafı değilse bunu belirt.',
+                symbolsLabel: 'El çizgileri ve tepeleri',
+                actionVerb: 'el falı yorumla'
+            },
+            general: {
+                role: 'Sen sezgisel bir fal ve spiritüel rehber uzmanısın. Fotoğraftaki her türlü sembol ve enerjiyi okuyabilirsin.',
+                imageDesc: multiPhoto ? 'Birden fazla fotoğrafı bir bütün olarak değerlendir — her görseldeki sembolleri, şekilleri ve enerjiyi oku.' : 'Fotoğraftaki sembolleri, şekilleri ve enerjiyi sezgisel olarak oku.',
+                validation: 'Fotoğrafta ne görüyorsan onu yorumla — tarot kartı, kristal, rüya günlüğü, doğa nesnesi, kahve, el vb. olabilir.',
+                symbolsLabel: 'Fotoğraftaki semboller',
+                actionVerb: 'sezgisel fal yorumla'
+            }
+        };
+        const config = TYPE_CONFIG[fortuneType] || TYPE_CONFIG.coffee;
+
+        const systemPrompt = `${config.role}
 Sıcak, samimi, gizemli ama umut verici bir ton kullan. Türkçe yaz.
-${multiPhoto ? 'Birden fazla açıdan çekilmiş fincan fotoğraflarını birlikte değerlendir — tabanı, duvarları, kenarları tüm açılardan incele.' : 'Fotoğraftaki fincanı detaylı incele — tabanı, duvarları, kenarları.'}
+${config.imageDesc}
+${config.validation}
 Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
 {
   "title": "Falın başlığı — yaratıcı ve dikkat çekici, 4-6 kelime",
   "mood": "Falın genel havası — tek emoji + 1-2 kelime",
-  "general": "Fincanın genel yorumu, 4-5 cümle. Gizemli ve etkileyici.",
+  "general": "Genel yorum, 4-5 cümle. Gizemli ve etkileyici.",
   "symbols": [
-    { "symbol": "Sembol adı", "meaning": "1-2 cümle anlamı" },
+    { "symbol": "${config.symbolsLabel} 1", "meaning": "1-2 cümle anlamı" },
     { "symbol": "Sembol 2", "meaning": "Anlamı" },
     { "symbol": "Sembol 3", "meaning": "Anlamı" }
   ],
@@ -1081,9 +1144,9 @@ Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma
   "timing": "Falda görülen olayların tahmini zamanlaması"
 }`;
 
-        const textPart = `Kişinin burcu: ${sunSign || 'bilinmiyor'}. Medeni durumu: ${status === 'single' ? 'Bekar' : status === 'married' ? 'Evli' : 'İlişkide'}.
-${cup ? `Kullanıcının notu: "${cup}"` : ''}
-${multiPhoto ? `${imageList.length} farklı açıdan çekilmiş fincan fotoğraflarını birlikte incele ve kahve falı yorumla.` : 'Bu fincan fotoğrafını detaylı incele ve kahve falı yorumla.'}`;
+        const textPart = `${subjectDesc}
+${cup ? `Not / Soru: "${cup}"` : ''}
+${multiPhoto ? `${imageList.length} fotoğrafı birlikte incele ve ${config.actionVerb}.` : `Bu fotoğrafı detaylı incele ve ${config.actionVerb}.`}`;
 
         const userContent = [
             { type: 'text', text: textPart },
@@ -1092,11 +1155,8 @@ ${multiPhoto ? `${imageList.length} farklı açıdan çekilmiş fincan fotoğraf
 
         const response = await openai.chat.completions.create({
             model: 'gpt-4o-mini',
-            messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userContent }
-            ],
-            max_tokens: 900,
+            messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userContent }],
+            max_tokens: 1100,
             temperature: 0.85
         });
         const raw = response.choices[0].message.content;
@@ -1143,7 +1203,7 @@ app.post('/api/checkout/init', async (req, res) => {
                 name: (billing?.name || 'Misafir').split(' ')[0],
                 surname: (billing?.name || 'Kullanıcı').split(' ').slice(1).join(' ') || 'Kullanıcı',
                 gsmNumber: billing?.phone || '+905000000000',
-                email: billing?.email || 'misafir@astromap.app',
+                email: billing?.email || 'misafir@zemara.app',
                 identityNumber: '11111111111',
                 lastLoginDate: new Date().toISOString().replace('T', ' ').slice(0, 19),
                 registrationDate: new Date().toISOString().replace('T', ' ').slice(0, 19),
@@ -1378,12 +1438,49 @@ process.on('SIGTERM', () => {
     process.exit(0);
 });
 
+// ═══════════════════════════════════════
+// API: Kullanıcı Kaydı → Neon DB
+// ═══════════════════════════════════════
+app.post('/api/register-user', async (req, res) => {
+    try {
+        const { id, name, email, birthDate, plan, createdAt } = req.body;
+        if (!email || !id) return res.status(400).json({ error: 'id ve email gerekli' });
+        const db = getDB();
+        if (!db) return res.json({ ok: true, stored: false }); // DB yoksa sessizce geç
+        // Tablo yoksa oluştur
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id TEXT PRIMARY KEY,
+                name TEXT,
+                email TEXT UNIQUE NOT NULL,
+                birth_date TEXT,
+                plan TEXT DEFAULT 'free',
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                updated_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        `);
+        await db.query(`
+            INSERT INTO users (id, name, email, birth_date, plan, created_at)
+            VALUES ($1, $2, $3, $4, $5, TO_TIMESTAMP($6 / 1000.0))
+            ON CONFLICT (email) DO UPDATE SET
+                name = EXCLUDED.name,
+                birth_date = EXCLUDED.birth_date,
+                plan = EXCLUDED.plan,
+                updated_at = NOW()
+        `, [id, name, email, birthDate || null, plan || 'free', createdAt || Date.now()]);
+        res.json({ ok: true, stored: true });
+    } catch (err) {
+        console.error('register-user error:', err.message);
+        res.json({ ok: true, stored: false }); // Hata olsa bile kayıt akışını bloklama
+    }
+});
+
 process.on('unhandledRejection', (reason) => {
     console.error('Unhandled rejection:', reason);
 });
 
 app.listen(PORT, () => {
-    console.log(`\n✦ AstroMap Server v4.0 — Optimized Edition`);
+    console.log(`\n✦ Zemara Server v4.0 — Optimized Edition`);
     console.log(`  → http://localhost:${PORT}`);
     console.log(`  → AI: ${process.env.OPENAI_API_KEY ? '✅ OpenAI bağlı' : '❌ API key yok'}`);
     console.log(`  → Security: Headers ✅ | Rate Limit: ${RATE_MAX}/min ✅ | Cache: ✅`);

@@ -1,7 +1,7 @@
 {
-  "name": "astromap",
+  "name": "zemara",
   "version": "4.0.0",
-  "description": "AstroMap — Premium Astrocartography App",
+  "description": "Zemara — AI Astroloji & Tarot Platformu",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -31,6 +31,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "express-rate-limit": "^8.3.2",
     "iyzipay": "^2.0.65",
     "openai": "^4.20.0",
     "pg": "^8.20.0"
@@ -39,6 +40,7 @@
     "node": ">=18"
   },
   "devDependencies": {
-    "docx": "^9.6.1"
+    "docx": "^9.6.1",
+    "xlsx": "^0.18.5"
   }
 }

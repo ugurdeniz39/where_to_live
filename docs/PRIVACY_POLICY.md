@@ -1,8 +1,8 @@
-# AstroMap - Gizlilik Politikasi
+# Zemara - Gizlilik Politikasi
 
 **Son guncelleme:** Mart 2026
 
-AstroMap olarak kullanicilarimizin gizliligine onem veriyoruz. Bu gizlilik politikasi, uygulamamizi kullanirken hangi verilerin toplandigini, nasil kullanildigini ve nasil korundugunuyu aciklamaktadir.
+Zemara olarak kullanicilarimizin gizliligine onem veriyoruz. Bu gizlilik politikasi, uygulamamizi kullanirken hangi verilerin toplandigini, nasil kullanildigini ve nasil korundugunuyu aciklamaktadir.
 
 ---
 
@@ -21,18 +21,18 @@ Anonim kullanim olaylari (sayfa goruntulemeleri, ozellik kullanimi) toplanmaktad
 
 ## 2. Toplanmayan Veriler
 
-Asagidaki veriler AstroMap tarafindan **toplanmaz ve islenmez**:
+Asagidaki veriler Zemara tarafindan **toplanmaz ve islenmez**:
 
 - **Gercek isimler:** Hesap olusturma istege baglidir ve gercek isim zorunlu degildir.
 - **Konum verileri:** Cihazinizin konum bilgisine erisim saglanmaz.
 - **Rehber/Kisiler:** Telefon rehberinize erisim saglanmaz.
-- **Finansal veriler:** Odeme islemleri tamamen iyzico altyapisi uzerinden gerceklestirilir. Kredi karti veya banka bilgileriniz AstroMap tarafindan gorulmuez veya saklanmaz.
+- **Finansal veriler:** Odeme islemleri tamamen iyzico altyapisi uzerinden gerceklestirilir. Kredi karti veya banka bilgileriniz Zemara tarafindan gorulmuez veya saklanmaz.
 
 ---
 
 ## 3. Ucuncu Taraf Hizmetleri
 
-AstroMap asagidaki ucuncu taraf hizmetlerini kullanmaktadir:
+Zemara asagidaki ucuncu taraf hizmetlerini kullanmaktadir:
 
 | Hizmet | Amac | Gizlilik Politikasi |
 |--------|------|---------------------|
@@ -72,7 +72,7 @@ Kahve fali icin yuklenen fotograflar:
 
 ## 7. Cocuklarin Gizliligi
 
-AstroMap, 13 yasindan kucuk cocuklar icin tasarlanmamistir. 13 yasindan kucuk bireylerin kisisel bilgilerini bilerek toplamiyoruz. Eger 13 yasindan kucuk bir cocugun bize kisisel bilgi sagladigini ogrenirseniz, lutfen bizimle iletisime gecin; ilgili bilgileri derhal silecegiz.
+Zemara, 13 yasindan kucuk cocuklar icin tasarlanmamistir. 13 yasindan kucuk bireylerin kisisel bilgilerini bilerek toplamiyoruz. Eger 13 yasindan kucuk bir cocugun bize kisisel bilgi sagladigini ogrenirseniz, lutfen bizimle iletisime gecin; ilgili bilgileri derhal silecegiz.
 
 ---
 
@@ -106,8 +106,8 @@ Bu gizlilik politikasini zaman zaman guncelleyebiliriz. Onemli degisiklikler yap
 
 Gizlilik politikamiz hakkinda sorulariniz icin:
 
-- **Web:** astromap.app
-- **Gelistirici:** AstroMap
+- **Web:** zemara.app
+- **Gelistirici:** Zemara
 
 ---
 

@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zemara — Teknik & İş Rehberi</title>
+<style>
+  :root {
+    --bg: #0a0612; --bg2: #100a22; --bg3: #160e30;
+    --accent: #a855f7; --accent2: #7c3aed; --gold: #f59e0b;
+    --text: #e2d9f3; --muted: #8b7aa8; --border: rgba(168,85,247,.2);
+    --code-bg: #1a1030; --green: #22c55e; --red: #f87171; --blue: #60a5fa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif;
+         font-size: 15px; line-height: 1.75; }
+
+  /* LAYOUT */
+  .sidebar { position: fixed; top: 0; left: 0; width: 260px; height: 100vh;
+             background: var(--bg2); border-right: 1px solid var(--border);
+             overflow-y: auto; padding: 24px 0; z-index: 100; }
+  .content { margin-left: 260px; padding: 48px 56px; max-width: 1100px; }
+  @media (max-width: 900px) { .sidebar { display: none; } .content { margin-left: 0; padding: 24px 20px; } }
+
+  /* SIDEBAR */
+  .sidebar-logo { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  .sidebar-logo h1 { font-size: 18px; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; }
+  .sidebar-logo p { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .nav-section { padding: 8px 20px 4px; font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+                 color: var(--muted); text-transform: uppercase; margin-top: 8px; }
+  .nav-item { display: block; padding: 7px 20px; font-size: 13px; color: var(--muted);
+              text-decoration: none; border-left: 3px solid transparent; transition: all .15s; }
+  .nav-item:hover { color: var(--text); background: var(--bg3); border-left-color: var(--accent); }
+
+  /* TYPOGRAPHY */
+  h1.page-title { font-size: 36px; font-weight: 900; letter-spacing: -1px;
+                  background: linear-gradient(135deg, #a855f7, #60a5fa); -webkit-background-clip: text;
+                  -webkit-text-fill-color: transparent; margin-bottom: 8px; }
+  h2 { font-size: 24px; font-weight: 800; color: var(--text); margin: 48px 0 16px;
+       padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 18px; font-weight: 700; color: var(--accent); margin: 32px 0 12px; }
+  h4 { font-size: 15px; font-weight: 700; color: var(--gold); margin: 20px 0 8px; }
+  p { margin-bottom: 12px; }
+  a { color: var(--accent); text-decoration: none; }
+  ul, ol { padding-left: 24px; margin-bottom: 12px; }
+  li { margin-bottom: 4px; }
+  strong { color: var(--text); }
+
+  /* HERO */
+  .hero { background: linear-gradient(135deg, var(--bg2), var(--bg3));
+          border: 1px solid var(--border); border-radius: 16px; padding: 40px; margin-bottom: 48px; }
+  .hero .subtitle { font-size: 18px; color: var(--muted); margin: 8px 0 24px; }
+  .hero-badges { display: flex; gap: 10px; flex-wrap: wrap; }
+  .badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+  .badge-purple { background: rgba(168,85,247,.2); color: var(--accent); border: 1px solid rgba(168,85,247,.3); }
+  .badge-blue   { background: rgba(96,165,250,.15); color: var(--blue);   border: 1px solid rgba(96,165,250,.3); }
+  .badge-green  { background: rgba(34,197,94,.15);  color: var(--green);  border: 1px solid rgba(34,197,94,.3); }
+  .badge-gold   { background: rgba(245,158,11,.15); color: var(--gold);   border: 1px solid rgba(245,158,11,.3); }
+
+  /* CODE */
+  code { background: var(--code-bg); color: #c4b5fd; padding: 2px 6px; border-radius: 4px;
+         font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 13px; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+        padding: 20px; overflow-x: auto; margin: 16px 0; }
+  pre code { background: none; padding: 0; color: #c4b5fd; font-size: 13px; line-height: 1.6; }
+
+  /* TABLES */
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+  th { background: var(--bg3); color: var(--accent); font-weight: 700; padding: 10px 14px;
+       text-align: left; border-bottom: 2px solid var(--border); }
+  td { padding: 9px 14px; border-bottom: 1px solid var(--border); color: var(--text); }
+  tr:hover td { background: rgba(168,85,247,.05); }
+  .yes { color: var(--green); font-weight: 700; }
+  .no  { color: var(--red); }
+  .partial { color: var(--gold); }
+
+  /* CARDS */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin: 16px 0; }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .card h4 { margin-top: 0; }
+  .card p { color: var(--muted); font-size: 13px; margin: 0; }
+
+  /* CALLOUTS */
+  .callout { border-radius: 10px; padding: 16px 20px; margin: 16px 0; border-left: 4px solid; }
+  .callout-warn { background: rgba(245,158,11,.08); border-color: var(--gold); }
+  .callout-info { background: rgba(96,165,250,.08);  border-color: var(--blue); }
+  .callout-danger { background: rgba(248,113,113,.08); border-color: var(--red); }
+  .callout-success { background: rgba(34,197,94,.08); border-color: var(--green); }
+  .callout-title { font-weight: 700; margin-bottom: 4px; }
+  .callout-warn   .callout-title { color: var(--gold); }
+  .callout-info   .callout-title { color: var(--blue); }
+  .callout-danger .callout-title { color: var(--red); }
+  .callout-success .callout-title { color: var(--green); }
+
+  /* SECTION DIVIDER */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+  .chapter-num { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 2px;
+                 text-transform: uppercase; margin-bottom: 4px; }
+
+  /* FLOW DIAGRAM */
+  .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+  .flow-step { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+               padding: 8px 14px; font-size: 13px; font-weight: 600; }
+  .flow-arrow { color: var(--accent); font-size: 18px; }
+
+  .toc-intro { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR NAV -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h1>✦ Zemara</h1>
+    <p>Teknik & İş Rehberi v4.0</p>
+  </div>
+  <span class="nav-section">Giriş</span>
+  <a class="nav-item" href="#overview">Projeye Genel Bakış</a>
+  <a class="nav-item" href="#stack">Teknoloji Stack</a>
+  <a class="nav-item" href="#architecture">Mimari</a>
+
+  <span class="nav-section">Özellikler</span>
+  <a class="nav-item" href="#features-free">Ücretsiz Özellikler</a>
+  <a class="nav-item" href="#features-premium">Premium Özellikler</a>
+  <a class="nav-item" href="#features-vip">VIP Özellikler</a>
+
+  <span class="nav-section">Teknik Detay</span>
+  <a class="nav-item" href="#ai">AI Entegrasyonu</a>
+  <a class="nav-item" href="#auth">Authentication</a>
+  <a class="nav-item" href="#database">Veritabanı</a>
+  <a class="nav-item" href="#payments">Ödeme Sistemi</a>
+  <a class="nav-item" href="#api-endpoints">API Endpoint'leri</a>
+  <a class="nav-item" href="#push">Push Notifications</a>
+
+  <span class="nav-section">Güvenlik</span>
+  <a class="nav-item" href="#security">Güvenlik Analizi</a>
+
+  <span class="nav-section">İş Modeli</span>
+  <a class="nav-item" href="#tiers">Tier Yapısı</a>
+  <a class="nav-item" href="#costs">Maliyet Analizi</a>
+  <a class="nav-item" href="#business">6 Aylık Plan</a>
+
+  <span class="nav-section">Deployment</span>
+  <a class="nav-item" href="#vercel">Vercel Deployment</a>
+  <a class="nav-item" href="#android">Android / Play Store</a>
+  <a class="nav-item" href="#ios">iOS / App Store</a>
+
+  <span class="nav-section">Lokalizasyon</span>
+  <a class="nav-item" href="#i18n">Çok Dil Desteği (i18n)</a>
+
+  <span class="nav-section">Test & Çalıştırma</span>
+  <a class="nav-item" href="#local">Lokal Geliştirme</a>
+  <a class="nav-item" href="#test-prompts">Test Promptları</a>
+  <a class="nav-item" href="#env">Ortam Değişkenleri</a>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main class="content">
+
+<!-- HERO -->
+<div class="hero">
+  <div class="chapter-num">Zemara v4.0</div>
+  <h1 class="page-title">Teknik & İş Rehberi</h1>
+  <p class="subtitle">Projenin her katmanını anlatan kapsamlı referans dökümanı</p>
+  <div class="hero-badges">
+    <span class="badge badge-purple">Vanilla JS SPA</span>
+    <span class="badge badge-blue">Express.js Backend</span>
+    <span class="badge badge-green">gpt-4o-mini</span>
+    <span class="badge badge-gold">Capacitor 8.3 (Android/iOS)</span>
+    <span class="badge badge-purple">Neon PostgreSQL</span>
+    <span class="badge badge-blue">iyzico Ödeme</span>
+    <span class="badge badge-green">Vercel Serverless</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<section id="overview">
+  <div class="chapter-num">Bölüm 1</div>
+  <h2>Projeye Genel Bakış</h2>
+
+  <p>Zemara, Türkçe dilli bir astroloji ve spiritüel rehberlik uygulamasıdır. Kullanıcılar doğum bilgilerini girerek kişiselleştirilmiş burç yorumları, doğum haritaları, tarot çekimleri, rüya yorumları, kristal rehberliği ve fal fotoğrafı analizi yapabilirler. Tüm analizler OpenAI GPT API ile gerçek zamanlı üretilmektedir.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>🎯 Hedef Kitle</h4>
+      <p>Türkiye'deki astroloji meraklıları, 18-35 yaş arası kadın ağırlıklı, mobil odaklı kullanıcılar</p>
+    </div>
+    <div class="card">
+      <h4>💡 Ana Değer Önerisi</h4>
+      <p>Kişiselleştirilmiş AI yorumları — genel burç değil, kullanıcının kendi doğum verileriyle özelleştirilmiş içerik</p>
+    </div>
+    <div class="card">
+      <h4>📱 Platform</h4>
+      <p>Web (Vercel) + Android APK/AAB (Capacitor) + iOS (yakında). Tek kod tabanı, tüm platformlar</p>
+    </div>
+    <div class="card">
+      <h4>💰 Gelir Modeli</h4>
+      <p>Freemium: Ücretsiz / Premium ₺49/ay / VIP ₺99/ay. iyzico entegrasyonu ile Türk kartı desteği</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="stack">
+  <div class="chapter-num">Bölüm 2</div>
+  <h2>Teknoloji Stack</h2>
+
+  <table>
+    <tr><th>Katman</th><th>Teknoloji</th><th>Açıklama</th><th>Dosya</th></tr>
+    <tr><td>Frontend</td><td>Vanilla JS (ES2020+)</td><td>Framework yok, saf JS SPA</td><td><code>app.js</code></td></tr>
+    <tr><td>Stil</td><td>CSS3 Custom Properties</td><td>CSS variables tabanlı tema sistemi</td><td><code>style.css</code></td></tr>
+    <tr><td>Markup</td><td>HTML5 SPA</td><td>Tek sayfa, section'larla sayfa geçişi</td><td><code>index.html</code></td></tr>
+    <tr><td>Backend</td><td>Node.js + Express 4</td><td>Lokal ve Vercel serverless</td><td><code>server.js</code></td></tr>
+    <tr><td>Serverless</td><td>Vercel Functions</td><td>11 fonksiyon limiti için extras.js pattern</td><td><code>api/*.js</code></td></tr>
+    <tr><td>AI</td><td>OpenAI gpt-4o-mini</td><td>Tüm yorumlar ve analizler</td><td><code>server.js</code></td></tr>
+    <tr><td>AI (Vision)</td><td>OpenAI gpt-4o-mini + base64</td><td>Fal fotoğrafı analizi</td><td><code>server.js</code></td></tr>
+    <tr><td>Veritabanı</td><td>Neon PostgreSQL (pg)</td><td>Analytics, ödemeler, push tokens</td><td><code>api/_lib/db.js</code></td></tr>
+    <tr><td>DB Fallback</td><td>Supabase JS Client</td><td>Neon yoksa devreye girer</td><td><code>api/_lib/supabase.js</code></td></tr>
+    <tr><td>DB Fallback 2</td><td>JSON dosyası</td><td>Her iki DB yoksa lokal JSON</td><td><code>data/*.json</code></td></tr>
+    <tr><td>Ödeme</td><td>iyzico (Sandbox/Canlı)</td><td>Türk kartı, 3D Secure, checkout form</td><td><code>server.js</code></td></tr>
+    <tr><td>Mobile</td><td>Capacitor 8.3</td><td>Web → Native hybrid wrapper</td><td><code>android/</code>, <code>ios/</code></td></tr>
+    <tr><td>Auth</td><td>localStorage + SHA-256</td><td>Şifre hash, session inject, profile memory</td><td><code>app.js</code></td></tr>
+    <tr><td>Rate Limit</td><td>express-rate-limit</td><td>AI endpoint'lere dakikada 15 istek limiti</td><td><code>server.js</code></td></tr>
+    <tr><td>Hosting</td><td>Vercel Hobby</td><td>Ücretsiz tier, custom domain destekli</td><td><code>vercel.json</code></td></tr>
+  </table>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="architecture">
+  <div class="chapter-num">Bölüm 3</div>
+  <h2>Mimari</h2>
+
+  <h3>İstek Akışı (Web)</h3>
+  <div class="flow">
+    <div class="flow-step">Kullanıcı (Tarayıcı)</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">index.html + app.js</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">fetch('/api/...')</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">Vercel / Express</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">OpenAI API</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">JSON yanıt</div>
+  </div>
+
+  <h3>İstek Akışı (Android)</h3>
+  <div class="flow">
+    <div class="flow-step">Android APK (Capacitor)</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">WebView (index.html)</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">fetch(VITE_API_URL)</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">Vercel Backend</div>
+  </div>
+
+  <h3>Veritabanı Fallback Zinciri</h3>
+  <div class="flow">
+    <div class="flow-step">getDB() → Neon PostgreSQL</div>
+    <span class="flow-arrow">||</span>
+    <div class="flow-step">getSupabase() → Supabase</div>
+    <span class="flow-arrow">||</span>
+    <div class="flow-step">JSON dosyası</div>
+  </div>
+
+  <h3>Dosya Yapısı</h3>
+  <pre><code>where_to_live/
+├── index.html           # SPA shell — tüm sayfa HTML'leri burada
+├── app.js               # ~3000+ satır — tüm frontend mantığı
+├── style.css            # ~1000+ satır — CSS variables tabanlı tema
+├── server.js            # Express backend — tüm API rotaları
+├── vercel.json          # Vercel routing kuralları
+├── package.json         # Bağımlılıklar
+├── .env                 # API anahtarları (git'e commit etme!)
+│
+├── api/                 # Vercel Serverless Functions
+│   ├── fortune.js       # Fal fotoğrafı (vision AI)
+│   ├── horoscope.js     # Burç yorumu
+│   ├── natal.js         # Doğum haritası + natal yorum
+│   ├── transit.js       # Transit analizi
+│   ├── compatibility.js # Uyum analizi
+│   ├── tarot.js         # Tarot açılımı
+│   ├── dream.js         # Rüya yorumu
+│   ├── crystal.js       # Kristal rehberi
+│   ├── extras.js        # analytics + push + premium-status (multi-route)
+│   └── _lib/
+│       ├── db.js        # Neon PostgreSQL bağlantısı
+│       └── supabase.js  # Supabase fallback
+│
+├── android/             # Capacitor Android projesi
+│   └── app/src/         # Java/Kotlin native kodu
+├── ios/                 # Capacitor iOS projesi
+└── data/                # JSON fallback depolama
+    ├── analytics.json
+    ├── payments.json
+    └── push-tokens.json</code></pre>
+
+  <h3>SPA Navigasyon Sistemi</h3>
+  <p>Uygulama tek HTML dosyasından oluşur. Her "sayfa" aslında <code>&lt;section id="page-xxx"&gt;</code> elementidir. <code>showPage(id)</code> fonksiyonu aktif section'ı gösterip diğerlerini gizler.</p>
+
+  <pre><code>// app.js — showPage() özeti
+function showPage(pageId) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(pageId)?.classList.add('active');
+    // Sayfa bazlı veri yükleme
+    if (pageId === 'moon') loadMoonCalendar();
+    if (pageId === 'natal') ProfileMemory.fillAll();
+    if (pageId === 'transit') initTransitForm();
+    // ... diğer sayfalar
+}</code></pre>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="features-free">
+  <div class="chapter-num">Bölüm 4</div>
+  <h2>Ücretsiz Özellikler</h2>
+
+  <h3>1. Günlük Burç Yorumu</h3>
+  <p>Kullanıcı adını ve doğum tarihini girer. Sistem burcu hesaplayıp GPT'ye gönderir. Kısa (200-300 kelime) günlük enerji yorumu üretilir. Sonuç 6 saat cache'lenir (aynı kullanıcı için).</p>
+  <ul>
+    <li><strong>Endpoint:</strong> <code>POST /api/horoscope</code></li>
+    <li><strong>Girdi:</strong> <code>{ name, birthDate, period: 'daily' }</code></li>
+    <li><strong>Cache TTL:</strong> 6 saat (server-side Map)</li>
+  </ul>
+
+  <h3>2. Tek Kart Tarot</h3>
+  <p>Rastgele 1 kart çekilir (Major + Minor Arcana dahil). Kartın yönü (dik/ters), anlamı ve günlük mesajı üretilir. Kart görsel olarak 3D flip animasyonuyla açılır.</p>
+  <ul>
+    <li><strong>Endpoint:</strong> <code>POST /api/tarot</code></li>
+    <li><strong>Girdi:</strong> <code>{ spreadType: 'single' }</code></li>
+  </ul>
+
+  <h3>3. Ay Takvimi</h3>
+  <p>Seçilen ay için Yeni Ay ve Dolunay tarihlerini gösterir. Her evre için ritüel önerileri ve enerji açıklaması üretilir. Astronomik hesaplama lokal algoritmayla yapılır (API gerekmez).</p>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="features-premium">
+  <h2>Premium Özellikler <span class="badge badge-purple" style="font-size:12px;vertical-align:middle">₺49/ay</span></h2>
+
+  <h3>4. Haftalık & Aylık Yorum</h3>
+  <p>Günlük yorum ile aynı akış, <code>period</code> parametresi <code>'weekly'</code> veya <code>'monthly'</code> gönderilir. Daha uzun ve derinlemesine analiz (500-800 kelime).</p>
+
+  <h3>5. Doğum Haritası Hesaplama</h3>
+  <p>Doğum tarihi, saati ve şehri alınır. GPT Güneş, Ay, Yükselen (Ascendant), Merkür, Venüs, Mars, Jüpiter, Satürn, Uranüs, Neptün, Plüton'un hangi burçta ve evde olduğunu hesaplar. 12 ev sistemi (Placidus) kullanılır.</p>
+  <ul>
+    <li><strong>Endpoint:</strong> <code>POST /api/natal</code> ile <code>type: 'chart'</code></li>
+    <li><strong>Girdi:</strong> <code>{ birthDate, birthTime, birthCity }</code></li>
+  </ul>
+
+  <h3>6. Natal Yorum (Karakter Analizi)</h3>
+  <p>Doğum haritasındaki gezegen pozisyonlarına göre kişilik analizi. Güneş burcu (dış kişilik), Ay burcu (iç dünya, duygular), Yükselen (ilk izlenim) üçlüsü detaylı yorumlanır.</p>
+
+  <h3>7. 3 Kart Tarot (Geçmiş-Şimdi-Gelecek)</h3>
+  <p>3 kart açılımı. Her kart pozisyonuna özel yorum üretilir. Kartlar sırayla 3D animasyonla açılır.</p>
+
+  <h3>8. Rüya Yorumu</h3>
+  <p>Kullanıcı rüyasını metin olarak yazar. GPT Jung psikolojisi, arketip teorisi ve sembolik analiz perspektifinden yorumlar. Günde 2 yorum hakkı (UsageLimiter ile kontrol edilir).</p>
+  <ul>
+    <li><strong>Endpoint:</strong> <code>POST /api/dream</code></li>
+    <li><strong>Girdi:</strong> <code>{ dream: "rüya metni" }</code></li>
+  </ul>
+
+  <h3>9. Kristal Rehberi</h3>
+  <p>Kullanıcı şikayetini/ihtiyacını yazar. GPT 3 kristal önerir: isim, fotoğraf (emoji), nasıl kullanılacağı, hangi çakra ile ilişkili olduğu. Türkçe olarak detaylı rehberlik.</p>
+  <ul>
+    <li><strong>Endpoint:</strong> <code>POST /api/crystal</code></li>
+    <li><strong>Girdi:</strong> <code>{ concern: "kaygı, odak sorunu..." }</code></li>
+  </ul>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="features-vip">
+  <h2>VIP Özellikler <span class="badge badge-gold" style="font-size:12px;vertical-align:middle">₺99/ay</span></h2>
+
+  <h3>10. Transit Analizi</h3>
+  <p>Seçilen tarihteki gezegen pozisyonlarının doğum haritasıyla ilişkisi analiz edilir. Örneğin Jüpiter şu an Boğa'da geziyorsa ve kullanıcı Boğa ise bu "Jüpiter dönemi" anlamına gelir. 3 aylık öngörü içerir.</p>
+  <ul>
+    <li><strong>Endpoint:</strong> <code>POST /api/transit</code></li>
+    <li><strong>Girdi:</strong> <code>{ birthDate, birthTime, currentDate, sunSign }</code></li>
+  </ul>
+
+  <h3>11. Uyum Analizi (İlişki Haritası)</h3>
+  <p>İki kişinin doğum tarihleri alınır. Güneş uyumu (temel enerji), Venüs uyumu (aşk/çekim), Mars uyumu (çatışma/tutku) hesaplanır. Uyum skoru (0-100) ve ilişki önerileri üretilir.</p>
+  <ul>
+    <li><strong>Endpoint:</strong> <code>POST /api/compatibility</code></li>
+    <li><strong>Girdi:</strong> <code>{ person1: { name, birthDate }, person2: { name, birthDate } }</code></li>
+  </ul>
+
+  <h3>12. Celtic Cross Tarot (10 Kart)</h3>
+  <p>En kapsamlı tarot açılımı. 10 kartın her biri farklı bir pozisyonu temsil eder: Mevcut durum, engel, geçmiş, gelecek, bilinçaltı, umutlar/korkular, dış etkiler, ipuçları, tahmin ve son sonuç. Pozisyonlara özel detaylı yorum üretilir.</p>
+
+  <h3>13. Fal Fotoğrafı Yorumu</h3>
+  <p>Kullanıcı el fotoğrafı, kahve fincanı veya başka bir fal fotoğrafı yükler. Görsel base64'e çevrilip OpenAI Vision API'a gönderilir. Fotoğraf türüne göre özel yorum üretilir (el falı, kahve falı, tarot kartı falı).</p>
+  <ul>
+    <li><strong>Endpoint:</strong> <code>POST /api/fortune</code></li>
+    <li><strong>Girdi:</strong> <code>{ image: "base64...", fortuneType: "palm|coffee|tarot", userName, birthDate }</code></li>
+    <li><strong>Not:</strong> Görsel 5MB limitine tabi. Server'da 5mb body limit aktif.</li>
+  </ul>
+
+  <div class="callout callout-info">
+    <div class="callout-title">Şu Anki Durum: Açık VIP Modu</div>
+    <p><code>isOpenVipAccessEnabled()</code> fonksiyonu <code>true</code> döndürdüğünden tüm kullanıcılar VIP özelliklerine erişebilmekte. Bu, büyüme aşamasında kullanıcı kazanmak için bilerek seçilmiş bir stratejidir. Ödeme sistemi hazır olduğunda kapatılabilir.</p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="ai">
+  <div class="chapter-num">Bölüm 5</div>
+  <h2>AI Entegrasyonu</h2>
+
+  <h3>Model Seçimi: gpt-4o-mini</h3>
+  <p>Tüm özellikler için <code>gpt-4o-mini</code> kullanılıyor. Seçim gerekçesi:</p>
+  <ul>
+    <li><strong>Maliyet:</strong> gpt-4o'nun ~5-10 katı daha ucuz</li>
+    <li><strong>Hız:</strong> gpt-4o'dan ~3x daha hızlı yanıt</li>
+    <li><strong>Yeterlilik:</strong> Burç/tarot yorumları için gpt-4o kalitesi gerekmez</li>
+    <li><strong>Vision desteği:</strong> Fal fotoğrafı için görsel işleyebiliyor</li>
+  </ul>
+
+  <h3>Prompt Mühendisliği</h3>
+  <p>Her özellik için sistem prompt'u ve kullanıcı prompt'u ayrı tasarlanmıştır. Genel kural:</p>
+  <pre><code>// Sistem prompt yapısı (her özellik için benzer)
+const systemPrompt = `Sen Zemara'in astroloji uzmanısın.
+Türkçe yaz. Samimi, sıcak ve rehber bir ton kullan.
+Yanıtı yapılandırılmış bölümlerle ver.
+Kişisel veri: ${userName}, ${birthDate}, ${zodiacSign}`;
+
+// Kullanıcı prompt'u — özelliğe özgü
+const userPrompt = `${userName} için ${period} burç yorumu yaz...`;</code></pre>
+
+  <h3>Server-Side Response Cache</h3>
+  <p>Aynı istek tekrar geldiğinde (aynı parametreler) OpenAI'ya gitmeyi önlemek için in-memory cache kullanılır:</p>
+  <pre><code>// server.js — Cache sistemi
+const responseCache = new Map(); // max 200 entry
+const CACHE_TTL = {
+    horoscope: 6 * 60 * 60 * 1000,    // 6 saat
+    natal:     24 * 60 * 60 * 1000,    // 24 saat
+    moon:      12 * 60 * 60 * 1000,    // 12 saat
+    tarot:     0,                       // Cache yok (her çekim farklı)
+    fortune:   0,                       // Cache yok (fotoğraf bazlı)
+};
+
+function getCacheKey(endpoint, params) {
+    return endpoint + ':' + JSON.stringify(params);
+}</code></pre>
+
+  <h3>Token Optimizasyonu</h3>
+  <p>Her özellik için prompt'lar optimizasyona tabi tutulmuştur:</p>
+  <ul>
+    <li>Gereksiz açıklamalar kaldırıldı (sistem prompt kısaltıldı)</li>
+    <li><code>max_tokens</code> özelliğe göre ayarlandı (günlük: 600, natal: 1200, celtic cross: 2000)</li>
+    <li><code>temperature: 0.8</code> — yaratıcı ama tutarlı yanıtlar için</li>
+  </ul>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="auth">
+  <div class="chapter-num">Bölüm 6</div>
+  <h2>Authentication Sistemi</h2>
+
+  <h3>Mimari: localStorage-Tabanlı</h3>
+  <p>Sunucuya kimlik doğrulaması için istek gönderilmez. Session tamamen tarayıcı localStorage'ında saklanır. Bu yaklaşım basitlik ve çevrimdışı çalışma sağlar, ancak server-side doğrulama yoktur.</p>
+
+  <pre><code>// AuthSystem._key = 'zemara_session'
+// Session yapısı:
+{
+    id: 'user_abc123',
+    name: 'Ayşe Kaya',
+    email: 'ayse@ornek.com',
+    birthDate: '1990-05-15',
+    birthCity: 'İstanbul',
+    plan: 'vip',          // 'free' | 'premium' | 'vip'
+    loginAt: 1710000000000,
+    isDemo: false
+}</code></pre>
+
+  <h3>Şifre Hashleme</h3>
+  <pre><code>// SHA-256 + statik salt
+async function hashPassword(password) {
+    const saltedPassword = password + 'zemara_v4_salt_';
+    const msgBuffer = new TextEncoder().encode(saltedPassword);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    return Array.from(new Uint8Array(hashBuffer))
+                .map(b => b.toString(16).padStart(2, '0')).join('');
+}</code></pre>
+
+  <div class="callout callout-warn">
+    <div class="callout-title">Güvenlik Notu</div>
+    <p>Statik salt ideal değildir; her kullanıcı için benzersiz salt kullanılmalıdır. Ancak mevcut mimari (localStorage-only) için yeterlidir. Server-side DB auth'a geçişte bcrypt + benzersiz salt kullanılmalı.</p>
+  </div>
+
+  <h3>ProfileMemory (Otomatik Doldurma)</h3>
+  <p>Kullanıcı bir formu doldururken sistem verileri localStorage'a kaydeder. Bir sonraki sayfada <code>ProfileMemory.fillAll()</code> çağrılarak tüm formlar otomatik doldurulur. Bu, kullanıcı deneyimini önemli ölçüde iyileştirir.</p>
+
+  <pre><code>// ProfileMemory.save() — herhangi bir sayfadan çağrılabilir
+ProfileMemory.save({
+    name: 'Ayşe',
+    birthDate: '1990-05-15',
+    birthCity: 'İstanbul',
+    sunSign: 'Boğa'
+});
+
+// ProfileMemory.fillAll() — sayfa yüklenince form alanlarını doldurur
+// data-profile-field="birthDate" → input value = '1990-05-15'</code></pre>
+
+  <h3>Demo Onboard (Kişiselleştirilmiş Demo)</h3>
+  <p>Demo butonuna tıklandığında kullanıcıdan isim, doğum tarihi ve şehir alınır. Bu veriler session'a ve ProfileMemory'e kaydedilir. Tüm AI özellikleri o kişinin verileriyle çalışır.</p>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="database">
+  <div class="chapter-num">Bölüm 7</div>
+  <h2>Veritabanı</h2>
+
+  <h3>Neon PostgreSQL (Birincil)</h3>
+  <p>Frankfurt bölgesinde Neon serverless PostgreSQL kullanılır. Bağlantı pooling aktif (max 3 bağlantı — Vercel serverless limit).</p>
+
+  <pre><code>// api/_lib/db.js
+const { Pool } = require('pg');
+const _pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+    max: 3,                    // Vercel serverless max
+    idleTimeoutMillis: 10000,
+    connectionTimeoutMillis: 5000
+});</code></pre>
+
+  <h3>Tablo Yapısı</h3>
+  <table>
+    <tr><th>Tablo</th><th>Kolon'lar</th><th>Kullanım</th></tr>
+    <tr><td><code>analytics</code></td><td>event, page, session_id, metadata, created_at</td><td>Kullanım istatistikleri</td></tr>
+    <tr><td><code>push_tokens</code></td><td>identifier (UNIQUE), token, platform, created_at</td><td>Push notification hedefleri</td></tr>
+    <tr><td><code>payments</code></td><td>payment_id (UNIQUE), email, plan, amount, status, created_at</td><td>iyzico ödeme kayıtları</td></tr>
+  </table>
+
+  <h3>Sorgu Örnekleri</h3>
+  <pre><code>// Analytics kaydet
+await db.query(
+    'INSERT INTO analytics(event, page, session_id, metadata) VALUES($1,$2,$3,$4)',
+    [event, page, sessionId, JSON.stringify(metadata)]
+);
+
+// Premium durum kontrol
+const result = await db.query(
+    "SELECT * FROM payments WHERE email=$1 AND status='active' AND expires_at > NOW()",
+    [email]
+);
+const isPremium = result.rows.length > 0;</code></pre>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="payments">
+  <div class="chapter-num">Bölüm 8</div>
+  <h2>Ödeme Sistemi</h2>
+
+  <h3>iyzico Entegrasyonu</h3>
+  <p>Türkiye'nin önde gelen ödeme altyapısı. 3D Secure, taksit, Türk kartı desteği. Sandbox (test) ve canlı ortam ayrı.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>📦 Paketler</h4>
+      <p>Premium: ₺49/ay, ₺490/yıl<br>VIP: ₺99/ay, ₺990/yıl<br>VIP Sınırsız: ₺4.990/yıl</p>
+    </div>
+    <div class="card">
+      <h4>🔄 Akış</h4>
+      <p>1. Kullanıcı plan seçer<br>2. POST /api/create-checkout<br>3. iyzico iframe açılır<br>4. Ödeme sonucu callback'e düşer</p>
+    </div>
+    <div class="card">
+      <h4>🏦 Sandbox</h4>
+      <p>Test kartı: 5528790000000008<br>CVV: 123, Son Tarih: 12/30<br>3D şifre: a</p>
+    </div>
+    <div class="card">
+      <h4>⚠️ Eksik</h4>
+      <p>iyzico HMAC imza doğrulaması henüz yok. Para almadan önce eklenmeli!</p>
+    </div>
+  </div>
+
+  <h3>Ödeme Akışı (Detaylı)</h3>
+  <pre><code>// 1. Frontend — plan seçimi
+async function startPayment(plan) {
+    const res = await fetch('/api/create-checkout', {
+        method: 'POST',
+        body: JSON.stringify({ plan, email: user.email })
+    });
+    const { checkoutFormContent, token } = await res.json();
+    // iyzico iframe'i DOM'a ekle
+    document.getElementById('iyzico-container').innerHTML = checkoutFormContent;
+}
+
+// 2. Backend — checkout oluştur (server.js)
+app.post('/api/create-checkout', async (req, res) => {
+    const { plan, email } = req.body;
+    const price = PLANS[plan]; // ₺49, ₺99, vb.
+    iyzipay.checkoutFormInitialize.create({...}, (err, result) => {
+        global.checkoutSessions[result.token] = { plan, email };
+        res.json({ checkoutFormContent: result.checkoutFormContent, token: result.token });
+    });
+});
+
+// 3. Backend — callback (ödeme sonucu)
+app.post('/api/payment-callback', async (req, res) => {
+    const { token } = req.body;
+    iyzipay.checkoutForm.retrieve({ token }, async (err, result) => {
+        if (result.paymentStatus === 'SUCCESS') {
+            // DB'ye kaydet, kullanıcı planını güncelle
+            await db.query('INSERT INTO payments...', [...]);
+        }
+    });
+});</code></pre>
+
+  <div class="callout callout-danger">
+    <div class="callout-title">Kritik Eksik: HMAC Doğrulama</div>
+    <p>iyzico callback'i herhangi biri taklit edebilir. Para almadan önce iyzico'nun imza doğrulama mekanizması eklenmeli. iyzico developer portal'ında HMAC-SHA256 dokümanına bakın.</p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="api-endpoints">
+  <div class="chapter-num">Bölüm 9</div>
+  <h2>API Endpoint'leri</h2>
+
+  <table>
+    <tr><th>Method</th><th>Endpoint</th><th>Açıklama</th><th>Auth</th><th>Tier</th></tr>
+    <tr><td>POST</td><td><code>/api/horoscope</code></td><td>Burç yorumu (günlük/haftalık/aylık)</td><td>Yok</td><td>Free/Premium</td></tr>
+    <tr><td>POST</td><td><code>/api/natal</code></td><td>Doğum haritası + natal yorum</td><td>Yok</td><td>Premium</td></tr>
+    <tr><td>POST</td><td><code>/api/transit</code></td><td>Transit analizi</td><td>isPremium body flag*</td><td>VIP</td></tr>
+    <tr><td>POST</td><td><code>/api/compatibility</code></td><td>Uyum analizi</td><td>Yok</td><td>VIP</td></tr>
+    <tr><td>POST</td><td><code>/api/tarot</code></td><td>Tarot açılımı</td><td>Yok</td><td>Free/Premium/VIP</td></tr>
+    <tr><td>POST</td><td><code>/api/dream</code></td><td>Rüya yorumu</td><td>Yok</td><td>Premium</td></tr>
+    <tr><td>POST</td><td><code>/api/crystal</code></td><td>Kristal rehberi</td><td>Yok</td><td>Premium</td></tr>
+    <tr><td>POST</td><td><code>/api/fortune</code></td><td>Fal fotoğrafı (vision)</td><td>Yok</td><td>VIP</td></tr>
+    <tr><td>POST</td><td><code>/api/analytics</code></td><td>Analitik event kaydet</td><td>Yok</td><td>—</td></tr>
+    <tr><td>GET</td><td><code>/api/analytics/summary</code></td><td>Admin panel özeti</td><td>ADMIN_TOKEN</td><td>Admin</td></tr>
+    <tr><td>POST</td><td><code>/api/push/register</code></td><td>Push token kaydet</td><td>Yok</td><td>—</td></tr>
+    <tr><td>GET</td><td><code>/api/push/stats</code></td><td>Push istatistikleri</td><td>ADMIN_TOKEN</td><td>Admin</td></tr>
+    <tr><td>GET</td><td><code>/api/premium-status</code></td><td>Kullanıcı plan durumu</td><td>email query</td><td>—</td></tr>
+    <tr><td>POST</td><td><code>/api/create-checkout</code></td><td>iyzico checkout başlat</td><td>Yok</td><td>—</td></tr>
+    <tr><td>POST</td><td><code>/api/payment-callback</code></td><td>iyzico ödeme sonucu</td><td>iyzico imzası*</td><td>—</td></tr>
+  </table>
+  <p style="color:var(--muted);font-size:13px">* = Eksik veya client-side bypass edilebilir güvenlik açığı mevcut</p>
+
+  <h3>Rate Limiting</h3>
+  <p>AI endpoint'lerine (<code>/api/fortune</code>, <code>/api/horoscope</code>, <code>/api/natal</code>, <code>/api/transit</code>, <code>/api/compatibility</code>, <code>/api/tarot</code>, <code>/api/dream</code>, <code>/api/crystal</code>) dakikada 15 istek limiti uygulanmıştır. Aşımda <code>429 Too Many Requests</code> döner.</p>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="security">
+  <div class="chapter-num">Bölüm 10</div>
+  <h2>Güvenlik Analizi</h2>
+
+  <table>
+    <tr><th>Açık</th><th>Önem</th><th>Durum</th><th>Çözüm</th></tr>
+    <tr>
+      <td>Hardcoded admin token</td>
+      <td style="color:var(--red)">KRİTİK</td>
+      <td class="yes">ÇÖZÜLDÜ</td>
+      <td><code>ADMIN_TOKEN</code> env var'a taşındı, fallback kaldırıldı</td>
+    </tr>
+    <tr>
+      <td>Rate limiting yok</td>
+      <td style="color:var(--gold)">YÜKSEK</td>
+      <td class="yes">ÇÖZÜLDÜ</td>
+      <td>express-rate-limit: tüm AI endpoint → 15 req/dk</td>
+    </tr>
+    <tr>
+      <td>Client-side premium bypass</td>
+      <td style="color:var(--gold)">YÜKSEK</td>
+      <td class="partial">AÇIK VIP aktif</td>
+      <td>Şu an herkes VIP. Tier ayrımı aktifleşince JWT doğrulama eklenecek</td>
+    </tr>
+    <tr>
+      <td>iyzico HMAC doğrulama yok</td>
+      <td style="color:var(--gold)">YÜKSEK</td>
+      <td class="no">AÇIK</td>
+      <td>Para almadan önce iyzico HMAC-SHA256 imza kontrolü eklenmeli</td>
+    </tr>
+    <tr>
+      <td>Prompt injection riski</td>
+      <td style="color:var(--gold)">ORTA</td>
+      <td class="no">AÇIK</td>
+      <td><code>sanitizeInput()</code> fonksiyonu eklenecek (tüm req.body → AI prompt)</td>
+    </tr>
+    <tr>
+      <td>Checkout session bellek kaybı</td>
+      <td style="color:var(--muted)">DÜŞÜK</td>
+      <td class="no">AÇIK</td>
+      <td>global.checkoutSessions → Neon checkout_sessions tablosuna taşınacak</td>
+    </tr>
+    <tr>
+      <td>Statik salt (şifre hash)</td>
+      <td style="color:var(--muted)">DÜŞÜK</td>
+      <td class="no">AÇIK</td>
+      <td>Server-side auth'a geçişte bcrypt + unique salt kullanılacak</td>
+    </tr>
+    <tr>
+      <td>.env git'e commit edilmemeli</td>
+      <td style="color:var(--red)">KRİTİK</td>
+      <td class="partial">DİKKAT</td>
+      <td>.gitignore'da var, kontrol et: <code>git status</code></td>
+    </tr>
+  </table>
+
+  <h3>Admin Panel'e Erişim (Güvenli)</h3>
+  <pre><code>// .env'deki ADMIN_TOKEN ile:
+GET /api/analytics/summary?token=faf87b097853fe44...
+GET /api/push/stats?token=faf87b097853fe44...</code></pre>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="tiers">
+  <div class="chapter-num">Bölüm 11</div>
+  <h2>Tier Yapısı</h2>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>🆓 Ücretsiz (₺0)</h4>
+      <ul style="font-size:13px;color:var(--muted)">
+        <li>Günlük burç yorumu (kısa)</li>
+        <li>Tek kart tarot</li>
+        <li>Ay takvimi</li>
+        <li>3 AI istek/gün</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>⭐ Premium (₺49/ay)</h4>
+      <ul style="font-size:13px;color:var(--muted)">
+        <li>Günlük/haftalık/aylık yorum</li>
+        <li>Doğum haritası + natal</li>
+        <li>3 kart tarot</li>
+        <li>Rüya yorumu (2/gün)</li>
+        <li>Kristal rehberi</li>
+        <li>20 AI istek/gün</li>
+        <li>Ay evresi bildirimleri</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>👑 VIP (₺99/ay)</h4>
+      <ul style="font-size:13px;color:var(--muted)">
+        <li>Premium'un tümü +</li>
+        <li>Transit analizi</li>
+        <li>Uyum analizi</li>
+        <li>Celtic Cross (10 kart)</li>
+        <li>Fal fotoğrafı</li>
+        <li>Sınırsız AI isteği</li>
+        <li>VIP rozeti + erken erişim</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Kod Kontrolü (app.js)</h3>
+  <pre><code>// Mevcut — herkese VIP ver
+function isOpenVipAccessEnabled() {
+    return window.__ZEMARA_CONFIG?.openVipAccess !== false; // default: true
+}
+function isPremiumUser() {
+    if (isOpenVipAccessEnabled()) return true;
+    const s = AuthSystem.getSession();
+    return s?.plan === 'premium' || s?.plan === 'vip';
+}
+
+// Gelecekte — tier ayrımı aktifleşince eklenecek
+function isVipUser() {
+    if (isOpenVipAccessEnabled()) return true;
+    return AuthSystem.getSession()?.plan === 'vip';
+}
+// Transit, Celtic Cross, uyum, fal → isVipUser() kullanacak</code></pre>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="costs">
+  <div class="chapter-num">Bölüm 12</div>
+  <h2>Maliyet Analizi</h2>
+
+  <h3>OpenAI API Maliyetleri (gpt-4o-mini)</h3>
+  <table>
+    <tr><th>Özellik</th><th>~Input Token</th><th>~Output Token</th><th>Maliyet/İstek</th></tr>
+    <tr><td>Günlük Yorum</td><td>600</td><td>500</td><td>$0.000390</td></tr>
+    <tr><td>Doğum Haritası</td><td>900</td><td>800</td><td>$0.000615</td></tr>
+    <tr><td>Transit Analizi</td><td>1.000</td><td>900</td><td>$0.000690</td></tr>
+    <tr><td>Celtic Cross Tarot</td><td>1.500</td><td>1.200</td><td>$0.000945</td></tr>
+    <tr><td>Fal Fotoğrafı (vision)</td><td>1.200</td><td>700</td><td>$0.000600</td></tr>
+    <tr><td><strong>Ortalama</strong></td><td><strong>878</strong></td><td><strong>767</strong></td><td><strong>$0.000578</strong></td></tr>
+  </table>
+
+  <h3>Günlük Kullanıcı → Aylık Maliyet</h3>
+  <table>
+    <tr><th>DAU</th><th>Günlük İstek</th><th>Günlük AI ($)</th><th>Aylık AI ($)</th><th>Aylık Altyapı ($)</th><th>TOPLAM/ay ($)</th></tr>
+    <tr><td>10</td><td>30</td><td>$0.017</td><td>$0.52</td><td>$1</td><td><strong>$1.52</strong></td></tr>
+    <tr><td>100</td><td>300</td><td>$0.17</td><td>$5.20</td><td>$1</td><td><strong>$6.20</strong></td></tr>
+    <tr><td>1.000</td><td>3.000</td><td>$1.74</td><td>$52</td><td>$20</td><td><strong>$72</strong></td></tr>
+    <tr><td>10.000</td><td>30.000</td><td>$17.40</td><td>$522</td><td>$40</td><td><strong>$562</strong></td></tr>
+    <tr><td>100.000</td><td>300.000</td><td>$174</td><td>$5.220</td><td>$80</td><td><strong>$5.300</strong></td></tr>
+  </table>
+  <p style="color:var(--muted);font-size:13px">Kur: $1 = ₺33. Altyapı: Vercel + Neon + domain.</p>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="business">
+  <div class="chapter-num">Bölüm 13</div>
+  <h2>6 Aylık İş Planı</h2>
+
+  <table>
+    <tr><th>Ay</th><th>Ücretsiz</th><th>Premium (₺49)</th><th>VIP (₺99)</th><th>Aylık Gelir</th><th>Maliyet</th><th>Kâr</th><th>Kümülatif Net</th></tr>
+    <tr><td>1</td><td>200</td><td>5</td><td>2</td><td>₺443</td><td>₺800</td><td class="no">-₺357</td><td class="no">-₺357</td></tr>
+    <tr><td>2</td><td>600</td><td>20</td><td>5</td><td>₺1.475</td><td>₺1.200</td><td class="yes">+₺275</td><td class="no">-₺82</td></tr>
+    <tr><td>3</td><td>1.500</td><td>60</td><td>15</td><td>₺4.425</td><td>₺2.500</td><td class="yes">+₺1.925</td><td class="yes">+₺1.843</td></tr>
+    <tr><td>4</td><td>4.000</td><td>150</td><td>40</td><td>₺11.310</td><td>₺5.000</td><td class="yes">+₺6.310</td><td class="yes">+₺8.153</td></tr>
+    <tr><td>5</td><td>10.000</td><td>400</td><td>100</td><td>₺29.500</td><td>₺12.000</td><td class="yes">+₺17.500</td><td class="yes">+₺25.653</td></tr>
+    <tr><td>6</td><td>25.000</td><td>1.000</td><td>250</td><td>₺74.250</td><td>₺28.000</td><td class="yes">+₺46.250</td><td class="yes">+₺71.903</td></tr>
+  </table>
+
+  <h3>Büyüme Kanalları</h3>
+  <ol>
+    <li><strong>TikTok/Instagram Reels:</strong> "Senin burcun bugün ne diyor?" formatı. Kısa, kişisel, paylaşılabilir. Organik büyümenin en hızlı yolu.</li>
+    <li><strong>ASO (App Store Optimizasyonu):</strong> Anahtar kelimeler: "astroloji", "burç yorumu", "tarot kartı", "doğum haritası", "uyum testi". Türkçe açıklama + ekran görüntüleri.</li>
+    <li><strong>Mikro Influencer:</strong> 1K-10K takipçili astroloji hesapları. Daha güvenilir, daha düşük maliyet, daha yüksek dönüşüm.</li>
+    <li><strong>SEO + Blog:</strong> "Boğa burcu nisan 2026", "yükselen burç hesapla", "tarot günlük" gibi aramalar için içerik üret.</li>
+    <li><strong>Referral sistemi:</strong> "Arkadaşını getir, 1 ay Premium kazan" kampanyası.</li>
+  </ol>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="vercel">
+  <div class="chapter-num">Bölüm 14</div>
+  <h2>Vercel Deployment</h2>
+
+  <h3>vercel.json Yapısı</h3>
+  <p>Vercel Functions 11 adet sınırlıdır. Fazlası için <code>api/extras.js</code> multi-route pattern kullanılır: tek fonksiyon, URL path'e göre farklı handler çalışır.</p>
+
+  <pre><code>// vercel.json
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/(.*)", "destination": "/" }
+  ]
+}</code></pre>
+
+  <h3>Ortam Değişkenleri (Vercel Dashboard)</h3>
+  <p>Settings → Environment Variables'a eklenecekler:</p>
+  <ul>
+    <li><code>OPENAI_API_KEY</code></li>
+    <li><code>IYZICO_API_KEY</code></li>
+    <li><code>IYZICO_SECRET_KEY</code></li>
+    <li><code>IYZICO_URI</code></li>
+    <li><code>DATABASE_URL</code></li>
+    <li><code>ADMIN_TOKEN</code> ← yeni eklendi</li>
+  </ul>
+
+  <h3>Deploy Komutu</h3>
+  <pre><code>npx vercel --prod</code></pre>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="android">
+  <div class="chapter-num">Bölüm 15</div>
+  <h2>Android & Play Store</h2>
+
+  <h3>Capacitor Yapılandırması</h3>
+  <pre><code>// capacitor.config.ts
+{
+    appId: 'com.zemara.app',
+    appName: 'Zemara',
+    webDir: '.',              // index.html kök dizinde
+    server: {
+        androidScheme: 'https'
+    }
+}</code></pre>
+
+  <h3>AAB Build & İmzalama</h3>
+  <pre><code># Web dosyalarını Android'e kopyala
+npx cap sync android
+
+# AAB build
+cd android
+./gradlew bundleRelease
+
+# İmzalama (zemara-release.keystore mevcut)
+jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+  -keystore zemara-release.keystore \
+  app/build/outputs/bundle/release/app-release.aab \
+  zemara-key
+
+# Doğrulama
+jarsigner -verify -verbose app-release.aab</code></pre>
+
+  <h3>Play Store Yükleme Adımları</h3>
+  <ol>
+    <li><strong>Hesap aç:</strong> play.google.com/console → Bireysel hesap → $25 ödeme</li>
+    <li><strong>Kimlik doğrula:</strong> TC kimlik veya pasaport (1-3 iş günü)</li>
+    <li><strong>Uygulama oluştur:</strong> "Zemara — Astroloji & Tarot"</li>
+    <li><strong>Store listing:</strong> 5 ekran görüntüsü (1080×1920), ikon (512×512 PNG, şeffaf arka plan), öne çıkan grafik (1024×500)</li>
+    <li><strong>İçerik derecelendirmesi:</strong> Anketi doldur → PEGI 3</li>
+    <li><strong>Gizlilik politikası:</strong> Basit bir web sayfası yeterli (Vercel'de barındır)</li>
+    <li><strong>AAB yükle:</strong> Production track → yeni sürüm oluştur</li>
+    <li><strong>İnceleme:</strong> İlk yükleme 3-7 iş günü. Sonraki güncellemeler daha hızlı.</li>
+  </ol>
+
+  <div class="callout callout-warn">
+    <div class="callout-title">Google Play Billing Notu</div>
+    <p>Uygulama içi satın alma için Google Play Billing API zorunludur (%15 komisyon). Kısa vadeli strateji: Uygulamayı ücretsiz yükle, ödeme sayfasına web üzerinden yönlendir (deeplinkle). Bu grey area'dır — büyük ölçeğe ulaşınca Play Billing entegre edilmeli.</p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="local">
+  <div class="chapter-num">Bölüm 16</div>
+  <h2>Lokal Geliştirme</h2>
+
+  <h3>Kurulum ve Başlatma</h3>
+  <pre><code># Bağımlılıkları yükle
+npm install
+
+# .env dosyasını oluştur (zaten var, sadece kontrol et)
+cat .env
+
+# Sunucuyu başlat
+node server.js
+# veya hot-reload için:
+npx nodemon server.js
+
+# Tarayıcıda aç
+open http://localhost:3000</code></pre>
+
+  <h3>Android Emülatör</h3>
+  <pre><code># Web dosyalarını sync et
+npx cap sync android
+
+# Android Studio'da aç
+npx cap open android
+# veya doğrudan emülatör başlat:
+npx cap run android</code></pre>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="test-prompts">
+  <div class="chapter-num">Bölüm 17</div>
+  <h2>Test Promptları</h2>
+  <p>Tüm özellikleri test etmek için kullanılacak sabit veri seti.</p>
+
+  <div class="callout callout-info">
+    <div class="callout-title">Test Kullanıcısı</div>
+    <p><strong>Ad:</strong> Ayşe Kaya &nbsp;|&nbsp; <strong>Doğum:</strong> 15.05.1990 &nbsp;|&nbsp; <strong>Saat:</strong> 09:30 &nbsp;|&nbsp; <strong>Şehir:</strong> İstanbul &nbsp;|&nbsp; <strong>Burç:</strong> Boğa</p>
+  </div>
+
+  <table>
+    <tr><th>Özellik</th><th>Giriş</th><th>Beklenen Çıktı</th><th>Tier</th></tr>
+    <tr>
+      <td>Günlük Yorum</td>
+      <td>Ad: Ayşe, Doğum: 15.05.1990</td>
+      <td>Boğa burcuna özel günlük enerji yorumu</td>
+      <td>Ücretsiz</td>
+    </tr>
+    <tr>
+      <td>Doğum Haritası</td>
+      <td>15.05.1990, 09:30, İstanbul</td>
+      <td>Ascendant, 12 ev, gezegen pozisyonları</td>
+      <td>Premium</td>
+    </tr>
+    <tr>
+      <td>Transit Analizi</td>
+      <td>Doğum: 15.05.1990, Bugün: 01.04.2026, Burç: Boğa</td>
+      <td>Jüpiter/Satürn transit etkileri, 3 aylık tahmin</td>
+      <td>VIP</td>
+    </tr>
+    <tr>
+      <td>Uyum Analizi</td>
+      <td>Kişi 1: 15.05.1990 / Kişi 2: 22.08.1988</td>
+      <td>Boğa-Aslan uyumu, Venüs açıları, skor</td>
+      <td>VIP</td>
+    </tr>
+    <tr>
+      <td>Celtic Cross</td>
+      <td>10 kart açılımı</td>
+      <td>10 pozisyon yorumu + genel mesaj</td>
+      <td>VIP</td>
+    </tr>
+    <tr>
+      <td>Rüya Yorumu</td>
+      <td>"Denizin üzerinde uçuyordum, altımda dalgalar vardı, güneş batıyordu"</td>
+      <td>Jung arketip analizi, bilinçaltı mesajı</td>
+      <td>Premium</td>
+    </tr>
+    <tr>
+      <td>Kristal Rehberi</td>
+      <td>"Kaygı ve odak sorunu yaşıyorum, uyku kalitem çok bozuk"</td>
+      <td>Ametist, Labradorit, Siyah Turmalin + nasıl kullanılır</td>
+      <td>Premium</td>
+    </tr>
+    <tr>
+      <td>Fal Fotoğrafı</td>
+      <td>El fotoğrafı (JPEG, iyi ışık, avuç içi açık)</td>
+      <td>Baş/kalp/akıl çizgileri, tepe analizi</td>
+      <td>VIP</td>
+    </tr>
+  </table>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="env">
+  <div class="chapter-num">Bölüm 18</div>
+  <h2>Ortam Değişkenleri (.env)</h2>
+
+  <table>
+    <tr><th>Değişken</th><th>Açıklama</th><th>Nereden Alınır</th></tr>
+    <tr><td><code>OPENAI_API_KEY</code></td><td>OpenAI API anahtarı</td><td>platform.openai.com/api-keys</td></tr>
+    <tr><td><code>IYZICO_API_KEY</code></td><td>iyzico API anahtarı (sandbox veya canlı)</td><td>merchant.iyzipay.com</td></tr>
+    <tr><td><code>IYZICO_SECRET_KEY</code></td><td>iyzico gizli anahtar</td><td>merchant.iyzipay.com</td></tr>
+    <tr><td><code>IYZICO_URI</code></td><td>iyzico API URL (sandbox: https://sandbox-api.iyzipay.com)</td><td>Sabit</td></tr>
+    <tr><td><code>DATABASE_URL</code></td><td>Neon PostgreSQL connection string</td><td>console.neon.tech</td></tr>
+    <tr><td><code>ADMIN_TOKEN</code></td><td>Admin panel erişim tokeni (32-byte hex)</td><td><code>node -e "require('crypto').randomBytes(32).toString('hex')"</code></td></tr>
+  </table>
+
+  <div class="callout callout-danger">
+    <div class="callout-title">.env GIT'E COMMIT EDİLMEMELİ</div>
+    <p>Projedeki <code>.gitignore</code>'da <code>.env</code> satırının olduğunu kontrol et: <code>grep "\.env" .gitignore</code>. Eğer yoksa hemen ekle. Bu dosya içindeki tüm anahtarlar (<strong>OpenAI, iyzico, Neon, Admin Token</strong>) sızdırılırsa ciddi maddi hasar oluşabilir.</p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ══════════════════════════════════════ -->
+<section id="i18n">
+  <div class="chapter-num">Bölüm 19</div>
+  <h2>Çok Dil Desteği (i18n) — Tüm Avrupa Pazarı</h2>
+
+  <p>Zemara şu an yalnızca Türkçe hizmet vermektedir. Ancak astroloji ve spiritüel içerik tüm Avrupa'da güçlü bir pazara sahiptir. Uygulamanın Avrupa'ya açılabilmesi için kapsamlı bir i18n (internationalization) altyapısı kurulması gerekmektedir.</p>
+
+  <div class="callout callout-info">
+    <div class="callout-title">Pazar Büyüklüğü</div>
+    <p>Avrupa'da astroloji uygulamaları pazarı 2025 itibarıyla yıllık ~$180M. En büyük pazarlar: Almanya, Fransa, İtalya, İspanya, Polonya, Hollanda. İngilizce tek başına Türkiye pazarının 15 katı büyüklüğünde.</p>
+  </div>
+
+  <h3>Hedef Diller — Öncelik Sırası</h3>
+
+  <table>
+    <tr><th>Öncelik</th><th>Dil</th><th>Kod</th><th>Konuşan (Avrupa)</th><th>Astroloji İlgisi</th><th>Tahmini Ek Gelir Potansiyeli</th></tr>
+    <tr><td>1</td><td>İngilizce</td><td><code>en</code></td><td>~70M (+ global)</td><td class="yes">Çok Yüksek</td><td>★★★★★</td></tr>
+    <tr><td>2</td><td>Almanca</td><td><code>de</code></td><td>~100M</td><td class="yes">Çok Yüksek</td><td>★★★★★</td></tr>
+    <tr><td>3</td><td>Fransızca</td><td><code>fr</code></td><td>~80M</td><td class="yes">Yüksek</td><td>★★★★☆</td></tr>
+    <tr><td>4</td><td>İspanyolca</td><td><code>es</code></td><td>~70M (+ Latin Amerika)</td><td class="yes">Yüksek</td><td>★★★★★</td></tr>
+    <tr><td>5</td><td>İtalyanca</td><td><code>it</code></td><td>~65M</td><td class="yes">Yüksek</td><td>★★★★☆</td></tr>
+    <tr><td>6</td><td>Portekizce</td><td><code>pt</code></td><td>~25M (+ Brezilya)</td><td class="yes">Yüksek</td><td>★★★★★</td></tr>
+    <tr><td>7</td><td>Lehçe</td><td><code>pl</code></td><td>~45M</td><td class="partial">Orta-Yüksek</td><td>★★★☆☆</td></tr>
+    <tr><td>8</td><td>Hollandaca</td><td><code>nl</code></td><td>~28M</td><td class="partial">Orta</td><td>★★★☆☆</td></tr>
+    <tr><td>9</td><td>Romence</td><td><code>ro</code></td><td>~24M</td><td class="partial">Orta</td><td>★★☆☆☆</td></tr>
+    <tr><td>10</td><td>Macarca</td><td><code>hu</code></td><td>~13M</td><td class="partial">Orta</td><td>★★☆☆☆</td></tr>
+    <tr><td>11</td><td>Çekçe</td><td><code>cs</code></td><td>~11M</td><td class="partial">Orta</td><td>★★☆☆☆</td></tr>
+    <tr><td>12</td><td>İsveççe</td><td><code>sv</code></td><td>~10M</td><td class="partial">Orta</td><td>★★☆☆☆</td></tr>
+    <tr><td>13</td><td>Danca</td><td><code>da</code></td><td>~6M</td><td class="partial">Orta</td><td>★★☆☆☆</td></tr>
+    <tr><td>14</td><td>Fince</td><td><code>fi</code></td><td>~5M</td><td class="partial">Orta</td><td>★★☆☆☆</td></tr>
+    <tr><td>15</td><td>Norveççe</td><td><code>no</code></td><td>~5M</td><td class="partial">Orta</td><td>★★☆☆☆</td></tr>
+    <tr><td>16</td><td>Yunanca</td><td><code>el</code></td><td>~12M</td><td class="yes">Yüksek (astroloji kökeni)</td><td>★★★☆☆</td></tr>
+    <tr><td>17</td><td>Bulgarca</td><td><code>bg</code></td><td>~7M</td><td class="partial">Orta</td><td>★★☆☆☆</td></tr>
+    <tr><td>18</td><td>Hırvatça</td><td><code>hr</code></td><td>~5M</td><td class="partial">Orta</td><td>★★☆☆☆</td></tr>
+    <tr><td>19</td><td>Slovakça</td><td><code>sk</code></td><td>~5M</td><td class="partial">Orta</td><td>★★☆☆☆</td></tr>
+    <tr><td>20</td><td>Litvanca</td><td><code>lt</code></td><td>~3M</td><td class="partial">Orta</td><td>★☆☆☆☆</td></tr>
+  </table>
+
+  <h3>Teknik Mimari: i18n Katmanı</h3>
+
+  <p>Mevcut sistem tamamen Türkçe hardcoded'dır. i18n için iki katmanda değişiklik gereklidir:</p>
+
+  <h4>1. UI Metinleri (app.js translations objesi)</h4>
+  <p>Uygulama içinde zaten kısmi bir <code>translations</code> objesi mevcut. Bu genişletilecek:</p>
+  <pre><code>// app.js — mevcut yapı (genişletilecek)
+const translations = {
+    tr: {
+        nav_daily: 'Günlük',
+        nav_natal: 'Doğum Haritası',
+        nav_tarot: 'Tarot',
+        btn_start: 'Ücretsiz Başla',
+        demo_btn: '⚡ Demo Girişi — Tüm Özellikler Açık',
+        // ... ~200 string
+    },
+    en: {
+        nav_daily: 'Daily',
+        nav_natal: 'Birth Chart',
+        nav_tarot: 'Tarot',
+        btn_start: 'Start Free',
+        demo_btn: '⚡ Demo Access — All Features Unlocked',
+        // ... ~200 string
+    },
+    de: {
+        nav_daily: 'Täglich',
+        nav_natal: 'Geburtshoroskop',
+        nav_tarot: 'Tarot',
+        btn_start: 'Kostenlos starten',
+        // ...
+    },
+    // fr, es, it, pt, pl, nl, ro...
+};
+
+function t(key) {
+    const lang = getCurrentLang(); // localStorage veya tarayıcı dili
+    return translations[lang]?.[key] ?? translations['en']?.[key] ?? key;
+}</code></pre>
+
+  <h4>2. AI Prompt Dili (server.js)</h4>
+  <p>En kritik kısım budur. Her AI çağrısına kullanıcının dili gönderilmeli, GPT o dilde yanıt üretmeli:</p>
+  <pre><code>// Frontend — her AI isteğine lang ekle
+const res = await fetch('/api/horoscope', {
+    method: 'POST',
+    body: JSON.stringify({
+        name, birthDate, period,
+        lang: getCurrentLang()   // 'en', 'de', 'fr', 'es'...
+    })
+});
+
+// server.js — sistem prompt'una dil talimatı ekle
+const langInstructions = {
+    tr: 'Türkçe yaz. Samimi ve sıcak bir ton kullan.',
+    en: 'Write in English. Use a warm, personal tone.',
+    de: 'Schreibe auf Deutsch. Verwende einen warmherzigen Ton.',
+    fr: 'Écris en français. Utilise un ton chaleureux et personnel.',
+    es: 'Escribe en español. Usa un tono cálido y personal.',
+    it: 'Scrivi in italiano. Usa un tono caldo e personale.',
+    pt: 'Escreva em português. Use um tom caloroso e pessoal.',
+    pl: 'Pisz po polsku. Używaj ciepłego, osobistego tonu.',
+    nl: 'Schrijf in het Nederlands. Gebruik een warme, persoonlijke toon.',
+    el: 'Γράψε στα ελληνικά. Χρησιμοποίησε ζεστό, προσωπικό τόνο.',
+};
+
+const systemPrompt = `Sen Zemara'in astroloji uzmanısın.
+${langInstructions[req.body.lang] || langInstructions['en']}
+Kişisel veri: ${name}, ${birthDate}`;</code></pre>
+
+  <div class="callout callout-success">
+    <div class="callout-title">GPT'nin Avantajı</div>
+    <p>gpt-4o-mini tüm Avrupa dillerinde akıcı çıktı üretebilir. Ek maliyet yok — sadece sistem prompt'una tek satır dil talimatı ekleniyor. UI çevirisi en büyük iş yükü, AI kısmı trivial.</p>
+  </div>
+
+  <h4>3. Dil Algılama ve Seçimi</h4>
+  <pre><code>// app.js — otomatik dil algılama
+function detectLanguage() {
+    // 1. Kullanıcının manuel seçimi (en yüksek öncelik)
+    const saved = localStorage.getItem('zemara_lang');
+    if (saved) return saved;
+
+    // 2. Tarayıcı dili
+    const browserLang = navigator.language?.split('-')[0]; // 'de-DE' → 'de'
+    const supported = ['tr','en','de','fr','es','it','pt','pl','nl','el','ro','hu','cs','sv','da','fi','no'];
+    if (supported.includes(browserLang)) return browserLang;
+
+    // 3. Fallback: İngilizce
+    return 'en';
+}
+
+function setLanguage(lang) {
+    localStorage.setItem('zemara_lang', lang);
+    applyTranslations(lang);
+    // Sayfa yeniden render'lamaya gerek yok — DOM'daki data-i18n attr'ları güncellenir
+}</code></pre>
+
+  <h4>4. HTML Attr Tabanlı Çeviri Sistemi</h4>
+  <pre><code>&lt;!-- index.html — data-i18n attr ekle --&gt;
+&lt;button data-i18n="btn_start" class="btn-primary"&gt;Ücretsiz Başla&lt;/button&gt;
+&lt;span data-i18n="nav_daily"&gt;Günlük&lt;/span&gt;
+
+&lt;!-- app.js — applyTranslations() --&gt;
+function applyTranslations(lang) {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        el.textContent = t(key);
+    });
+    // placeholder'lar için:
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+    });
+}</code></pre>
+
+  <h3>Uygulama Aşamaları</h3>
+
+  <table>
+    <tr><th>Aşama</th><th>Kapsam</th><th>Süre</th><th>Öncelik</th></tr>
+    <tr>
+      <td><strong>Aşama 1</strong></td>
+      <td>İngilizce — tam UI çevirisi + AI prompt dil desteği + dil seçici</td>
+      <td>1 hafta</td>
+      <td class="yes">Kritik</td>
+    </tr>
+    <tr>
+      <td><strong>Aşama 2</strong></td>
+      <td>Almanca + Fransızca + İspanyolca (en büyük Avrupa pazarları)</td>
+      <td>2 hafta</td>
+      <td class="yes">Yüksek</td>
+    </tr>
+    <tr>
+      <td><strong>Aşama 3</strong></td>
+      <td>İtalyanca + Portekizce + Lehçe + Hollandaca</td>
+      <td>2 hafta</td>
+      <td class="partial">Orta</td>
+    </tr>
+    <tr>
+      <td><strong>Aşama 4</strong></td>
+      <td>Romence, Yunanca, İsveççe, Danca, Fince, Norveççe</td>
+      <td>2 hafta</td>
+      <td class="partial">Orta</td>
+    </tr>
+    <tr>
+      <td><strong>Aşama 5</strong></td>
+      <td>Çekçe, Macarca, Slovakça, Bulgarca, Hırvatça, Litvanca</td>
+      <td>2 hafta</td>
+      <td class="no">Düşük</td>
+    </tr>
+  </table>
+
+  <h3>Çeviri Yöntemi</h3>
+  <ul>
+    <li><strong>UI metinleri (~200 string):</strong> GPT ile toplu çeviri yaptırılabilir. Her dil ~30 dakika. Sonra native speaker review önerilir (kritik pazarlar için).</li>
+    <li><strong>AI yorumları:</strong> Ek çalışma gerekmez — lang parametresi gönderildiğinde GPT otomatik o dilde üretir.</li>
+    <li><strong>App Store / Play Store açıklamaları:</strong> Her dil için ayrı store listing gerekli (ASO açısından kritik).</li>
+    <li><strong>Push notification içerikleri:</strong> Dile göre ayrı notification şablonları gerekli.</li>
+  </ul>
+
+  <h3>RTL Dil Notu</h3>
+  <p>Avrupa dilleri LTR (soldan sağa) yazıldığından CSS değişikliği gerekmez. İleride Arapça veya İbranice eklenmek istenirse <code>dir="rtl"</code> + ayrı CSS gerekli.</p>
+
+  <h3>Para Birimi ve Fiyatlandırma</h3>
+  <table>
+    <tr><th>Bölge</th><th>Para Birimi</th><th>Premium Önerilen Fiyat</th><th>VIP Önerilen Fiyat</th></tr>
+    <tr><td>Türkiye</td><td>TRY ₺</td><td>₺49/ay</td><td>₺99/ay</td></tr>
+    <tr><td>Almanya, Fransa, İtalya, İspanya</td><td>EUR €</td><td>€4.99/ay</td><td>€9.99/ay</td></tr>
+    <tr><td>İngiltere</td><td>GBP £</td><td>£3.99/ay</td><td>£7.99/ay</td></tr>
+    <tr><td>Polonya</td><td>PLN zł</td><td>zł19/ay</td><td>zł39/ay</td></tr>
+    <tr><td>İsveç, Norveç, Danimarka</td><td>SEK/NOK/DKK kr</td><td>~50kr/ay</td><td>~100kr/ay</td></tr>
+  </table>
+  <p style="color:var(--muted);font-size:13px">Avrupa'da iyzico geçersizdir. Stripe veya Paddle entegrasyonu gerekli. Stripe, Avrupa'nın tüm para birimlerini ve ülkelerini destekler.</p>
+
+  <div class="callout callout-warn">
+    <div class="callout-title">Avrupa Pazarı İçin Ödeme Altyapısı Değişmeli</div>
+    <p><strong>iyzico yalnızca Türkiye'de çalışır.</strong> Avrupa pazarı için <strong>Stripe</strong> (developer-friendly, 35+ ülke) veya <strong>Paddle</strong> (KDV/vergi otomatik yönetimi) entegre edilmelidir. Stripe entegrasyonu mevcut iyzico kodu ile paralel çalışabilir — ülkeye göre doğru sağlayıcı seçilir.</p>
+  </div>
+
+  <h3>GDPR Uyumluluğu (Avrupa Zorunluluğu)</h3>
+  <p>AB'deki kullanıcılara hizmet verildiğinde GDPR (Genel Veri Koruma Yönetmeliği) zorunludur:</p>
+  <ul>
+    <li><strong>Cookie consent banner:</strong> Avrupa'dan gelen kullanıcılara zorunlu</li>
+    <li><strong>Gizlilik politikası:</strong> Hangi verinin toplandığı, nerede saklandığı, ne kadar süre tutulduğu</li>
+    <li><strong>Veri silme hakkı:</strong> Kullanıcı hesabını sildiğinde tüm veriler Neon'dan silinmeli</li>
+    <li><strong>Veri lokasyonu:</strong> Neon Frankfurt (eu-central-1) zaten AB içinde — ✓</li>
+    <li><strong>Analytics:</strong> IP adresi kaydedilmemeli veya anonimleştirilmeli</li>
+  </ul>
+
+  <h3>App Store'da Lokalizasyon Faydası</h3>
+  <p>Her yeni dil eklendiğinde App Store ve Play Store'da o dilde arama sonuçlarında çıkılır. 20 dil desteği = 20 farklı pazarda organik görünürlük. Bu, paid user acquisition'dan çok daha düşük maliyetlidir.</p>
+</section>
+
+<hr class="divider">
+
+<!-- FOOTER -->
+<div style="text-align:center;padding:48px 0;color:var(--muted);font-size:13px">
+  <div style="font-size:32px;margin-bottom:12px">✦</div>
+  <p>Zemara v4.0 Teknik & İş Rehberi</p>
+  <p>Oluşturulma tarihi: Nisan 2026</p>
+</div>
+
+</main>
+
+<script>
+// Aktif nav item highlight
+const sections = document.querySelectorAll('section[id]');
+const navItems = document.querySelectorAll('.nav-item');
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            navItems.forEach(i => i.style.borderLeftColor = 'transparent');
+            const active = document.querySelector(`.nav-item[href="#${entry.target.id}"]`);
+            if (active) { active.style.borderLeftColor = 'var(--accent)'; active.style.color = 'var(--text)'; }
+        }
+    });
+}, { threshold: 0.3 });
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 /**
  * ============================================
- * AstroMap v4 — Premium SPA Controller
+ * Zemara v4 — Premium SPA Controller
  * Navigation, Daily Horoscope, Compatibility,
  * Moon Calendar, Astrocartography, Comparison,
  * Share, Timing, Auth UI
@@ -11,9 +11,48 @@
 // ═══════════════════════════════════════
 // ANALYTICS SCAFFOLD
 // ═══════════════════════════════════════
+// ═══════════════════════════════════════
+// COOKIE CONSENT MANAGER
+// ═══════════════════════════════════════
+const CookieConsent = {
+    _key: 'zemara_cookie_consent',
+    get() { return localStorage.getItem(this._key); },
+    set(value) { localStorage.setItem(this._key, value); },
+    isAccepted() { return this.get() === 'accepted'; },
+    isDecided() { return this.get() !== null; },
+    show() {
+        const el = document.getElementById('cookie-consent');
+        if (el) el.style.display = '';
+    },
+    hide() {
+        const el = document.getElementById('cookie-consent');
+        if (el) { el.style.display = 'none'; }
+    }
+};
+
+function acceptCookies() {
+    CookieConsent.set('accepted');
+    CookieConsent.hide();
+    Analytics.track('cookie_consent', { action: 'accepted' });
+}
+
+function rejectCookies() {
+    CookieConsent.set('rejected');
+    CookieConsent.hide();
+}
+
+// Show banner on load if not decided
+document.addEventListener('DOMContentLoaded', () => {
+    if (!CookieConsent.isDecided()) {
+        setTimeout(() => CookieConsent.show(), 1500);
+    }
+});
+
 const Analytics = {
     events: [],
     track(event, data = {}) {
+        // Only send to server if consent given (local tracking always works for debugging)
+        const hasConsent = CookieConsent.isAccepted() || event === 'cookie_consent';
         const entry = {
             event,
             data,
@@ -25,16 +64,18 @@ const Analytics = {
         // Keep max 500 events in memory
         if (this.events.length > 500) this.events.shift();
         // Debug mode
-        if (localStorage.getItem('astromap_debug')) {
+        if (localStorage.getItem('zemara_debug')) {
             console.log(`📊 Analytics: ${event}`, data);
         }
-        // Send to analytics backend (fire-and-forget)
-        const _ab = window.__ASTROMAP_CONFIG?.apiBase || '';
-        fetch(_ab + '/api/analytics', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(entry)
-        }).catch(() => {}); // Silent fail
+        // Send to analytics backend only with consent
+        if (hasConsent) {
+            const _ab = window.__ZEMARA_CONFIG?.apiBase || '';
+            fetch(_ab + '/api/analytics', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(entry)
+            }).catch(() => {}); // Silent fail
+        }
     },
     _sessionId: 's_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     getSummary() {
@@ -77,7 +118,7 @@ const ABTest = {
 // i18n — INTERNATIONALIZATION
 // ═══════════════════════════════════════
 const i18n = {
-    _lang: localStorage.getItem('astromap_lang') || 'tr',
+    _lang: localStorage.getItem('zemara_lang') || 'tr',
 
     translations: {
         tr: {
@@ -113,7 +154,7 @@ const i18n = {
     setLang(lang) {
         if (!this.translations[lang]) return;
         this._lang = lang;
-        localStorage.setItem('astromap_lang', lang);
+        localStorage.setItem('zemara_lang', lang);
     },
 
     getLang() { return this._lang; }
@@ -160,7 +201,7 @@ function debounce(fn, delay = 200) {
 // API RESPONSE CACHE
 // ═══════════════════════════════════════
 const AICache = {
-    prefix: 'astromap_cache_',
+    prefix: 'zemara_cache_',
     ttl: 3600000, // 1 hour in ms
     
     _key(endpoint, body) {
@@ -252,9 +293,9 @@ prefersReducedMotion.addEventListener('change', (e) => {
 // LOCAL STORAGE AUTH SYSTEM
 // ═══════════════════════════════════════
 const AuthSystem = {
-    _key: 'astromap_user',
-    _historyKey: 'astromap_history',
-    _favKey: 'astromap_favorites',
+    _key: 'zemara_user',
+    _historyKey: 'zemara_history',
+    _favKey: 'zemara_favorites',
 
     getUser() {
         try { return JSON.parse(localStorage.getItem(this._key)); } catch { return null; }
@@ -288,7 +329,7 @@ const AuthSystem = {
             plan: isOpenVipAccessEnabled() ? 'vip' : 'free'
         };
         users.push(user);
-        localStorage.setItem('astromap_users', JSON.stringify(users));
+        localStorage.setItem('zemara_users', JSON.stringify(users));
         const session = { ...user, password: undefined, loginAt: Date.now() };
         localStorage.setItem(this._key, JSON.stringify(session));
         return session;
@@ -352,7 +393,7 @@ const AuthSystem = {
     },
 
     _getAllUsers() {
-        try { return JSON.parse(localStorage.getItem('astromap_users') || '[]'); } catch { return []; }
+        try { return JSON.parse(localStorage.getItem('zemara_users') || '[]'); } catch { return []; }
     },
 
     async _hash(str) {
@@ -360,7 +401,7 @@ const AuthSystem = {
         // NOTE: For production, use server-side bcrypt/argon2 with proper salting
         try {
             const encoder = new TextEncoder();
-            const salt = 'astromap_v4_salt_'; // Static salt — use per-user salt in production
+            const salt = 'zemara_v4_salt_'; // Static salt — use per-user salt in production
             const data = encoder.encode(salt + str);
             const hashBuffer = await crypto.subtle.digest('SHA-256', data);
             const hashArray = Array.from(new Uint8Array(hashBuffer));
@@ -368,7 +409,7 @@ const AuthSystem = {
         } catch {
             // Fallback for environments without SubtleCrypto
             let hash = 0;
-            const salted = 'astromap_v4_' + str;
+            const salted = 'zemara_v4_' + str;
             for (let i = 0; i < salted.length; i++) {
                 const char = salted.charCodeAt(i);
                 hash = ((hash << 5) - hash) + char;
@@ -472,10 +513,10 @@ function navigateTo(pageId) {
     
     // Track visited pages (remove "Yeni" badges)
     try {
-        const visited = JSON.parse(localStorage.getItem('astromap_visited') || '[]');
+        const visited = JSON.parse(localStorage.getItem('zemara_visited') || '[]');
         if (!visited.includes(pageId)) {
             visited.push(pageId);
-            localStorage.setItem('astromap_visited', JSON.stringify(visited));
+            localStorage.setItem('zemara_visited', JSON.stringify(visited));
         }
         const badge = document.querySelector(`.nav-link[data-page="${pageId}"] .nav-new-badge`);
         if (badge) badge.remove();
@@ -493,7 +534,7 @@ function navigateTo(pageId) {
 // PROFILE MEMORY — auto-fill birth data
 // ═══════════════════════════════════════
 const ProfileMemory = {
-    _key: 'astromap_profile',
+    _key: 'zemara_profile',
 
     save(data) {
         try {
@@ -563,7 +604,7 @@ const ProfileMemory = {
 // FREEMIUM USAGE LIMITER
 // ═══════════════════════════════════════
 const UsageLimiter = {
-    _key: 'astromap_daily_usage',
+    _key: 'zemara_daily_usage',
     FREE_DAILY_LIMIT: 3,
 
     _getToday() {
@@ -579,14 +620,14 @@ const UsageLimiter = {
     },
 
     getRemaining() {
-        if (window.__ASTROMAP_CONFIG?.isNative || isOpenVipAccessEnabled()) return Infinity;
+        if (window.__ZEMARA_CONFIG?.isNative || isOpenVipAccessEnabled()) return Infinity;
         const user = AuthSystem.getUser();
         if (user && (user.plan === 'premium' || user.plan === 'vip')) return Infinity;
         return Math.max(0, this.FREE_DAILY_LIMIT - this._getData().count);
     },
 
     consume() {
-        if (window.__ASTROMAP_CONFIG?.isNative || isOpenVipAccessEnabled()) return true;
+        if (window.__ZEMARA_CONFIG?.isNative || isOpenVipAccessEnabled()) return true;
         const user = AuthSystem.getUser();
         if (user && (user.plan === 'premium' || user.plan === 'vip')) return true;
         const data = this._getData();
@@ -605,7 +646,7 @@ const UsageLimiter = {
 // PREMIUM CHECK
 // ═══════════════════════════════════════
 function isOpenVipAccessEnabled() {
-    return window.__ASTROMAP_CONFIG?.openVipAccess !== false;
+    return window.__ZEMARA_CONFIG?.openVipAccess === true;
 }
 
 // ═══════════════════════════════════════
@@ -615,17 +656,17 @@ function toggleDarkLight() {
     const btn = document.getElementById('dark-toggle');
     if (currentTheme === 'moonlight') {
         // Switch back to previous theme or cosmic
-        const prev = localStorage.getItem('astromap_theme_prev') || 'cosmic';
+        const prev = localStorage.getItem('zemara_theme_prev') || 'cosmic';
         applyTheme(prev);
         currentTheme = prev;
-        localStorage.setItem('astromap_theme', prev);
+        localStorage.setItem('zemara_theme', prev);
         if (btn) btn.textContent = '🌙';
     } else {
         // Save current and switch to moonlight
-        localStorage.setItem('astromap_theme_prev', currentTheme);
+        localStorage.setItem('zemara_theme_prev', currentTheme);
         applyTheme('moonlight');
         currentTheme = 'moonlight';
-        localStorage.setItem('astromap_theme', 'moonlight');
+        localStorage.setItem('zemara_theme', 'moonlight');
         if (btn) btn.textContent = '☀️';
     }
     // Update theme panel if open
@@ -637,7 +678,7 @@ function toggleDarkLight() {
 }
 
 function isPremiumUser() {
-    if (window.__ASTROMAP_CONFIG?.isNative || isOpenVipAccessEnabled()) return true;
+    if (window.__ZEMARA_CONFIG?.isNative || isOpenVipAccessEnabled()) return true;
     const user = AuthSystem.getUser();
     return user && (user.plan === 'premium' || user.plan === 'vip');
 }
@@ -656,7 +697,7 @@ async function callAI(endpoint, body, useCache = true) {
     if (useCache) {
         const cached = AICache.get(endpoint, body);
         if (cached) {
-            if (localStorage.getItem('astromap_debug')) console.log(`✦ AI Cache hit: ${endpoint}`);
+            if (localStorage.getItem('zemara_debug')) console.log(`✦ AI Cache hit: ${endpoint}`);
             return cached;
         }
     }
@@ -668,7 +709,7 @@ async function callAI(endpoint, body, useCache = true) {
     UsageLimiter.consume();
     
     let res;
-    const apiBase = window.__ASTROMAP_CONFIG?.apiBase || '';
+    const apiBase = window.__ZEMARA_CONFIG?.apiBase || '';
     _pendingRequests.add(endpoint);
     try {
         res = await fetch(apiBase + '/api/' + endpoint, {
@@ -681,7 +722,7 @@ async function callAI(endpoint, body, useCache = true) {
         // Offline fallback: try to serve stale cache
         const staleCache = AICache.get(endpoint, body, true); // true = ignore TTL
         if (staleCache) {
-            if (localStorage.getItem('astromap_debug')) console.log(`✦ Offline fallback: ${endpoint} (stale cache)`);
+            if (localStorage.getItem('zemara_debug')) console.log(`✦ Offline fallback: ${endpoint} (stale cache)`);
             staleCache._offline = true;
             return staleCache;
         }
@@ -707,8 +748,8 @@ async function callAI(endpoint, body, useCache = true) {
     AuthSystem.addToHistory(endpoint, body);
 
     // Increment total AI use counter for rating prompt
-    const totalUses = parseInt(localStorage.getItem('astromap_total_uses') || '0') + 1;
-    localStorage.setItem('astromap_total_uses', String(totalUses));
+    const totalUses = parseInt(localStorage.getItem('zemara_total_uses') || '0') + 1;
+    localStorage.setItem('zemara_total_uses', String(totalUses));
     if (typeof checkRatingPrompt === 'function') checkRatingPrompt();
 
     _pendingRequests.delete(endpoint);
@@ -1184,7 +1225,7 @@ function closeModal(id) { const el = document.getElementById(id); if (el) el.cla
 
 // Close modal on backdrop click
 document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal')) {
+    if (e.target.classList.contains('modal') || e.target.classList.contains('modal-overlay')) {
         e.target.classList.add('hidden');
     }
 });
@@ -1202,21 +1243,36 @@ function showToast(msg, duration = 3000) {
 // ═══════════════════════════════════════
 // AUTH (Real localStorage auth)
 // ═══════════════════════════════════════
-function demoLogin() {
+function openDemoOnboard() {
+    closeModal('login-modal');
+    openModal('demo-onboard-modal');
+    const d = new Date(); d.setFullYear(d.getFullYear() - 30);
+    document.getElementById('demo-birth').value = d.toISOString().split('T')[0];
+    document.getElementById('demo-name').value = '';
+    document.getElementById('demo-city').value = '';
+}
+
+function submitDemoOnboard() {
+    const name = document.getElementById('demo-name').value.trim() || 'Demo Kullanıcı';
+    const birth = document.getElementById('demo-birth').value;
+    const city = document.getElementById('demo-city').value.trim() || 'İstanbul';
+    if (!birth) { showToast('Doğum tarihini gir'); return; }
     const session = {
-        id: 'demo_user',
-        name: 'Demo Kullanıcı',
-        email: 'demo@astromap.app',
-        birthDate: '1990-05-15',
+        id: 'demo_user_' + Date.now(),
+        name,
+        email: 'demo@zemara.app',
+        birthDate: birth,
+        birthCity: city,
         plan: 'vip',
         loginAt: Date.now(),
         isDemo: true
     };
     localStorage.setItem(AuthSystem._key, JSON.stringify(session));
-    showToast('Demo moduna hoş geldin! Tüm özellikler açık ✨');
-    closeModal('login-modal');
+    ProfileMemory.save({ name, birthDate: birth, birthCity: city });
+    closeModal('demo-onboard-modal');
     AuthSystem.updateUI();
     SoundFX.play('success');
+    showToast(`Hoş geldin ${name}! Tüm özellikler açık ✨`);
 }
 
 async function handleLogin(e) {
@@ -1255,6 +1311,13 @@ async function handleSignup(e) {
         const btn = form.querySelector('button[type="submit"]');
         if (btn) { btn.disabled = true; btn.textContent = 'Hesap oluşturuluyor...'; }
         const user = await AuthSystem.signup(name, email, password, birthDate);
+        // Neon DB'ye kaydet (background — hata olsa UI etkilenmesin)
+        fetch('/api/register-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: user.id, name: user.name, email: user.email, birthDate: user.birthDate, plan: user.plan, createdAt: user.createdAt })
+        }).catch(() => {});
+        ProfileMemory.save({ name: user.name, birthDate: user.birthDate });
         showToast(`Hesabın oluşturuldu! Hoş geldin, ${user.name} ✨`);
         closeModal('signup-modal');
         AuthSystem.updateUI();
@@ -1324,6 +1387,18 @@ function startCheckout(tier) {
     // Open modal
     openModal('checkout-modal');
     SoundFX.play('click');
+    // Auto-detect payment region
+    setTimeout(initCheckoutRegion, 50);
+}
+
+// ── Detect if user is likely outside Turkey (for LS vs iyzico routing) ───────
+function isInternationalUser() {
+    // Check stored preference first
+    const stored = localStorage.getItem('zemara_payment_region');
+    if (stored) return stored === 'international';
+    // Fallback: check browser language
+    const lang = navigator.language || navigator.userLanguage || '';
+    return !lang.toLowerCase().startsWith('tr');
 }
 
 async function submitBillingAndPay(e) {
@@ -1331,10 +1406,42 @@ async function submitBillingAndPay(e) {
 
     const name = document.getElementById('checkout-name').value.trim();
     const email = document.getElementById('checkout-email').value.trim();
-    const phone = document.getElementById('checkout-phone').value.trim();
+    const phone = document.getElementById('checkout-phone')?.value?.trim() || '';
 
-    if (!name || !email || !phone) {
-        showToast('Lütfen tüm alanları doldurun');
+    if (!name || !email) {
+        showToast('Lütfen ad ve e-posta alanlarını doldurun');
+        return;
+    }
+
+    const apiBase = window.__ZEMARA_CONFIG?.apiBase || '';
+
+    // ── Lemon Squeezy flow (international / non-TR users) ──────────────────
+    if (isInternationalUser()) {
+        const btn = e.target.querySelector('button[type=submit]');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Yönlendiriliyor...'; }
+
+        try {
+            const lsRes = await fetch(apiBase + '/api/checkout/ls', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan: currentCheckoutPlan, email, name })
+            });
+            const lsData = await lsRes.json();
+            if (lsData.checkoutUrl) {
+                window.location.href = lsData.checkoutUrl;
+                return;
+            }
+            throw new Error(lsData.error || 'LS checkout hatası');
+        } catch (err) {
+            showToast('Ödeme yönlendirmesi başarısız: ' + err.message);
+            if (btn) { btn.disabled = false; btn.textContent = 'Devam Et'; }
+        }
+        return;
+    }
+
+    // ── iyzico flow (Turkey) ────────────────────────────────────────────────
+    if (!phone) {
+        showToast('Lütfen telefon numaranızı girin');
         return;
     }
 
@@ -1343,7 +1450,6 @@ async function submitBillingAndPay(e) {
     document.getElementById('checkout-step-payment').classList.remove('hidden');
 
     try {
-        const apiBase = window.__ASTROMAP_CONFIG?.apiBase || '';
         const response = await fetch(apiBase + '/api/checkout/init', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1402,6 +1508,29 @@ async function submitBillingAndPay(e) {
         document.getElementById('checkout-step-payment').classList.add('hidden');
         document.getElementById('checkout-step-billing').classList.remove('hidden');
     }
+}
+
+// ── Payment Region Toggle ────────────────────────────────────────────────────
+function setPaymentRegion(region) {
+    const isIntl = region === 'international';
+    localStorage.setItem('zemara_payment_region', isIntl ? 'international' : 'turkey');
+
+    document.getElementById('region-tr')?.classList.toggle('active', !isIntl);
+    document.getElementById('region-intl')?.classList.toggle('active', isIntl);
+
+    // Show/hide phone field (only needed for iyzico/TR)
+    const phoneGroup = document.getElementById('checkout-phone-group');
+    if (phoneGroup) phoneGroup.style.display = isIntl ? 'none' : '';
+
+    // Update price display if pricing differs
+    // (Optional: swap TL ↔ USD prices here)
+}
+
+// Auto-detect region on modal open
+function initCheckoutRegion() {
+    const stored = localStorage.getItem('zemara_payment_region');
+    const region = stored || (navigator.language?.toLowerCase().startsWith('tr') ? 'turkey' : 'international');
+    setPaymentRegion(region);
 }
 
 function closeCheckout() {
@@ -1890,22 +2019,52 @@ function loadMoonCalendar() {
 // ═══════════════════════════════════════
 // STANDALONE NATAL CHART PAGE
 // ═══════════════════════════════════════
-function filterNatalCities(query) {
-    const select = document.getElementById('natal-birth-city');
-    if (!select) return;
-    const q = (query || '').toLowerCase().trim();
-    const allCities = CITY_DATABASE.ALL_CITIES;
-    const filtered = q ? allCities.filter(c => c.city.toLowerCase().includes(q) || c.country.toLowerCase().includes(q)) : allCities;
-    const toShow = filtered.slice(0, 50);
-    select.innerHTML = '';
-    toShow.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.city.toLowerCase().replace(/\s+/g, '');
-        opt.textContent = `${c.city}, ${c.country}`;
-        select.appendChild(opt);
-    });
-    if (toShow.length > 0) select.value = toShow[0].value;
+function showCityDropdown(prefix) {
+    const dropdown = document.getElementById(`${prefix}-city-dropdown`);
+    const query = document.getElementById(`${prefix}-city-search`)?.value || '';
+    if (dropdown) { dropdown.classList.remove('hidden'); filterNatalCities(query, prefix); }
 }
+
+function filterNatalCities(query, prefix = 'natal') {
+    const dropdown = document.getElementById(`${prefix}-city-dropdown`);
+    const hiddenInput = document.getElementById(`${prefix}-birth-city`);
+    if (!dropdown) return;
+    const q = (query || '').toLowerCase().trim();
+    if (!q) { dropdown.classList.add('hidden'); return; }
+    const allCities = CITY_DATABASE?.ALL_CITIES || [];
+    const filtered = allCities.filter(c =>
+        c.city.toLowerCase().startsWith(q) || c.city.toLowerCase().includes(q) || c.country.toLowerCase().includes(q)
+    ).slice(0, 12);
+
+    if (filtered.length === 0) { dropdown.classList.add('hidden'); return; }
+
+    dropdown.classList.remove('hidden');
+    dropdown.innerHTML = filtered.map(c => `
+        <div class="city-dropdown-item" onclick="selectCity('${prefix}','${c.city.replace(/'/g,"\\'")}','${c.country.replace(/'/g,"\\'")}','${c.lat||0}','${c.lng||0}')">
+            <span class="city-dropdown-name">${c.city}</span>
+            <span class="city-dropdown-country">${c.country}</span>
+        </div>
+    `).join('');
+}
+
+function selectCity(prefix, city, country, lat, lng) {
+    const searchInput = document.getElementById(`${prefix}-city-search`);
+    const hiddenInput = document.getElementById(`${prefix}-birth-city`);
+    const badge = document.getElementById(`${prefix}-city-badge`);
+    const dropdown = document.getElementById(`${prefix}-city-dropdown`);
+    if (searchInput) searchInput.value = `${city}, ${country}`;
+    if (hiddenInput) hiddenInput.value = city;
+    if (badge) { badge.textContent = city; badge.style.display = 'inline-flex'; }
+    if (dropdown) dropdown.classList.add('hidden');
+    ProfileMemory.save({ birthCity: city });
+}
+
+// Close city dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.city-autocomplete-wrap')) {
+        document.querySelectorAll('.city-dropdown').forEach(d => d.classList.add('hidden'));
+    }
+});
 
 // ═══════════════════════════════════════
 // TRANSIT RAPOR
@@ -2966,9 +3125,9 @@ async function downloadShareCard() {
         if (window.Capacitor?.Plugins?.Share) {
             try {
                 await window.Capacitor.Plugins.Share.share({
-                    title: 'AstroMap Sonuçlarım',
-                    text: 'AstroMap ile yıldızlarımın beni nereye çağırdığını keşfettim!',
-                    url: 'https://astromap.app',
+                    title: 'Zemara Sonuçlarım',
+                    text: 'Zemara ile yıldızlarımın beni nereye çağırdığını keşfettim!',
+                    url: 'https://zemara.app',
                     dialogTitle: 'Sonuçlarını Paylaş'
                 });
                 return;
@@ -2977,7 +3136,7 @@ async function downloadShareCard() {
 
         // Web fallback: download
         const link = document.createElement('a');
-        link.download = 'astromap-sonuclarim.png';
+        link.download = 'zemara-sonuclarim.png';
         link.href = dataUrl;
         link.click();
     } catch {
@@ -2997,7 +3156,7 @@ async function shareAIResult(resultElementId, title) {
             // Fallback: Web Share API with text
             if (navigator.share) {
                 const text = el.innerText.slice(0, 500);
-                await navigator.share({ title: `AstroMap — ${title}`, text, url: 'https://astromap.app' });
+                await navigator.share({ title: `Zemara — ${title}`, text, url: 'https://zemara.app' });
                 return;
             }
             showToast('Paylaşma özelliği kullanılamıyor');
@@ -3017,7 +3176,7 @@ async function shareAIResult(resultElementId, title) {
         ctx.font = '14px Inter, sans-serif';
         ctx.fillStyle = 'rgba(201,160,255,0.5)';
         ctx.textAlign = 'right';
-        ctx.fillText('astromap.app', canvas.width - 20, canvas.height - 15);
+        ctx.fillText('zemara.app', canvas.width - 20, canvas.height - 15);
 
         const dataUrl = canvas.toDataURL('image/png');
 
@@ -3025,9 +3184,9 @@ async function shareAIResult(resultElementId, title) {
         if (window.Capacitor?.Plugins?.Share) {
             try {
                 await window.Capacitor.Plugins.Share.share({
-                    title: `AstroMap — ${title}`,
-                    text: 'AstroMap ile kozmik rehberliğimi keşfettim!',
-                    url: 'https://astromap.app'
+                    title: `Zemara — ${title}`,
+                    text: 'Zemara ile kozmik rehberliğimi keşfettim!',
+                    url: 'https://zemara.app'
                 });
                 return;
             } catch {}
@@ -3037,9 +3196,9 @@ async function shareAIResult(resultElementId, title) {
         if (navigator.canShare) {
             try {
                 const blob = await (await fetch(dataUrl)).blob();
-                const file = new File([blob], 'astromap-sonuc.png', { type: 'image/png' });
+                const file = new File([blob], 'zemara-sonuc.png', { type: 'image/png' });
                 if (navigator.canShare({ files: [file] })) {
-                    await navigator.share({ title: `AstroMap — ${title}`, files: [file] });
+                    await navigator.share({ title: `Zemara — ${title}`, files: [file] });
                     return;
                 }
             } catch {}
@@ -3047,7 +3206,7 @@ async function shareAIResult(resultElementId, title) {
 
         // Fallback: download
         const link = document.createElement('a');
-        link.download = `astromap-${resultElementId}.png`;
+        link.download = `zemara-${resultElementId}.png`;
         link.href = dataUrl;
         link.click();
         showToast('Kart indirildi!');
@@ -3065,7 +3224,7 @@ function downloadReport() {
     const top20 = allRenderedCities.slice(0, 20);
     const natal = results.natalChart;
 
-    let text = '✦ ASTROMAP — KİŞİSEL LOKASYON RAPORU ✦\n';
+    let text = '✦ ZEMARA — KİŞİSEL LOKASYON RAPORU ✦\n';
     text += '═'.repeat(50) + '\n\n';
     text += `Tarih: ${new Date().toLocaleDateString('tr-TR')}\n\n`;
     text += '🌌 DOĞUM HARİTASI\n' + '─'.repeat(30) + '\n';
@@ -3082,11 +3241,11 @@ function downloadReport() {
     (results.transits || []).forEach(t => {
         text += `${t.transitPlanet.symbol} ${t.transitPlanet.name} ${t.aspect} ${t.natalPlanet.symbol} ${t.natalPlanet.name} (${t.quality})\n`;
     });
-    text += '\n\n✦ AstroMap ile oluşturuldu ✦\n';
+    text += '\n\n✦ Zemara ile oluşturuldu ✦\n';
 
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const link = document.createElement('a');
-    link.download = 'astromap-rapor.txt';
+    link.download = 'zemara-rapor.txt';
     link.href = URL.createObjectURL(blob);
     link.click();
     showToast('Rapor indirildi! 📄');
@@ -3325,7 +3484,7 @@ async function showCityDetail(city, country, score, influences) {
     `;
 
     try {
-        const cityApiBase = window.__ASTROMAP_CONFIG?.apiBase || '';
+        const cityApiBase = window.__ZEMARA_CONFIG?.apiBase || '';
         const resp = await fetch(cityApiBase + '/api/city-insight', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3482,13 +3641,31 @@ function selectSpread(btn) {
     btn.classList.add('selected');
 }
 
+function toggleTarotOther(isOther) {
+    document.getElementById('tarot-self-fields')?.classList.toggle('hidden', isOther);
+    document.getElementById('tarot-other-fields')?.classList.toggle('hidden', !isOther);
+}
+
 async function showTarot() {
-    const birthDate = document.getElementById('tarot-birth-date').value;
     const question = document.getElementById('tarot-question').value;
-    if (!birthDate) { showToast('Lütfen doğum tarihini gir'); return; }
+    const isForOther = document.getElementById('tarot-for-other-chk')?.checked;
+
+    let birthDate, sunSign, forOther;
+    if (isForOther) {
+        const otherName = document.getElementById('tarot-other-name')?.value.trim();
+        const otherBirth = document.getElementById('tarot-other-birth')?.value;
+        if (!otherName) { showToast('Kişinin adını gir'); return; }
+        if (!otherBirth) { showToast('Kişinin doğum tarihini gir'); return; }
+        birthDate = otherBirth;
+        sunSign = getSunSignFromDate(otherBirth);
+        forOther = { name: otherName, birthDate: otherBirth, sunSign };
+    } else {
+        birthDate = document.getElementById('tarot-birth-date').value;
+        if (!birthDate) { showToast('Lütfen doğum tarihini gir'); return; }
+        sunSign = getSunSignFromDate(birthDate);
+    }
 
     const spreadConfig = getSelectedTarotSpread();
-    const sunSign = getSunSignFromDate(birthDate);
     const resultEl = document.getElementById('tarot-result');
     document.getElementById('tarot-form').style.display = 'none';
     resultEl.classList.remove('hidden');
@@ -3520,7 +3697,9 @@ async function showTarot() {
     });
 
     try {
-        const data = await callAI('tarot', { birthDate, sunSign, question, spread: selectedSpread, _t: Date.now() }, false);
+        const tarotPayload = { birthDate, sunSign, question, spread: selectedSpread, _t: Date.now() };
+        if (forOther) tarotPayload.forOther = forOther;
+        const data = await callAI('tarot', tarotPayload, false);
         const cards = resolveTarotCardsForSpread(data.cards || [], spreadConfig);
         const posEmojis = {
             'Geçmiş': '⏳',
@@ -3773,6 +3952,35 @@ async function showCrystalGuide() {
 // KAHVE FALI — IMAGE UPLOAD
 // ═══════════════════════════════════════
 let fortuneImages = [];
+let selectedFortuneType = 'coffee';
+
+const FORTUNE_TYPE_CONFIG = {
+    coffee: { icon: '☕', label: 'Falıma Bak', hint: '💡 Fincanı döktükten 5 dk sonra çek — tabanı ve duvarları göster.', dropIcon: '☕', dropText: 'Fincanın fotoğrafını yükle', toastEmpty: 'Lütfen fincan fotoğrafını yükle 📸' },
+    palm:   { icon: '🤚', label: 'Elimi Oku', hint: '💡 Avuç içini açık tut, iyi ışıkta yakından çek.', dropIcon: '🤚', dropText: 'El fotoğrafını yükle (avuç açık)', toastEmpty: 'Lütfen el fotoğrafını yükle 🤚' },
+    general:{ icon: '✨', label: 'Fala Bak', hint: '💡 Tarot kartı, kristal, rüya defteri veya istediğin nesnenin fotoğrafı olabilir.', dropIcon: '📸', dropText: 'Fotoğrafını yükle', toastEmpty: 'Lütfen fotoğraf yükle 📸' }
+};
+
+function selectFortuneType(btn) {
+    selectedFortuneType = btn.dataset.type;
+    document.querySelectorAll('.fortune-type-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    const cfg = FORTUNE_TYPE_CONFIG[selectedFortuneType];
+    const dropIcon = document.getElementById('fortune-drop-icon');
+    const dropText = document.getElementById('fortune-drop-text');
+    const hint = document.getElementById('fortune-hint-text');
+    const btnText = document.getElementById('fortune-btn-text');
+    if (dropIcon) dropIcon.textContent = cfg.dropIcon;
+    if (dropText) dropText.textContent = cfg.dropText;
+    if (hint) hint.textContent = cfg.hint;
+    if (btnText) btnText.textContent = cfg.label;
+}
+
+function toggleFortuneOther(isOther) {
+    const selfFields = document.getElementById('fortune-self-fields');
+    const otherFields = document.getElementById('fortune-other-fields');
+    if (selfFields) selfFields.classList.toggle('hidden', isOther);
+    if (otherFields) otherFields.classList.toggle('hidden', !isOther);
+}
 
 // Native camera via Capacitor (used in mobile apps)
 async function nativePickPhoto(source) {
@@ -3804,7 +4012,7 @@ async function nativePickPhoto(source) {
 
 // Fortune image picker — tries native first, falls back to web file input
 async function pickFortuneImage(source) {
-    if (window.__ASTROMAP_CONFIG?.isNative) {
+    if (window.__ZEMARA_CONFIG?.isNative) {
         const success = await nativePickPhoto(source);
         if (success) return;
     }
@@ -3962,33 +4170,53 @@ function removeFortuneImage(e) {
 })();
 
 async function showFortune() {
-    const birthDate = document.getElementById('fortune-birth-date').value;
-    const status = document.getElementById('fortune-status').value;
+    const isForOther = document.getElementById('fortune-for-other-chk')?.checked;
     const cup = document.getElementById('fortune-cup').value;
-    if (fortuneImages.length === 0) { showToast('Lütfen fincanın fotoğrafını yükle 📸'); return; }
+    const cfg = FORTUNE_TYPE_CONFIG[selectedFortuneType] || FORTUNE_TYPE_CONFIG.coffee;
 
-    const sunSign = getSunSignFromDate(birthDate);
+    if (fortuneImages.length === 0) { showToast(cfg.toastEmpty); return; }
+
+    let payload = { images: fortuneImages, cup, fortuneType: selectedFortuneType };
+    if (isForOther) {
+        const otherName = document.getElementById('fortune-other-name')?.value.trim();
+        const otherBirth = document.getElementById('fortune-other-birth')?.value;
+        if (!otherName) { showToast('Kişinin adını gir'); return; }
+        payload.forOther = { name: otherName, birthDate: otherBirth, sunSign: otherBirth ? getSunSignFromDate(otherBirth) : null };
+    } else {
+        const birthDate = document.getElementById('fortune-birth-date').value;
+        const status = document.getElementById('fortune-status').value;
+        payload.sunSign = getSunSignFromDate(birthDate);
+        payload.status = status;
+    }
+
     const resultEl = document.getElementById('fortune-result');
     document.getElementById('fortune-form').style.display = 'none';
     resultEl.classList.remove('hidden');
 
     resultEl.innerHTML = `
         <div class="fortune-loading-scene">
-            <div class="fortune-cup-anim">☕</div>
-            <p class="fortune-loading-msg">Fincanın okunuyor...</p>
+            <div class="fortune-cup-anim">${cfg.icon}</div>
+            <p class="fortune-loading-msg">${isForOther ? 'Fal bakılıyor...' : 'Falın okunuyor...'}</p>
             <div class="dream-loading-dots"><span>.</span><span>.</span><span>.</span></div>
         </div>
     `;
 
     try {
-        const data = await callAI('fortune', { images: fortuneImages, cup, sunSign, status }, false);
+        const data = await callAI('fortune', payload, false);
         SoundFX.play('mystic');
         const symbols = data.symbols || [];
+        const typeLabels = {
+            coffee: { icon: '☕', symbolTitle: '☕ Fincandaki Semboller', resetLabel: '☕ Yeni Fal Baktır', shareLabel: 'Kahve Falı' },
+            palm:   { icon: '🤚', symbolTitle: '🤚 El Çizgileri & Tepeler', resetLabel: '🤚 Yeni El Falı', shareLabel: 'El Falı' },
+            general:{ icon: '✨', symbolTitle: '✨ Fotoğraftaki Semboller', resetLabel: '✨ Yeni Fal Baktır', shareLabel: 'Sezgisel Fal' }
+        };
+        const tl = typeLabels[selectedFortuneType] || typeLabels.coffee;
+
         resultEl.innerHTML = `
             <div class="fortune-reveal">
                 <div class="fortune-header stagger-1">
-                    <div class="fortune-cup-icon">☕</div>
-                    <h2 class="fortune-title">${data.title || 'Fincan Yorumun'}</h2>
+                    <div class="fortune-cup-icon">${tl.icon}</div>
+                    <h2 class="fortune-title">${data.title || 'Falın Yorumun'}</h2>
                     <span class="fortune-mood">${data.mood || ''}</span>
                 </div>
 
@@ -3998,7 +4226,7 @@ async function showFortune() {
                 </div>
 
                 <div class="fortune-symbols stagger-3">
-                    <h3>☕ Fincandaki Semboller</h3>
+                    <h3>${tl.symbolTitle}</h3>
                     <div class="dream-symbols-grid">
                         ${symbols.map((s, i) => `
                             <div class="dream-symbol-card" style="animation-delay:${0.6 + i * 0.1}s">
@@ -4027,8 +4255,8 @@ async function showFortune() {
                 </div>
 
                 <div class="ai-result-actions stagger-6">
-                    <button class="btn-ghost reset-btn" onclick="resetFortunePage()">☕ Yeni Fal Baktır</button>
-                    <button class="btn-ghost share-btn" onclick="shareAIResult('fortune-result','Kahve Falı')">📸 Paylaş</button>
+                    <button class="btn-ghost reset-btn" onclick="resetFortunePage()">${tl.resetLabel}</button>
+                    <button class="btn-ghost share-btn" onclick="shareAIResult('fortune-result','${tl.shareLabel}')">📸 Paylaş</button>
                 </div>
             </div>
         `;
@@ -4263,7 +4491,7 @@ function generateShareLink() {
  */
 function shareContent(title, text) {
     const shareData = {
-        title: `AstroMap — ${title}`,
+        title: `Zemara — ${title}`,
         text: text,
         url: window.location.origin
     };
@@ -4397,10 +4625,10 @@ async function initPushNotifications() {
         await PushNotifications.register();
 
         PushNotifications.addListener('registration', (token) => {
-            if (localStorage.getItem('astromap_debug')) console.log('Push token:', token.value);
-            localStorage.setItem('astromap_push_token', token.value);
+            if (localStorage.getItem('zemara_debug')) console.log('Push token:', token.value);
+            localStorage.setItem('zemara_push_token', token.value);
             // Send token to backend
-            fetch((window.__ASTROMAP_CONFIG?.apiBase || '') + '/api/push/register', {
+            fetch((window.__ZEMARA_CONFIG?.apiBase || '') + '/api/push/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -4440,7 +4668,7 @@ async function initWebPush() {
         if (Notification.permission === 'denied') return;
         if (Notification.permission === 'default') {
             // Ask after some engagement (not on first load)
-            const pageViews = parseInt(localStorage.getItem('astromap_pv') || '0');
+            const pageViews = parseInt(localStorage.getItem('zemara_pv') || '0');
             if (pageViews < 3) return; // Wait for 3 page views
         }
 
@@ -4449,11 +4677,11 @@ async function initWebPush() {
 
         const subscription = await reg.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: localStorage.getItem('astromap_vapid_public') || undefined
+            applicationServerKey: localStorage.getItem('zemara_vapid_public') || undefined
         });
 
         // Send to backend
-        fetch((window.__ASTROMAP_CONFIG?.apiBase || '') + '/api/push/register', {
+        fetch((window.__ZEMARA_CONFIG?.apiBase || '') + '/api/push/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -4500,8 +4728,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initWebPush();
 
     // Track page view for push notification timing
-    const pv = parseInt(localStorage.getItem('astromap_pv') || '0') + 1;
-    localStorage.setItem('astromap_pv', String(pv));
+    const pv = parseInt(localStorage.getItem('zemara_pv') || '0') + 1;
+    localStorage.setItem('zemara_pv', String(pv));
 
     // Share link: check URL for shared chart
     handleShareLink();
@@ -4578,6 +4806,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // First-time onboarding
     showOnboardingIfNeeded();
+
+    // Handle ?page= URL parameter for direct page navigation
+    const _urlParams = new URLSearchParams(window.location.search);
+    const _targetPage = _urlParams.get('page');
+    if (_targetPage && typeof navigateTo === 'function') {
+        // Delay to ensure DOM is ready after onboarding check
+        setTimeout(() => navigateTo(_targetPage), 300);
+    }
 
     // Daily energy card on home
     renderDailyEnergyCard();
@@ -4936,13 +5172,13 @@ let _onboardingPage = 0;
 // ═══════════════════════════════════════
 function checkRatingPrompt() {
     // Don't show if already rated or dismissed
-    if (localStorage.getItem('astromap_rated') || localStorage.getItem('astromap_rate_dismissed')) return;
+    if (localStorage.getItem('zemara_rated') || localStorage.getItem('zemara_rate_dismissed')) return;
     // Show after 5th AI use
-    const uses = parseInt(localStorage.getItem('astromap_total_uses') || '0');
+    const uses = parseInt(localStorage.getItem('zemara_total_uses') || '0');
     if (uses < 5) return;
     // Only show once per session
-    if (sessionStorage.getItem('astromap_rate_shown')) return;
-    sessionStorage.setItem('astromap_rate_shown', '1');
+    if (sessionStorage.getItem('zemara_rate_shown')) return;
+    sessionStorage.setItem('zemara_rate_shown', '1');
     setTimeout(showRatingPrompt, 1500);
 }
 
@@ -4956,7 +5192,7 @@ function showRatingPrompt() {
         <div class="rating-card">
             <div class="rating-emoji">⭐</div>
             <div class="rating-title">Bizi Beğeniyor musun?</div>
-            <div class="rating-sub">AstroMap'i kullanmak nasıl bir deneyim? Görüşün bizim için çok değerli!</div>
+            <div class="rating-sub">Zemara'i kullanmak nasıl bir deneyim? Görüşün bizim için çok değerli!</div>
             <div class="rating-stars">
                 ${[1,2,3,4,5].map(i => `<span class="rating-star" data-star="${i}" onclick="selectRatingStar(${i})">★</span>`).join('')}
             </div>
@@ -4981,15 +5217,15 @@ function submitRating() {
     const overlay = document.querySelector('.rating-overlay');
     const stars = parseInt(overlay?.dataset.stars || '0');
     if (!stars) return;
-    localStorage.setItem('astromap_rated', '1');
+    localStorage.setItem('zemara_rated', '1');
     overlay?.remove();
     if (stars >= 4) {
         // High rating → open Play Store
         showToast('Teşekkürler! Yorum bırakıyoruz... ⭐');
         setTimeout(() => {
-            const url = window.__ASTROMAP_CONFIG?.isNative
-                ? 'market://details?id=com.astromap.app'
-                : 'https://play.google.com/store/apps/details?id=com.astromap.app';
+            const url = window.__ZEMARA_CONFIG?.isNative
+                ? 'market://details?id=com.zemara.app'
+                : 'https://play.google.com/store/apps/details?id=com.zemara.app';
             window.open(url, '_blank');
         }, 800);
     } else {
@@ -5002,11 +5238,11 @@ function submitRating() {
 
 function dismissRating() {
     document.querySelector('.rating-overlay')?.remove();
-    localStorage.setItem('astromap_rate_dismissed', '1');
+    localStorage.setItem('zemara_rate_dismissed', '1');
 }
 
 function showOnboardingIfNeeded() {
-    if (localStorage.getItem('astromap_onboarded')) return;
+    if (localStorage.getItem('zemara_onboarded')) return;
     _onboardingPage = 0;
 
     const overlay = document.createElement('div');
@@ -5075,7 +5311,7 @@ function nextOnboardingSlide() {
 }
 
 function closeOnboarding() {
-    localStorage.setItem('astromap_onboarded', 'true');
+    localStorage.setItem('zemara_onboarded', 'true');
     const overlay = document.querySelector('.onboarding-overlay');
     if (overlay) {
         overlay.style.opacity = '0';
@@ -5109,7 +5345,7 @@ function submitFeedback(e) {
     const message = document.getElementById('feedback-message').value.trim();
 
     // Send to analytics
-    const apiBase = window.__ASTROMAP_CONFIG?.apiBase || '';
+    const apiBase = window.__ZEMARA_CONFIG?.apiBase || '';
     fetch(apiBase + '/api/analytics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -5138,11 +5374,11 @@ function generateReferralCode() {
 function shareReferralLink() {
     const code = generateReferralCode();
     if (!code) return;
-    const url = 'https://wheretolive-nine.vercel.app/?ref=' + code;
-    const text = 'AstroMap ile yıldızlarımın beni nereye çağırdığını keşfettim! Sen de dene:';
+    const url = 'https://zemara.app/?ref=' + code;
+    const text = 'Zemara ile yıldızlarımın beni nereye çağırdığını keşfettim! Sen de dene:';
 
     if (navigator.share) {
-        navigator.share({ title: 'AstroMap', text, url }).catch(() => {});
+        navigator.share({ title: 'Zemara', text, url }).catch(() => {});
     } else {
         navigator.clipboard.writeText(url).then(() => {
             showToast('Referans linki kopyalandı!');
@@ -5956,7 +6192,7 @@ const themes = {
     }
 };
 
-let currentTheme = localStorage.getItem('astromap_theme') || 'cosmic';
+let currentTheme = localStorage.getItem('zemara_theme') || 'cosmic';
 
 function initThemeSystem() {
     applyTheme(currentTheme);
@@ -6082,7 +6318,7 @@ function applyTheme(themeName) {
     document.body.classList.toggle('light-theme', themeName === 'moonlight');
     
     currentTheme = themeName;
-    localStorage.setItem('astromap_theme', themeName);
+    localStorage.setItem('zemara_theme', themeName);
 }
 
 function updateMapTiles(themeName) {
@@ -6110,7 +6346,7 @@ function cycleTheme() {
 // ═══════════════════════════════════════
 function initNotificationBadges() {
     // Show "Yeni" badge on features not yet visited
-    const visited = JSON.parse(localStorage.getItem('astromap_visited') || '[]');
+    const visited = JSON.parse(localStorage.getItem('zemara_visited') || '[]');
     const newPages = ['tarot', 'crystal', 'dream'].filter(p => !visited.includes(p));
     
     newPages.forEach(pageId => {
