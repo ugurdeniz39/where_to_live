@@ -14,49 +14,59 @@ module.exports = async (req, res) => {
         const today = new Date().toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         const periodLabel = { weekly: 'Haftalık', monthly: 'Aylık', yearly: 'Yıllık' }[period] || 'Günlük';
         const periodScope = { weekly: 'Bu hafta', monthly: 'Bu ay', yearly: 'Bu yıl' }[period] || 'Bugün';
-        
-        // Gender-specific pronoun and tone
-        const genderText = {
-            'kadın': { pronoun: 'sen', tone: 'zarif, şefkatli ve güçlendirici', article: 'Kadın' },
-            'erkek': { pronoun: 'sen', tone: 'güçlü, cesur ve ilham verici', article: 'Erkek' },
-            'diğer': { pronoun: 'sen', tone: 'dost canlı, saygılı ve ilham verici', article: 'Kimse' }
-        }[gender] || { pronoun: 'sen', tone: 'sıcak ve ilham verici', article: 'Kimse' };
 
-        const systemPrompt = `Sen deneyimli, sıcak ve empatik bir astrologsun. Türkçe yaz. 
-${name} adında ${genderText.article.toLowerCase()}, doğum tarihi ${birthDate} olan birine astroloji yorumu yapıyorsun.
-Yanıtlarını samimi, ilham verici ve motive edici tut. ${name}'e hitap ediyorsun — ${genderText.tone} bir ton kullan.
-Emoji kullan ama abartma. Her bölümü net ve akıcı yaz.
-Bu bir ${periodLabel} yorumdur. ${periodScope} için detaylı, çok spesifik ve ${name}'e kişisel olarak seslenen yorum yaz.
-${name}'in adını en az 2-3 kez yorumda kullan, adına hitap biçiminde. Örneğin "Merhaba ${name}!" gibi başla veya "${name}, bu dönem..." şeklinde bahset.
-Genellikle aynı yorumları yazma! Çok çeşitli, benzersiz ve yaratıcı tavsiyeler sun.
+        // Gender-specific tone
+        const genderText = {
+            'kadın': { tone: 'zarif, içgüdüsel ve güçlendirici', article: 'kadın' },
+            'erkek': { tone: 'kararlı, cesur ve ilham verici', article: 'erkek' },
+            'diğer': { tone: 'özgür, saygılı ve ilham verici', article: 'kişi' }
+        }[gender] || { tone: 'sıcak ve ilham verici', article: 'kişi' };
+
+        // Build a rich natal chart description only from what's available
+        const hasMoon = moonSign && moonSign !== 'bilinmiyor';
+        const hasRising = risingSign && risingSign !== 'bilinmiyor';
+        const chartParts = [`Güneş: ${sunSign || 'bilinmiyor'}`];
+        if (hasMoon) chartParts.push(`Ay: ${moonSign}`);
+        if (hasRising) chartParts.push(`Yükselen: ${risingSign}`);
+        const chartSummary = chartParts.join(', ');
+
+        // Instruction to weave in the placements if available
+        const planetaryNote = (hasMoon || hasRising)
+            ? `${name}'in doğum haritasında ${chartSummary} var. ${hasMoon ? `Ay burcu ${moonSign}, duygusal dünyasını ve içgüdüsel tepkilerini renklendirir — bu yerleşimi ${periodLabel.toLowerCase()} yorumuna dahil et.` : ''} ${hasRising ? `Yükselen burç ${risingSign}, ${name}'in dünyaya nasıl göründüğünü ve ilk izlenimlerini şekillendirir — kariyer veya sosyal ipuçları verirken bunu yansıt.` : ''}`
+            : `Yalnızca Güneş burcu ${sunSign || 'bilinmiyor'} mevcut; yorumu buna odakla.`;
+
+        const systemPrompt = `Sen derin sezgilere sahip, şiirsel üsluplu ve deneyimli bir astrologsun. Türkçe yaz — akıcı, doğal Türkçe kullan, çeviri gibi durmasın.
+${name} adında bir ${genderText.article} için ${periodLabel.toLowerCase()} astroloji yorumu yazıyorsun; ton ${genderText.tone} olsun.
+${planetaryNote}
+Yorum kozmik imgelerle (gezegenler, ışık, akış, dönüşüm) renklenmeli ama şiirsellik somut tavsiyeyi gölgelememelidir.
+Her alan için o alana özgü, bu ${periodLabel.toLowerCase()} döneminde yapılabilecek en az bir somut eylem öner.
+${name}'in ismini doğal biçimde 2-3 kez kullan; "Merhaba ${name}," veya "${name}, bu ${periodScope.toLowerCase()}..." gibi açılışlar tercih et.
+Yanıtların her seferinde farklı, taze ve yaratıcı olmalı — klişeden kaçın.
 Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
 {
-  "general": "${name}, ${periodScope.toLowerCase()} genel enerjisi hakkında kişisel mesaj — 2-3 cümle",
-  "love": "${name}'in aşk ve ilişkileri hakkında spesifik yorum — 2-3 cümle", 
-  "career": "${name}'in kariyer ve para hakkında tavsiye — 2-3 cümle",
-  "health": "${name}'in sağlık ve enerji hakkında — 2-3 cümle",
-  "advice": "${name}'e özel ${periodLabel.toLowerCase()} tavsiyesi — 1-2 cümle, çok spesifik",
-  "affirmation": "${name} için güçlendirici söz — kısa, güçlü, ${periodScope.toLowerCase()} geçerli",
+  "general": "${name} için ${periodScope.toLowerCase()} kozmik enerji mesajı — 2-3 cümle, aktif gezegen veya eleman enerjisine değin",
+  "love": "Aşk ve ilişkiler için ${periodScope.toLowerCase()} özel mesaj — 2-3 cümle, somut bir eylem içermeli",
+  "career": "Kariyer ve bolluk için ${periodScope.toLowerCase()} rehberlik — 2-3 cümle, fırsat veya dikkat noktası belirt",
+  "health": "Beden ve zihin dengesi için ${periodScope.toLowerCase()} tavsiye — 2-3 cümle, uygulanabilir bir öneri içermeli",
+  "advice": "${name}'e özel ${periodLabel.toLowerCase()} ana mesajı — 1-2 güçlü cümle, bu döneme ait tek bir netlik anı sun",
+  "affirmation": "${name} için kozmik onaylama cümlesi — güçlü, kısa, birinci şahıs, ${periodScope.toLowerCase()} için geçerli",
   "luckyColor": "Şans rengi (tek kelime)",
   "luckyNumber": "1-99 arası şans sayısı",
   "luckyStone": "Şans taşı adı",
   "luckyHour": "Şanslı saat aralığı örn: 14:00-16:00",
   "scores": { "love": 60-100, "career": 60-100, "health": 60-100, "luck": 60-100, "energy": 60-100, "mood": 60-100 },
   "tarotCard": "Günün tarot kartı adı",
-  "tarotMeaning": "${name}'e bu kartın ${periodScope.toLowerCase()} anlamı — 1-2 cümle, çok kişisel"
+  "tarotMeaning": "Bu kartın ${name}'e ${periodScope.toLowerCase()} özel mesajı — 1-2 cümle, doğum haritasıyla bağlantı kur"
 }`;
 
-        const userPrompt = `Bugün ${today}.
-Kişi: ${name} (${gender})
-Doğum tarihi ${birthDate}, doğum saati ${birthTime || 'bilinmiyor'}.
+        const userPrompt = `Tarih: ${today}
+Kişi: ${name} (${gender}), doğum: ${birthDate}, saat: ${birthTime || 'bilinmiyor'}
+Doğum haritası — ${chartSummary}
+Dönem: ${periodLabel} (${periodScope})
 
-⚠️ Bu kişinin burcu KESİNLİKLE ${sunSign || 'bilinmiyor'}. Başka burç yazma!
-Güneş burcu: ${sunSign || 'bilinmiyor'}, Ay burcu: ${moonSign || 'bilinmiyor'}, Yükselen: ${risingSign || 'bilinmiyor'}.
+${name} için bu dönemin enerjisini yansıt. ${sunSign || 'Güneş burcu'} Güneşi'nin özelliklerinden yola çık${hasMoon ? `; ${moonSign} Ayı'nın duygusal derinliğini ekle` : ''}${hasRising ? `; ${risingSign} Yükselen'in dış görünümünü ve sosyal dinamiğini de harmana kat` : ''}. Yorum her defasında özgün, taze ve kişiye özel olsun.`;
 
-${name} için çok spesifik, kişisel ve benzersiz bir yorumun olsun! Aynı şeyleri yazma. ${sunSign} burcuna özgü olmalı.
-${name}'e doğrudan seslenleri ve ismini sık sık kullan. Yorumun son derece kişiselleştirilmiş olmalı.`;
-
-        const raw = await askGPT(systemPrompt, userPrompt, 800);
+        const raw = await askGPT(systemPrompt, userPrompt, 850);
         const result = parseJSON(raw);
         res.json({ success: true, data: result });
     } catch (err) {
