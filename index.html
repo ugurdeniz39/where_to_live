@@ -129,85 +129,59 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
                 <span class="nav-drawer-title">✦ Menü</span>
                 <button class="nav-drawer-close" onclick="closeMobileNav()" type="button" aria-label="Menüyü kapat">✕</button>
             </div>
-            <a class="nav-link active" href="javascript:void(0)" data-page="home" data-nav="home" role="menuitem" tabindex="0" data-i18n="home" data-emoji="🏠">🏠 Ana Sayfa</a>
-            <a class="nav-link" href="javascript:void(0)" data-page="today" data-nav="today" role="menuitem" tabindex="0" data-i18n="today" data-emoji="☀️">☀️ Bugün</a>
-            <a class="nav-link" href="javascript:void(0)" data-page="daily" data-nav="daily" role="menuitem" tabindex="0" data-i18n="daily" data-emoji="🌟">🌟 Günlük Yorum</a>
-            <a class="nav-link" href="javascript:void(0)" data-page="compatibility" data-nav="compatibility" role="menuitem" tabindex="0" data-i18n="compatibility" data-emoji="💕">💕 Uyum Testi</a>
-            <a class="nav-link" href="javascript:void(0)" data-page="moon" data-nav="moon" role="menuitem" tabindex="0" data-i18n="moon" data-emoji="🌙">🌙 Ay Takvimi</a>
-            <a class="nav-link" href="javascript:void(0)" data-page="tarot" data-nav="tarot" role="menuitem" tabindex="0" data-i18n="tarot" data-emoji="🃏">🃏 Tarot</a>
-            <a class="nav-link" href="javascript:void(0)" data-page="crystal" data-nav="crystal" role="menuitem" tabindex="0" data-i18n="crystal" data-emoji="💎">💎 Kristal</a>
-            <a class="nav-link" href="javascript:void(0)" data-page="dream" data-nav="dream" role="menuitem" tabindex="0" data-i18n="dream" data-emoji="💭">💭 Rüya</a>
-            <a class="nav-link" href="javascript:void(0)" data-page="fortune" data-nav="fortune" role="menuitem" tabindex="0" data-i18n="fortune" data-emoji="☕">☕ Fal</a>
-            <a class="nav-link" href="javascript:void(0)" data-page="retrograde" data-nav="retrograde" role="menuitem" tabindex="0" data-i18n="retrograde" data-emoji="⚠️">⚠️ Retro</a>
-            <a class="nav-link" href="javascript:void(0)" data-page="natal" data-nav="natal" role="menuitem" tabindex="0" data-i18n="natal" data-emoji="🪐">🪐 Doğum Haritası</a>
-            <a class="nav-link" href="javascript:void(0)" data-page="about" data-nav="about" role="menuitem" tabindex="0" data-i18n="about" data-emoji="ℹ️">ℹ️ Hakkında</a>
+            <a class="nav-link active" href="javascript:void(0)" data-page="home" data-nav="home" role="menuitem" tabindex="0">🏠 Ana Sayfa</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="today" data-nav="today" role="menuitem" tabindex="0">☀️ Bugün</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="daily" data-nav="daily" role="menuitem" tabindex="0">🌟 Günlük Yorum</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="compatibility" data-nav="compatibility" role="menuitem" tabindex="0">💕 Uyum Testi</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="moon" data-nav="moon" role="menuitem" tabindex="0">🌙 Ay Takvimi</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="tarot" data-nav="tarot" role="menuitem" tabindex="0">🃏 Tarot</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="crystal" data-nav="crystal" role="menuitem" tabindex="0">💎 Kristal</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="dream" data-nav="dream" role="menuitem" tabindex="0">💭 Rüya</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="fortune" data-nav="fortune" role="menuitem" tabindex="0">☕ Fal</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="retrograde" data-nav="retrograde" role="menuitem" tabindex="0">⚠️ Retro</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="natal" data-nav="natal" role="menuitem" tabindex="0">🪐 Doğum Haritası</a>
+            <a class="nav-link" href="javascript:void(0)" data-page="about" data-nav="about" role="menuitem" tabindex="0">ℹ️ Hakkında</a>
             <a class="nav-link" href="javascript:void(0)" data-page="pricing" data-nav="pricing" role="menuitem" tabindex="0">Premium ✨</a>
             <div class="nav-drawer-actions">
-                <div class="lang-picker-wrap">
-                    <span class="lang-globe" aria-hidden="true">🌐</span>
-                    <select class="lang-select" id="lang-select" onchange="switchLang(this.value)" aria-label="Dil seç">
-                        <option value="tr">🇹🇷 TR</option>
-                        <option value="en">🇬🇧 EN</option>
-                        <option value="de">🇩🇪 DE</option>
-                        <option value="fr">🇫🇷 FR</option>
-                        <option value="es">🇪🇸 ES</option>
-                        <option value="it">🇮🇹 IT</option>
-                        <option value="nl">🇳🇱 NL</option>
-                        <option value="pt">🇵🇹 PT</option>
-                        <option value="pl">🇵🇱 PL</option>
-                        <option value="sv">🇸🇪 SV</option>
-                        <option value="no">🇳🇴 NO</option>
-                        <option value="da">🇩🇰 DA</option>
-                        <option value="fi">🇫🇮 FI</option>
-                        <option value="cs">🇨🇿 CS</option>
-                        <option value="sk">🇸🇰 SK</option>
-                        <option value="hu">🇭🇺 HU</option>
-                        <option value="ro">🇷🇴 RO</option>
-                        <option value="bg">🇧🇬 BG</option>
-                        <option value="hr">🇭🇷 HR</option>
-                        <option value="sr">🇷🇸 SR</option>
-                        <option value="el">🇬🇷 EL</option>
-                        <option value="uk">🇺🇦 UK</option>
-                        <option value="ru">🇷🇺 RU</option>
-                    </select>
+                <div class="lang-picker">
+                    <button class="lang-picker-btn" type="button" onclick="toggleLangDropdown(event)" aria-haspopup="listbox" aria-label="Dil / Language">
+                        <span class="lang-flag-current">🇹🇷</span>
+                        <span class="lang-code-current">TR</span>
+                        <svg class="lang-caret" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <div class="lang-dropdown" hidden role="listbox">
+                        <button class="lang-opt active" data-lang="tr" onclick="switchLang('tr')" role="option">🇹🇷 <span>Türkçe</span></button>
+                        <button class="lang-opt" data-lang="en" onclick="switchLang('en')" role="option">🇬🇧 <span>English</span></button>
+                        <button class="lang-opt" data-lang="de" onclick="switchLang('de')" role="option">🇩🇪 <span>Deutsch</span></button>
+                        <button class="lang-opt" data-lang="es" onclick="switchLang('es')" role="option">🇪🇸 <span>Español</span></button>
+                        <button class="lang-opt" data-lang="fr" onclick="switchLang('fr')" role="option">🇫🇷 <span>Français</span></button>
+                        <button class="lang-opt" data-lang="ru" onclick="switchLang('ru')" role="option">🇷🇺 <span>Русский</span></button>
+                    </div>
                 </div>
                 <button class="btn-ghost" onclick="openFeedbackForm();closeMobileNav()" type="button">💬 Geri Bildirim</button>
-                <button class="btn-ghost" data-modal="login-modal" type="button" data-i18n="login">Giriş Yap</button>
-                <button class="btn-nav-primary" data-modal="signup-modal" type="button" data-i18n="signup">Ücretsiz Başla</button>
+                <button class="btn-ghost" data-modal="login-modal" type="button">Giriş Yap</button>
+                <button class="btn-nav-primary" data-modal="signup-modal" type="button">Ücretsiz Başla</button>
             </div>
         </div>
         <div class="nav-actions">
-            <div class="lang-picker-wrap lang-picker-desktop">
-                <span class="lang-globe" aria-hidden="true">🌐</span>
-                <select class="lang-select" id="lang-select-desktop" onchange="switchLang(this.value)" aria-label="Select language">
-                    <option value="tr">🇹🇷 TR</option>
-                    <option value="en">🇬🇧 EN</option>
-                    <option value="de">🇩🇪 DE</option>
-                    <option value="fr">🇫🇷 FR</option>
-                    <option value="es">🇪🇸 ES</option>
-                    <option value="it">🇮🇹 IT</option>
-                    <option value="nl">🇳🇱 NL</option>
-                    <option value="pt">🇵🇹 PT</option>
-                    <option value="pl">🇵🇱 PL</option>
-                    <option value="sv">🇸🇪 SV</option>
-                    <option value="no">🇳🇴 NO</option>
-                    <option value="da">🇩🇰 DA</option>
-                    <option value="fi">🇫🇮 FI</option>
-                    <option value="cs">🇨🇿 CS</option>
-                    <option value="sk">🇸🇰 SK</option>
-                    <option value="hu">🇭🇺 HU</option>
-                    <option value="ro">🇷🇴 RO</option>
-                    <option value="bg">🇧🇬 BG</option>
-                    <option value="hr">🇭🇷 HR</option>
-                    <option value="sr">🇷🇸 SR</option>
-                    <option value="el">🇬🇷 EL</option>
-                    <option value="uk">🇺🇦 UK</option>
-                    <option value="ru">🇷🇺 RU</option>
-                </select>
+            <div class="lang-picker">
+                <button class="lang-picker-btn" type="button" onclick="toggleLangDropdown(event)" aria-haspopup="listbox" aria-label="Dil / Language">
+                    <span class="lang-flag-current">🇹🇷</span>
+                    <span class="lang-code-current">TR</span>
+                    <svg class="lang-caret" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <div class="lang-dropdown" hidden role="listbox">
+                    <button class="lang-opt active" data-lang="tr" onclick="switchLang('tr')" role="option">🇹🇷 <span>Türkçe</span></button>
+                    <button class="lang-opt" data-lang="en" onclick="switchLang('en')" role="option">🇬🇧 <span>English</span></button>
+                    <button class="lang-opt" data-lang="de" onclick="switchLang('de')" role="option">🇩🇪 <span>Deutsch</span></button>
+                    <button class="lang-opt" data-lang="es" onclick="switchLang('es')" role="option">🇪🇸 <span>Español</span></button>
+                    <button class="lang-opt" data-lang="fr" onclick="switchLang('fr')" role="option">🇫🇷 <span>Français</span></button>
+                    <button class="lang-opt" data-lang="ru" onclick="switchLang('ru')" role="option">🇷🇺 <span>Русский</span></button>
+                </div>
             </div>
             <button class="btn-dark-toggle" id="dark-toggle" type="button" onclick="toggleDarkLight()" aria-label="Karanlık/aydınlık mod" title="Karanlık/Aydınlık Mod">🌙</button>
-            <button class="btn-ghost" data-modal="login-modal" type="button" data-i18n="login">Giriş Yap</button>
-            <button class="btn-nav-primary" data-modal="signup-modal" type="button" data-i18n="signup">Ücretsiz Başla</button>
+            <button class="btn-ghost" data-modal="login-modal" type="button">Giriş Yap</button>
+            <button class="btn-nav-primary" data-modal="signup-modal" type="button">Ücretsiz Başla</button>
         </div>
         <button class="nav-hamburger" id="nav-hamburger" type="button" onclick="toggleMobileNav()" aria-label="Menüyü aç">☰</button>
     </div>
@@ -437,22 +411,23 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
                 <p class="pricing-tagline-card">Tam astro deneyim</p>
             </div>
             <div class="pricing-price">
-                <span class="price-amount" id="price-premium">₺150</span>
+                <span class="price-amount" id="price-premium">₺49</span>
                 <span class="price-period" id="period-premium">/ay</span>
             </div>
             <ul class="pricing-features">
                 <li class="included">✓ Tüm 550+ şehir sonucu</li>
-                <li class="included">✓ Detaylı doğum haritası yorumu</li>
-                <li class="included">✓ Sınırsız günlük/haftalık/aylık yorum</li>
-                <li class="included">✓ Uyum testi (tam + detaylı)</li>
-                <li class="included">✓ Sınırsız Tarot, Kristal, Rüya & Fal</li>
+                <li class="included">✓ Detaylı doğum haritası</li>
+                <li class="included">✓ Kişisel günlük yorum</li>
+                <li class="included">✓ Şehir karşılaştırma</li>
+                <li class="included">✓ Uyum testi (tam)</li>
+                <li class="included">✓ Kristal & renk rehberi</li>
                 <li class="included">✓ Transit analiz</li>
-                <li class="included">✓ Şehir karşılaştırma (5 şehir)</li>
                 <li class="included">✓ PDF rapor indirme</li>
                 <li class="included">✓ Paylaşım kartları</li>
-                <li class="excluded">✗ VIP özel içerikler</li>
+                <li class="excluded">✗ VIP destek</li>
             </ul>
             <button class="btn-pricing popular" onclick="startCheckout('premium')">Premium'a Geç ✨</button>
+            <div class="trial-cta">veya <button class="trial-link" onclick="startFreeTrial()">7 gün ücretsiz dene →</button></div>
         </div>
 
         <!-- VIP -->
@@ -463,24 +438,32 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
                 <p class="pricing-tagline-card">Eksiksiz kozmik rehberlik</p>
             </div>
             <div class="pricing-price">
-                <span class="price-amount" id="price-vip">₺400</span>
+                <span class="price-amount" id="price-vip">₺99</span>
                 <span class="price-period" id="period-vip">/ay</span>
             </div>
             <ul class="pricing-features">
                 <li class="included">✓ Premium'daki her şey</li>
-                <li class="included">✓ Sınırsız şehir karşılaştırma</li>
-                <li class="included">✓ Aylık özel kozmik tahmin bülteni</li>
-                <li class="included">✓ Meditasyon &amp; ritüel rehberi</li>
-                <li class="included">✓ Kristal reçetesi (kişiye özel)</li>
-                <li class="included">✓ Öncelikli destek (24 saat)</li>
+                <li class="included">✓ Aylık kişisel tahmin</li>
+                <li class="included">✓ Meditasyon rehberi</li>
+                <li class="included">✓ Öncelikli destek</li>
                 <li class="included">✓ Reklamsız deneyim</li>
-                <li class="included">✓ Erken erişim (beta özellikler)</li>
-                <li class="included">✓ Animasyonlu natal harita çarkı</li>
-                <li class="included">✓ Yıllık derin analiz raporu</li>
+                <li class="included">✓ Erken erişim (yeni özellikler)</li>
+                <li class="included">✓ Sınırsız karşılaştırma</li>
+                <li class="included">✓ Detaylı transit rapor</li>
+                <li class="included">✓ Kristal reçetesi</li>
+                <li class="included">✓ Doğum haritası çarkı</li>
             </ul>
             <button class="btn-pricing" onclick="startCheckout('vip')">VIP Ol 💎</button>
         </div>
     </div>
+
+    <div class="trust-row">
+        <span class="trust-badge">🔒 256-bit SSL Güvenlik</span>
+        <span class="trust-badge">💳 Lemon Squeezy Güvenli Ödeme</span>
+        <span class="trust-badge">✅ 30 Gün Para İade Garantisi</span>
+        <span class="trust-badge">🚫 Kart Bilgileri Saklanmaz</span>
+    </div>
+    <p class="trust-guarantee">✅ 30 gün içinde memnun kalmazsan, hiç soru sormadan iade ediyoruz.</p>
 
     <div class="referral-banner">
         <h3>🎁 Arkadasini Davet Et</h3>
@@ -1357,6 +1340,9 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
                 <!-- Bölge Seçimi -->
                 <div class="form-group checkout-region-selector">
                     <label>Ödeme Bölgesi</label>
+                    <div class="region-toggle">
+
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Ad Soyad</label>
@@ -1366,7 +1352,7 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
                     <label>E-posta</label>
                     <input type="email" id="checkout-email" placeholder="ornek@email.com" required>
                 </div>
-                <div class="checkout-summary">
+<div class="checkout-summary">
                     <div class="summary-row">
                         <span>Plan</span>
                         <span id="checkout-summary-plan">-</span>
@@ -1385,6 +1371,8 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
                 <p class="checkout-disclaimer">Kart bilgileriniz Lemon Squeezy güvencesiyle işlenir. Bilgileriniz bizde saklanmaz.</p>
             </form>
         </div>
+</div>
+        </div>
     </div>
 </div>
 <!-- ══════════════════ SHARE MODAL ══════════════════ -->
@@ -1399,8 +1387,112 @@ body.is-loading .hero-badge,body.is-loading .hero-title,body.is-loading .hero-su
             <div class="share-card-footer">zemara.app ✦</div>
         </div>
         <div class="share-actions">
-            <button class="btn-primary" onclick="downloadShareCard()">📸 Kart İndir</button>
+            <button class="btn-primary" onclick="shareOGCard()">🌟 OG Kart Paylaş</button>
+            <button class="btn-ghost" onclick="downloadShareCard()">📸 html2canvas İndir</button>
             <button class="btn-ghost" onclick="downloadReport()">📄 Rapor İndir</button>
+        </div>
+        <div class="referral-share-row">
+            <p class="referral-share-label">🎁 Arkadaşını davet et, ikisine de <strong>7 gün Premium</strong> hediye!</p>
+            <button class="btn-ghost" style="width:100%" onclick="copyReferralLink()">🔗 Referans Linki Kopyala</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════ PREMIUM UPSELL MODAL ══════════════════ -->
+<div id="upsell-overlay" class="upsell-modal-overlay hidden">
+    <div class="upsell-modal">
+        <button class="upsell-modal-close" onclick="closeUpsellModal()" aria-label="Kapat">✕</button>
+        <div class="upsell-modal-icon" id="upsell-icon">✨</div>
+        <h2 class="upsell-modal-title" id="upsell-title">Premium Özellik</h2>
+        <p class="upsell-modal-sub" id="upsell-sub">Bu özelliği kullanmak için Premium'a geçmen gerekiyor.</p>
+        <ul class="upsell-features">
+            <li><span class="upsell-check">✓</span> Tüm 550+ şehir astro analizi</li>
+            <li><span class="upsell-check">✓</span> Transit &amp; doğum haritası raporu</li>
+            <li><span class="upsell-check">✓</span> Kelt Haçı Tarot açılımı</li>
+            <li><span class="upsell-check">✓</span> PDF indirme &amp; paylaşım kartları</li>
+            <li><span class="upsell-check">✓</span> Sınırsız günlük AI kullanımı</li>
+        </ul>
+        <div class="upsell-price-row">
+            <div>
+                <div class="upsell-price-label">Aylık Premium</div>
+                <div class="upsell-price-hint">İstediğin zaman iptal et</div>
+            </div>
+            <div>
+                <span class="upsell-price-amount">₺49</span>
+                <span class="upsell-price-period">/ay</span>
+            </div>
+        </div>
+        <button class="btn-primary upsell-cta" onclick="closeUpsellModal();startCheckout('premium')">Premium'a Geç ✨</button>
+        <button class="upsell-later" onclick="closeUpsellModal()">Şimdi değil</button>
+    </div>
+</div>
+
+<!-- ══════════════════ PERSONALIZE MODAL ══════════════════ -->
+<div id="personalize-overlay" class="personalize-overlay hidden">
+    <div class="personalize-modal">
+        <div class="personalize-steps">
+            <div class="personalize-step-dot active" id="pdot-0"></div>
+            <div class="personalize-step-dot" id="pdot-1"></div>
+            <div class="personalize-step-dot" id="pdot-2"></div>
+        </div>
+        <div id="personalize-step-0">
+            <div style="font-size:40px;margin-bottom:10px">🗺️</div>
+            <h2>Haritanı Kişiselleştir</h2>
+            <p>Doğum saatini girersen astro çizgilerin çok daha isabetli çıkar. Sadece 2 adım.</p>
+            <div class="form-group personalize-field">
+                <label>Doğum Saati <small style="opacity:0.6">(opsiyonel)</small></label>
+                <input type="time" id="personalize-birth-time" class="form-control">
+            </div>
+            <button class="btn-primary" style="width:100%" onclick="personalizeNext(0)">Devam →</button>
+        </div>
+        <div id="personalize-step-1" class="hidden">
+            <div style="font-size:40px;margin-bottom:10px">🏙️</div>
+            <h2>Doğduğun Şehir</h2>
+            <p>Hangi şehirde doğdun? Hesaplama hassasiyeti için kullanıyoruz.</p>
+            <div class="form-group personalize-field">
+                <label>Doğum Şehri <small style="opacity:0.6">(opsiyonel)</small></label>
+                <input type="text" id="personalize-birth-city" class="form-control" placeholder="ör: İstanbul">
+            </div>
+            <button class="btn-primary" style="width:100%" onclick="personalizeNext(1)">Devam →</button>
+        </div>
+        <div id="personalize-step-2" class="hidden">
+            <div style="font-size:48px;margin-bottom:10px">✦</div>
+            <h2>Hazırsın!</h2>
+            <p>Yıldız haritanı oluşturuyoruz. Seni nereye çağırdıklarını görelim.</p>
+            <button class="btn-primary" style="width:100%;margin-bottom:8px" onclick="personalizeFinish('map')">Haritamı Gör 🗺️</button>
+        </div>
+        <button class="personalize-skip" onclick="personalizeFinish(null)">Şimdi değil, geç</button>
+    </div>
+</div>
+
+<!-- ══════════════════ SHARE NUDGE BANNER ══════════════════ -->
+<div id="share-nudge" class="share-nudge hidden">
+    <span>✨ Sonuçların harika görünüyor!</span>
+    <button onclick="shareResults();hideShareNudge()">Paylaş</button>
+    <button class="share-nudge-close" onclick="hideShareNudge()">✕</button>
+</div>
+
+<!-- ══════════════════ ABANDONED CHECKOUT BANNER ══════════════════ -->
+<div id="checkout-recovery-bar" class="checkout-recovery-bar hidden">
+    <span>⭐ Premium alışverişini yarıda bıraktın!</span>
+    <button onclick="startCheckout('premium');hideCheckoutRecovery()">Devam Et</button>
+    <button class="recovery-close" onclick="hideCheckoutRecovery()">✕</button>
+</div>
+
+<!-- ══════════════════ FREE LIMIT COUNTER BAR ══════════════════ -->
+<div id="usage-limit-bar" class="usage-limit-bar hidden">
+    <span id="usage-limit-text">✦ Bugün <strong>2</strong> ücretsiz AI hakkın kaldı</span>
+    <button onclick="navigateTo('pricing')" class="usage-limit-cta">Premium Al</button>
+    <button class="usage-limit-close" onclick="this.parentElement.classList.add('hidden')">✕</button>
+</div>
+
+<!-- ══════════════════ KVKK / COOKIE CONSENT ══════════════════ -->
+<div id="kvkk-banner" class="kvkk-banner hidden">
+    <div class="kvkk-content">
+        <p>🍪 Zemara, deneyimini kişiselleştirmek için tarayıcı depolama alanı (localStorage) kullanır. <a href="privacy.html" target="_blank">Gizlilik Politikası</a></p>
+        <div class="kvkk-actions">
+            <button class="btn-ghost kvkk-btn" onclick="kvkkDecline()">Reddet</button>
+            <button class="btn-primary kvkk-btn" onclick="kvkkAccept()">Kabul Et</button>
         </div>
     </div>
 </div>
@@ -1507,20 +1599,6 @@ if ('serviceWorker' in navigator) {
         <button class="btn-demo" onclick="submitDemoOnboard()" style="margin-top:16px">
             ⚡ Haritamı Aç — Tüm Özellikler VIP
         </button>
-    </div>
-</div>
-
-<!-- Cookie Consent Banner -->
-<div id="cookie-consent" class="cookie-banner" style="display:none">
-    <div class="cookie-content">
-        <div class="cookie-text">
-            <p>Bu site deneyiminizi iyileştirmek için çerezler ve yerel depolama kullanır. Analitik verileri anonim olarak toplanır.</p>
-        </div>
-        <div class="cookie-actions">
-            <button class="cookie-btn cookie-btn-accept" onclick="acceptCookies()">Kabul Et</button>
-            <button class="cookie-btn cookie-btn-reject" onclick="rejectCookies()">Reddet</button>
-            <a href="privacy.html" class="cookie-link">Gizlilik Politikası</a>
-        </div>
     </div>
 </div>
 

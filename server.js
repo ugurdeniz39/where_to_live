@@ -353,11 +353,7 @@ app.post('/api/analytics', (req, res) => {
         const { event, data, session, page } = req.body;
         if (!event || typeof event !== 'string') return res.status(400).json({ error: 'event gerekli' });
 
-        const rawIp = req.ip || req.socket?.remoteAddress || '';
-        // GDPR/KVKK: Anonymize IP — zero out last octet (IPv4) or last 80 bits (IPv6)
-        const ip = rawIp.includes(':')
-            ? rawIp.replace(/:[0-9a-f]{0,4}:[0-9a-f]{0,4}:[0-9a-f]{0,4}:[0-9a-f]{0,4}:[0-9a-f]{0,4}$/i, ':0:0:0:0:0')
-            : rawIp.replace(/\.\d+$/, '.0');
+        const ip = req.ip || req.socket?.remoteAddress;
 
         // DB (fire-and-forget — don't block response)
         const db = getDB() || getSupabase();
@@ -375,7 +371,7 @@ app.post('/api/analytics', (req, res) => {
                 data: typeof data === 'object' ? data : {},
                 session_id: (session || '').slice(0, 50),
                 page: (page || '').slice(0, 100),
-                ip  // Already anonymized above
+                ip
             }).then(() => {}).catch(() => {});
             return res.json({ ok: true });
         }
@@ -1159,6 +1155,7 @@ ${multiPhoto ? `${imageList.length} fotoğrafı birlikte incele ve ${config.acti
 });
 
 // ═══════════════════════════════════════
+// ═══════════════════════════════════════
 // API: Lemon Squeezy Checkout
 // ═══════════════════════════════════════
 const lsHandler = require('./api/checkout/ls');
@@ -1169,8 +1166,6 @@ app.post('/api/checkout/ls/webhook', (req, res) => {
     return lsHandler(req, res);
 });
 
-
-// ═══════════════════════════════════════
 // API: Premium Status Check
 // ═══════════════════════════════════════
 app.post('/api/premium-status', async (req, res) => {
@@ -1298,7 +1293,7 @@ app.listen(PORT, () => {
     console.log(`  → http://localhost:${PORT}`);
     console.log(`  → AI: ${process.env.OPENAI_API_KEY ? '✅ OpenAI bağlı' : '❌ API key yok'}`);
     console.log(`  → Security: Headers ✅ | Rate Limit: ${RATE_MAX}/min ✅ | Cache: ✅`);
-    console.log(`  → Lemon Squeezy: ${process.env.LEMONSQUEEZY_API_KEY ? '✅ Bağlı' : '⚠️ API key eksik'}`);
+    console.log(`  → Lemon Squeezy: ${process.env.LEMONSQUEEZY_WEBHOOK_SECRET ? '✅ Webhook ayarlı' : '⚠️ Webhook secret eksik'} — checkout URL'leri hardcoded`);
     console.log(`  → Routes: /api/daily-horoscope, /api/compatibility, /api/crystal-guide, /api/tarot, /api/city-insight, /api/dream, /api/fortune`);
     console.log(`  → Payment: /api/checkout/ls, /api/checkout/ls/webhook\n`);
 });

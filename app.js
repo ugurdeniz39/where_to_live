@@ -11,53 +11,9 @@
 // ═══════════════════════════════════════
 // ANALYTICS SCAFFOLD
 // ═══════════════════════════════════════
-// ═══════════════════════════════════════
-// COOKIE CONSENT MANAGER
-// ═══════════════════════════════════════
-const CookieConsent = {
-    _key: 'zemara_cookie_consent',
-    get() { return localStorage.getItem(this._key); },
-    set(value) { localStorage.setItem(this._key, value); },
-    isAccepted() { return this.get() === 'accepted'; },
-    isDecided() { return this.get() !== null; },
-    show() {
-        const el = document.getElementById('cookie-consent');
-        if (el) el.style.display = '';
-    },
-    hide() {
-        const el = document.getElementById('cookie-consent');
-        if (el) { el.style.display = 'none'; }
-    }
-};
-
-function acceptCookies() {
-    CookieConsent.set('accepted');
-    CookieConsent.hide();
-    Analytics.track('cookie_consent', { action: 'accepted' });
-}
-
-function rejectCookies() {
-    CookieConsent.set('rejected');
-    CookieConsent.hide();
-}
-
-// Show banner on load if not decided
-document.addEventListener('DOMContentLoaded', () => {
-    if (!CookieConsent.isDecided()) {
-        setTimeout(() => CookieConsent.show(), 1500);
-    }
-    // Sync lang select dropdown and apply i18n translations
-    const savedLang = localStorage.getItem('zemara_lang') || 'tr';
-    document.querySelectorAll('.lang-select').forEach(s => { s.value = savedLang; });
-    // applyI18n is defined later in the file; defer to ensure it's available
-    setTimeout(applyI18n, 0);
-});
-
 const Analytics = {
     events: [],
     track(event, data = {}) {
-        // Only send to server if consent given (local tracking always works for debugging)
-        const hasConsent = CookieConsent.isAccepted() || event === 'cookie_consent';
         const entry = {
             event,
             data,
@@ -72,15 +28,13 @@ const Analytics = {
         if (localStorage.getItem('zemara_debug')) {
             console.log(`📊 Analytics: ${event}`, data);
         }
-        // Send to analytics backend only with consent
-        if (hasConsent) {
-            const _ab = window.__ZEMARA_CONFIG?.apiBase || '';
-            fetch(_ab + '/api/analytics', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(entry)
-            }).catch(() => {}); // Silent fail
-        }
+        // Send to analytics backend (fire-and-forget)
+        const _ab = window.__ZEMARA_CONFIG?.apiBase || '';
+        fetch(_ab + '/api/analytics', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(entry)
+        }).catch(() => {}); // Silent fail
     },
     _sessionId: 's_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     getSummary() {
@@ -122,6 +76,15 @@ const ABTest = {
 // ═══════════════════════════════════════
 // i18n — INTERNATIONALIZATION
 // ═══════════════════════════════════════
+const LANG_META = {
+    tr: { flag: '🇹🇷', code: 'TR', name: 'Türkçe' },
+    en: { flag: '🇬🇧', code: 'EN', name: 'English' },
+    de: { flag: '🇩🇪', code: 'DE', name: 'Deutsch' },
+    es: { flag: '🇪🇸', code: 'ES', name: 'Español' },
+    fr: { flag: '🇫🇷', code: 'FR', name: 'Français' },
+    ru: { flag: '🇷🇺', code: 'RU', name: 'Русский' },
+};
+
 const i18n = {
     _lang: localStorage.getItem('zemara_lang') || 'tr',
 
@@ -151,256 +114,52 @@ const i18n = {
             premiumRequired: 'This feature requires Premium',
         },
         de: {
-            home: 'Start', daily: 'Tageshoroskop', compatibility: 'Kompatibilität',
-            moon: 'Mondkalender', tarot: 'Tarot', crystal: 'Kristalle', dream: 'Traumdeutung',
-            fortune: 'Orakel', retrograde: 'Retrograde', about: 'Über uns', pricing: 'Premium',
+            home: 'Startseite', daily: 'Tageshoroskop', compatibility: 'Kompatibilität',
+            moon: 'Mondkalender', tarot: 'Tarot', crystal: 'Kristall', dream: 'Traum',
+            fortune: 'Wahrsagung', retrograde: 'Rückläufig', about: 'Über uns', pricing: 'Premium',
             natal: 'Geburtshoroskop', login: 'Anmelden', signup: 'Kostenlos starten',
-            loading: 'Laden...', error: 'Fehler aufgetreten',
+            loading: 'Wird geladen...', error: 'Ein Fehler ist aufgetreten',
             offline: 'Keine Internetverbindung', retry: 'Erneut versuchen',
             share: 'Teilen', download: 'Herunterladen', back: 'Zurück',
-            calculate: 'Berechnen', submit: 'Absenden', cancel: 'Abbrechen',
-            dailyLimit: 'Tägliches Limit erreicht',
+            calculate: 'Berechnen', submit: 'Senden', cancel: 'Abbrechen',
+            dailyLimit: 'Tägliches Freikontingent verbraucht',
             premiumRequired: 'Diese Funktion erfordert Premium',
+        },
+        es: {
+            home: 'Inicio', daily: 'Horóscopo Diario', compatibility: 'Compatibilidad',
+            moon: 'Calendario Lunar', tarot: 'Tarot', crystal: 'Cristal', dream: 'Sueño',
+            fortune: 'Fortuna', retrograde: 'Retrógrado', about: 'Acerca de', pricing: 'Premium',
+            natal: 'Carta Natal', login: 'Iniciar sesión', signup: 'Comenzar gratis',
+            loading: 'Cargando...', error: 'Ocurrió un error',
+            offline: 'Sin conexión a internet', retry: 'Reintentar',
+            share: 'Compartir', download: 'Descargar', back: 'Volver',
+            calculate: 'Calcular', submit: 'Enviar', cancel: 'Cancelar',
+            dailyLimit: 'Límite diario gratuito alcanzado',
+            premiumRequired: 'Esta función requiere Premium',
         },
         fr: {
             home: 'Accueil', daily: 'Horoscope du jour', compatibility: 'Compatibilité',
-            moon: 'Calendrier lunaire', tarot: 'Tarot', crystal: 'Cristaux', dream: 'Rêves',
-            fortune: 'Bonne aventure', retrograde: 'Rétrograde', about: 'À propos', pricing: 'Premium',
-            natal: 'Thème natal', login: 'Connexion', signup: 'Commencer',
-            loading: 'Chargement...', error: 'Erreur survenue',
-            offline: 'Sans connexion internet', retry: 'Réessayer',
+            moon: 'Calendrier Lunaire', tarot: 'Tarot', crystal: 'Cristal', dream: 'Rêve',
+            fortune: 'Fortune', retrograde: 'Rétrograde', about: 'À propos', pricing: 'Premium',
+            natal: 'Thème Natal', login: 'Se connecter', signup: 'Commencer gratuitement',
+            loading: 'Chargement...', error: 'Une erreur s\'est produite',
+            offline: 'Pas de connexion internet', retry: 'Réessayer',
             share: 'Partager', download: 'Télécharger', back: 'Retour',
             calculate: 'Calculer', submit: 'Envoyer', cancel: 'Annuler',
             dailyLimit: 'Limite quotidienne atteinte',
-            premiumRequired: 'Fonctionnalité Premium requise',
-        },
-        es: {
-            home: 'Inicio', daily: 'Horóscopo diario', compatibility: 'Compatibilidad',
-            moon: 'Calendario lunar', tarot: 'Tarot', crystal: 'Cristales', dream: 'Sueños',
-            fortune: 'Fortuna', retrograde: 'Retrógrado', about: 'Acerca de', pricing: 'Premium',
-            natal: 'Carta natal', login: 'Iniciar sesión', signup: 'Empezar gratis',
-            loading: 'Cargando...', error: 'Error ocurrido',
-            offline: 'Sin conexión a internet', retry: 'Reintentar',
-            share: 'Compartir', download: 'Descargar', back: 'Atrás',
-            calculate: 'Calcular', submit: 'Enviar', cancel: 'Cancelar',
-            dailyLimit: 'Límite diario alcanzado',
-            premiumRequired: 'Esta función requiere Premium',
-        },
-        it: {
-            home: 'Home', daily: 'Oroscopo del giorno', compatibility: 'Compatibilità',
-            moon: 'Calendario lunare', tarot: 'Tarocchi', crystal: 'Cristalli', dream: 'Sogni',
-            fortune: 'Fortuna', retrograde: 'Retrogrado', about: 'Chi siamo', pricing: 'Premium',
-            natal: 'Tema natale', login: 'Accedi', signup: 'Inizia gratis',
-            loading: 'Caricamento...', error: 'Errore verificato',
-            offline: 'Senza connessione', retry: 'Riprova',
-            share: 'Condividi', download: 'Scarica', back: 'Indietro',
-            calculate: 'Calcola', submit: 'Invia', cancel: 'Annulla',
-            dailyLimit: 'Limite giornaliero raggiunto',
-            premiumRequired: 'Richiede Premium',
-        },
-        nl: {
-            home: 'Home', daily: 'Dagelijkse horoscoop', compatibility: 'Compatibiliteit',
-            moon: 'Maankalender', tarot: 'Tarot', crystal: 'Kristallen', dream: 'Dromen',
-            fortune: 'Fortuin', retrograde: 'Retrograde', about: 'Over ons', pricing: 'Premium',
-            natal: 'Geboorteshoroscoop', login: 'Inloggen', signup: 'Gratis starten',
-            loading: 'Laden...', error: 'Fout opgetreden',
-            offline: 'Geen internetverbinding', retry: 'Opnieuw proberen',
-            share: 'Delen', download: 'Downloaden', back: 'Terug',
-            calculate: 'Berekenen', submit: 'Verzenden', cancel: 'Annuleren',
-            dailyLimit: 'Daglimiet bereikt',
-            premiumRequired: 'Vereist Premium',
-        },
-        pt: {
-            home: 'Início', daily: 'Horóscopo diário', compatibility: 'Compatibilidade',
-            moon: 'Calendário lunar', tarot: 'Tarô', crystal: 'Cristais', dream: 'Sonhos',
-            fortune: 'Fortuna', retrograde: 'Retrógrado', about: 'Sobre nós', pricing: 'Premium',
-            natal: 'Mapa natal', login: 'Entrar', signup: 'Começar grátis',
-            loading: 'Carregando...', error: 'Erro ocorrido',
-            offline: 'Sem conexão com a internet', retry: 'Tentar novamente',
-            share: 'Compartilhar', download: 'Baixar', back: 'Voltar',
-            calculate: 'Calcular', submit: 'Enviar', cancel: 'Cancelar',
-            dailyLimit: 'Limite diário atingido',
-            premiumRequired: 'Requer Premium',
-        },
-        pl: {
-            home: 'Strona główna', daily: 'Codzienny horoskop', compatibility: 'Zgodność',
-            moon: 'Kalendarz księżycowy', tarot: 'Tarot', crystal: 'Kryształy', dream: 'Sny',
-            fortune: 'Wróżba', retrograde: 'Retrograd', about: 'O nas', pricing: 'Premium',
-            natal: 'Mapa urodzenia', login: 'Zaloguj się', signup: 'Zacznij za darmo',
-            loading: 'Ładowanie...', error: 'Wystąpił błąd',
-            offline: 'Brak połączenia z internetem', retry: 'Spróbuj ponownie',
-            share: 'Udostępnij', download: 'Pobierz', back: 'Wstecz',
-            calculate: 'Oblicz', submit: 'Wyślij', cancel: 'Anuluj',
-            dailyLimit: 'Codzienny limit osiągnięty',
-            premiumRequired: 'Wymaga Premium',
-        },
-        sv: {
-            home: 'Hem', daily: 'Daglig horoskop', compatibility: 'Kompatibilitet',
-            moon: 'Månkalender', tarot: 'Tarot', crystal: 'Kristaller', dream: 'Drömmar',
-            fortune: 'Lycka', retrograde: 'Retrograd', about: 'Om oss', pricing: 'Premium',
-            natal: 'Födelsekarta', login: 'Logga in', signup: 'Börja gratis',
-            loading: 'Laddar...', error: 'Ett fel inträffade',
-            offline: 'Ingen internetanslutning', retry: 'Försök igen',
-            share: 'Dela', download: 'Ladda ner', back: 'Tillbaka',
-            calculate: 'Beräkna', submit: 'Skicka', cancel: 'Avbryt',
-            dailyLimit: 'Daglig gräns nådd',
-            premiumRequired: 'Kräver Premium',
-        },
-        no: {
-            home: 'Hjem', daily: 'Daglig horoskop', compatibility: 'Kompatibilitet',
-            moon: 'Månekalender', tarot: 'Tarot', crystal: 'Krystaller', dream: 'Drømmer',
-            fortune: 'Lykke', retrograde: 'Retrograd', about: 'Om oss', pricing: 'Premium',
-            natal: 'Fødselskart', login: 'Logg inn', signup: 'Start gratis',
-            loading: 'Laster...', error: 'En feil oppsto',
-            offline: 'Ingen internettforbindelse', retry: 'Prøv igjen',
-            share: 'Del', download: 'Last ned', back: 'Tilbake',
-            calculate: 'Beregn', submit: 'Send', cancel: 'Avbryt',
-            dailyLimit: 'Daglig grense nådd',
-            premiumRequired: 'Krever Premium',
-        },
-        da: {
-            home: 'Hjem', daily: 'Daglig horoskop', compatibility: 'Kompatibilitet',
-            moon: 'Månekalender', tarot: 'Tarot', crystal: 'Krystaller', dream: 'Drømme',
-            fortune: 'Lykke', retrograde: 'Retrograd', about: 'Om os', pricing: 'Premium',
-            natal: 'Fødselskort', login: 'Log ind', signup: 'Start gratis',
-            loading: 'Indlæser...', error: 'Der opstod en fejl',
-            offline: 'Ingen internetforbindelse', retry: 'Prøv igen',
-            share: 'Del', download: 'Download', back: 'Tilbage',
-            calculate: 'Beregn', submit: 'Send', cancel: 'Annuller',
-            dailyLimit: 'Daglig grænse nået',
-            premiumRequired: 'Kræver Premium',
-        },
-        fi: {
-            home: 'Koti', daily: 'Päivähoroskooppi', compatibility: 'Yhteensopivuus',
-            moon: 'Kuukalenteri', tarot: 'Tarot', crystal: 'Kristallit', dream: 'Unet',
-            fortune: 'Onni', retrograde: 'Retrograde', about: 'Tietoa', pricing: 'Premium',
-            natal: 'Syntymähoroskooppi', login: 'Kirjaudu', signup: 'Aloita ilmaiseksi',
-            loading: 'Ladataan...', error: 'Tapahtui virhe',
-            offline: 'Ei internetyhteyttä', retry: 'Yritä uudelleen',
-            share: 'Jaa', download: 'Lataa', back: 'Takaisin',
-            calculate: 'Laske', submit: 'Lähetä', cancel: 'Peruuta',
-            dailyLimit: 'Päiväraja saavutettu',
-            premiumRequired: 'Vaatii Premiumin',
-        },
-        cs: {
-            home: 'Domů', daily: 'Denní horoskop', compatibility: 'Kompatibilita',
-            moon: 'Měsíční kalendář', tarot: 'Tarot', crystal: 'Krystaly', dream: 'Sny',
-            fortune: 'Štěstí', retrograde: 'Retrograd', about: 'O nás', pricing: 'Premium',
-            natal: 'Rodný horoskop', login: 'Přihlásit se', signup: 'Začít zdarma',
-            loading: 'Načítání...', error: 'Došlo k chybě',
-            offline: 'Žádné připojení k internetu', retry: 'Zkusit znovu',
-            share: 'Sdílet', download: 'Stáhnout', back: 'Zpět',
-            calculate: 'Vypočítat', submit: 'Odeslat', cancel: 'Zrušit',
-            dailyLimit: 'Denní limit dosažen',
-            premiumRequired: 'Vyžaduje Premium',
-        },
-        sk: {
-            home: 'Domov', daily: 'Denný horoskop', compatibility: 'Kompatibilita',
-            moon: 'Mesiačný kalandár', tarot: 'Tarot', crystal: 'Kryštály', dream: 'Sny',
-            fortune: 'Šťastie', retrograde: 'Retrograd', about: 'O nás', pricing: 'Premium',
-            natal: 'Rodný horoskop', login: 'Prihlásiť sa', signup: 'Začať zadarmo',
-            loading: 'Načítávanie...', error: 'Nastala chyba',
-            offline: 'Žiadne internetové pripojenie', retry: 'Skúsiť znovu',
-            share: 'Zdieľať', download: 'Stiahnuť', back: 'Späť',
-            calculate: 'Vypočítať', submit: 'Odoslať', cancel: 'Zrušiť',
-            dailyLimit: 'Denný limit dosiahnutý',
-            premiumRequired: 'Vyžaduje Premium',
-        },
-        hu: {
-            home: 'Főoldal', daily: 'Napi horoszkóp', compatibility: 'Kompatibilitás',
-            moon: 'Hold naptár', tarot: 'Tarot', crystal: 'Kristályok', dream: 'Álmok',
-            fortune: 'Szerencse', retrograde: 'Retrograd', about: 'Rólunk', pricing: 'Premium',
-            natal: 'Születési horoszkóp', login: 'Bejelentkezés', signup: 'Ingyenes kezdés',
-            loading: 'Betöltés...', error: 'Hiba történt',
-            offline: 'Nincs internetkapcsolat', retry: 'Próbálja újra',
-            share: 'Megosztás', download: 'Letöltés', back: 'Vissza',
-            calculate: 'Számítás', submit: 'Küldés', cancel: 'Mégse',
-            dailyLimit: 'Napi korlát elérve',
-            premiumRequired: 'Premium szükséges',
-        },
-        ro: {
-            home: 'Acasă', daily: 'Horoscop zilnic', compatibility: 'Compatibilitate',
-            moon: 'Calendar lunar', tarot: 'Tarot', crystal: 'Cristale', dream: 'Vise',
-            fortune: 'Noroc', retrograde: 'Retrograd', about: 'Despre noi', pricing: 'Premium',
-            natal: 'Hartă natală', login: 'Autentificare', signup: 'Începř gratuit',
-            loading: 'Se încarcă...', error: 'A apărut o eroare',
-            offline: 'Fără conexiune la internet', retry: 'Reîncearcă',
-            share: 'Distribuie', download: 'Descărcă', back: 'Înapoi',
-            calculate: 'Calculează', submit: 'Trimite', cancel: 'Anulează',
-            dailyLimit: 'Limita zilnică atinsă',
-            premiumRequired: 'Necesită Premium',
-        },
-        bg: {
-            home: 'Начало', daily: 'Дневен хороскоп', compatibility: 'Съвместимост',
-            moon: 'Лунен календар', tarot: 'Таро', crystal: 'Кристали', dream: 'Сънища',
-            fortune: 'Съдба', retrograde: 'Ретроград', about: 'За нас', pricing: 'Премиум',
-            natal: 'Натална карта', login: 'Влезте', signup: 'Започнете безплатно',
-            loading: 'Зарежда се...', error: 'Възникна грешка',
-            offline: 'Няма връзка с интернет', retry: 'Опитайте отново',
-            share: 'Споделете', download: 'Изтеглете', back: 'Назад',
-            calculate: 'Изчислете', submit: 'Изпратете', cancel: 'Отказ',
-            dailyLimit: 'Дневният лимит е достигнат',
-            premiumRequired: 'Изисква Премиум',
-        },
-        hr: {
-            home: 'Početna', daily: 'Dnevni horoskop', compatibility: 'Kompatibilnost',
-            moon: 'Lunarni kalendar', tarot: 'Tarot', crystal: 'Kristali', dream: 'Snovi',
-            fortune: 'Sudbina', retrograde: 'Retrogradan', about: 'O nama', pricing: 'Premium',
-            natal: 'Natalna karta', login: 'Prijava', signup: 'Počni besplatno',
-            loading: 'Učitavanje...', error: 'Došlo je do pogreške',
-            offline: 'Nema internet veze', retry: 'Pokušaj ponovo',
-            share: 'Podijeli', download: 'Preuzmi', back: 'Natrag',
-            calculate: 'Izračunaj', submit: 'Pošalji', cancel: 'Odustani',
-            dailyLimit: 'Dostiguto dnevno ograničenje',
-            premiumRequired: 'Potreban Premium',
-        },
-        sr: {
-            home: 'Почетна', daily: 'Дневни хороскоп', compatibility: 'Компатибилност',
-            moon: 'Лунарни календар', tarot: 'Таро', crystal: 'Кристали', dream: 'Снови',
-            fortune: 'Судбина', retrograde: 'Ретроградан', about: 'О нама', pricing: 'Премиум',
-            natal: 'Натална карта', login: 'Пријава', signup: 'Почни бесплатно',
-            loading: 'Учитавање...', error: 'Дошло је до грешке',
-            offline: 'Нема интернет везе', retry: 'Покушај поново',
-            share: 'Подели', download: 'Преузми', back: 'Назад',
-            calculate: 'Израчунај', submit: 'Пошаљи', cancel: 'Откажи',
-            dailyLimit: 'Достигнут дневни лимит',
-            premiumRequired: 'Потребан Премиум',
-        },
-        el: {
-            home: 'Αρχική', daily: 'Ημερήσιο Ωροσκόπιο', compatibility: 'Συμβατότητα',
-            moon: 'Σεληνιακό Ημερολόγιο', tarot: 'Ταρώ', crystal: 'Κρύσταλλοι', dream: 'Όνειρα',
-            fortune: 'Τύχη', retrograde: 'Ανάδρομος', about: 'Σχετικά', pricing: 'Premium',
-            natal: 'Ωροσκόπιο γέννησης', login: 'Σύνδεση', signup: 'Ξεκινήστε δωρεάν',
-            loading: 'Φόρτωση...', error: 'Παρουσιάστηκε σφάλμα',
-            offline: 'Χωρίς σύνδεση διαδικτύου', retry: 'Δοκιμάστε ξανά',
-            share: 'Κοινοποίηση', download: 'Λήψη', back: 'Πίσω',
-            calculate: 'Υπολογισμός', submit: 'Υποβολή', cancel: 'Ακύρωση',
-            dailyLimit: 'Ημερήσιος περιορισμός συμπληρώθηκε',
-            premiumRequired: 'Απαιτείται Premium',
-        },
-        uk: {
-            home: 'Головна', daily: 'Щоденний гороскоп', compatibility: 'Сумісність',
-            moon: 'Місячний календар', tarot: 'Таро', crystal: 'Кристали', dream: 'Сни',
-            fortune: 'Доля', retrograde: 'Ретроград', about: 'Про нас', pricing: 'Преміум',
-            natal: 'Натальна карта', login: 'Увійти', signup: 'Почати безкоштовно',
-            loading: 'Завантаження...', error: 'Сталася помилка',
-            offline: 'Немає підключення до інтернету', retry: 'Спробувати знову',
-            share: 'Поділитися', download: 'Завантажити', back: 'Назад',
-            calculate: 'Обчислити', submit: 'Надіслати', cancel: 'Скасувати',
-            dailyLimit: 'Денний ліміт досягнуто',
-            premiumRequired: 'Потрібний Преміум',
+            premiumRequired: 'Cette fonctionnalité nécessite Premium',
         },
         ru: {
-            home: 'Главная', daily: 'Ежедневный гороскоп', compatibility: 'Совместимость',
-            moon: 'Лунный календарь', tarot: 'Таро', crystal: 'Кристаллы', dream: 'Сны',
-            fortune: 'Судьба', retrograde: 'Ретроград', about: 'О нас', pricing: 'Премиум',
+            home: 'Главная', daily: 'Гороскоп на день', compatibility: 'Совместимость',
+            moon: 'Лунный календарь', tarot: 'Таро', crystal: 'Кристалл', dream: 'Сон',
+            fortune: 'Гадание', retrograde: 'Ретроград', about: 'О нас', pricing: 'Премиум',
             natal: 'Натальная карта', login: 'Войти', signup: 'Начать бесплатно',
             loading: 'Загрузка...', error: 'Произошла ошибка',
-            offline: 'Нет подключения к интернету', retry: 'Повторить',
+            offline: 'Нет интернет-соединения', retry: 'Попробовать снова',
             share: 'Поделиться', download: 'Скачать', back: 'Назад',
             calculate: 'Рассчитать', submit: 'Отправить', cancel: 'Отмена',
-            dailyLimit: 'Дневной лимит достигнут',
-            premiumRequired: 'Требуется Премиум',
+            dailyLimit: 'Дневной лимит исчерпан',
+            premiumRequired: 'Эта функция требует Premium',
         },
     },
 
@@ -417,59 +176,197 @@ const i18n = {
     getLang() { return this._lang; }
 };
 
-const _LANG_NAMES = {
-    tr: 'Türkçe', en: 'English', de: 'Deutsch', fr: 'Français',
-    es: 'Español', it: 'Italiano', nl: 'Nederlands', pt: 'Português', pl: 'Polski',
-    sv: 'Svenska', no: 'Norsk', da: 'Dansk', fi: 'Suomi',
-    cs: 'Čeština', sk: 'Slovenčina', hu: 'Magyar', ro: 'Română',
-    bg: 'Български', hr: 'Hrvatski', sr: 'Srpski',
-    el: 'Ελληνικά', uk: 'Українська', ru: 'Русский'
-};
-
-const _LANG_FLAGS = {
-    tr: '🇹🇷', en: '🇬🇧', de: '🇩🇪', fr: '🇫🇷', es: '🇪🇸',
-    it: '🇮🇹', nl: '🇳🇱', pt: '🇵🇹', pl: '🇵🇱', sv: '🇸🇪',
-    no: '🇳🇴', da: '🇩🇰', fi: '🇫🇮', cs: '🇨🇿', sk: '🇸🇰',
-    hu: '🇭🇺', ro: '🇷🇴', bg: '🇧🇬', hr: '🇭🇷', sr: '🇷🇸',
-    el: '🇬🇷', uk: '🇺🇦', ru: '🇷🇺'
-};
-
-// Patch "today" key into every language translation
-{
-    const _todayMap = {
-        tr: 'Bugün', en: 'Today', de: 'Heute', fr: "Aujourd'hui", es: 'Hoy',
-        it: 'Oggi', nl: 'Vandaag', pt: 'Hoje', pl: 'Dzisiaj', sv: 'Idag',
-        no: 'I dag', da: 'I dag', fi: 'Tänään', cs: 'Dnes', sk: 'Dnes',
-        hu: 'Ma', ro: 'Azi', bg: 'Днес', hr: 'Danas', sr: 'Данас',
-        el: 'Σήμερα', uk: 'Сьогодні', ru: 'Сегодня'
-    };
-    Object.entries(_todayMap).forEach(([l, v]) => { if (i18n.translations[l]) i18n.translations[l].today = v; });
+function _updateLangUI(lang) {
+    const meta = LANG_META[lang] || LANG_META.tr;
+    document.querySelectorAll('.lang-flag-current').forEach(el => el.textContent = meta.flag);
+    document.querySelectorAll('.lang-code-current').forEach(el => el.textContent = meta.code);
+    document.querySelectorAll('.lang-opt').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
 }
 
-function applyI18n() {
-    const lang = i18n.getLang();
-    // Translate elements with data-i18n attribute (nav links, buttons, etc.)
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.dataset.i18n;
-        const emoji = el.dataset.emoji;
-        const translated = i18n.t(key);
-        el.textContent = emoji ? emoji + '\u00A0' + translated : translated;
+function toggleLangDropdown(e) {
+    e.stopPropagation();
+    const picker = e.currentTarget.closest('.lang-picker');
+    const isOpen = picker?.classList.contains('open');
+    document.querySelectorAll('.lang-picker.open').forEach(p => {
+        p.classList.remove('open');
+        p.querySelector('.lang-dropdown')?.setAttribute('hidden', '');
     });
-    // Update compact lang picker labels (desktop nav)
-    const flag = _LANG_FLAGS[lang] || '🌐';
-    document.querySelectorAll('.lang-picker-label').forEach(el => {
-        el.textContent = flag + ' ' + lang.toUpperCase();
-    });
-    // Update html lang attribute
-    document.documentElement.lang = lang;
+    if (picker && !isOpen) {
+        picker.classList.add('open');
+        picker.querySelector('.lang-dropdown')?.removeAttribute('hidden');
+    }
 }
+
+document.addEventListener('click', () => {
+    document.querySelectorAll('.lang-picker.open').forEach(p => {
+        p.classList.remove('open');
+        p.querySelector('.lang-dropdown')?.setAttribute('hidden', '');
+    });
+});
 
 function switchLang(lang) {
     i18n.setLang(lang);
-    document.querySelectorAll('.lang-select').forEach(s => { s.value = lang; });
-    document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
-    applyI18n();
-    showToast((_LANG_FLAGS[lang] || '🌐') + ' ' + (_LANG_NAMES[lang] || lang));
+    _updateLangUI(lang);
+    document.querySelectorAll('.lang-picker.open').forEach(p => {
+        p.classList.remove('open');
+        p.querySelector('.lang-dropdown')?.setAttribute('hidden', '');
+    });
+    const msgs = { tr: 'Dil: Türkçe', en: 'Language: English', de: 'Sprache: Deutsch', es: 'Idioma: Español', fr: 'Langue: Français', ru: 'Язык: Русский' };
+    showToast(msgs[lang] || 'Language changed');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    _updateLangUI(i18n.getLang());
+    trackIncomingReferral();
+    kvkkInit();
+    checkCheckoutRecovery();
+    updateUsageLimitBar();
+    trackAppOpen();            // Re-engagement push nudge
+});
+
+// ═══════════════════════════════════════
+// KVKK / COOKIE CONSENT
+// ═══════════════════════════════════════
+function kvkkInit() {
+    if (localStorage.getItem('zemara_kvkk') === 'accepted') return;
+    if (localStorage.getItem('zemara_kvkk') === 'declined') return;
+    // Show banner after 1s delay
+    setTimeout(() => {
+        document.getElementById('kvkk-banner')?.classList.remove('hidden');
+    }, 1000);
+}
+
+function kvkkAccept() {
+    localStorage.setItem('zemara_kvkk', 'accepted');
+    document.getElementById('kvkk-banner')?.classList.add('hidden');
+    Analytics.track('kvkk_accepted');
+}
+
+function kvkkDecline() {
+    localStorage.setItem('zemara_kvkk', 'declined');
+    document.getElementById('kvkk-banner')?.classList.add('hidden');
+    // Clear non-essential data on decline
+    const keep = ['zemara_kvkk'];
+    Object.keys(localStorage).filter(k => k.startsWith('zemara_') && !keep.includes(k))
+        .forEach(k => localStorage.removeItem(k));
+    Analytics.track('kvkk_declined');
+}
+
+// ═══════════════════════════════════════
+// RE-ENGAGEMENT PUSH NUDGE
+// ═══════════════════════════════════════
+function trackAppOpen() {
+    const KEY = 'zemara_last_open';
+    const last = parseInt(localStorage.getItem(KEY) || '0', 10);
+    const now = Date.now();
+    localStorage.setItem(KEY, now.toString());
+
+    if (!last) return; // first visit ever
+
+    const daysSince = (now - last) / (1000 * 60 * 60 * 24);
+    if (daysSince < 2) return; // visited recently, no nudge needed
+
+    // Show re-engagement prompt after 3 seconds
+    setTimeout(() => {
+        const user = typeof AuthSystem !== 'undefined' ? AuthSystem.getUser() : null;
+        if (!user) return; // only for signed-in users
+
+        const plan = user.plan || 'free';
+        if (plan === 'free') {
+            // Soft nag toward premium after absence
+            showToast(`✦ ${Math.round(daysSince)} gün sonra geri döndün! Yıldızlar bekliyor 🌟`, 6000);
+        }
+        // Request push permission if not yet granted
+        if (typeof requestPushPermission === 'function' &&
+            Notification?.permission !== 'granted') {
+            setTimeout(requestPushPermission, 4000);
+        }
+    }, 3000);
+}
+
+// ═══════════════════════════════════════
+// ABANDONED CHECKOUT RECOVERY
+// ═══════════════════════════════════════
+function markCheckoutStarted(plan) {
+    sessionStorage.setItem('zemara_checkout_started', Date.now().toString());
+    sessionStorage.setItem('zemara_checkout_plan', plan || 'premium');
+}
+
+function markCheckoutCompleted() {
+    sessionStorage.removeItem('zemara_checkout_started');
+    sessionStorage.removeItem('zemara_checkout_plan');
+    localStorage.removeItem('zemara_checkout_abandoned');
+}
+
+function checkCheckoutRecovery() {
+    // If user previously abandoned checkout (stored across session)
+    const abandoned = localStorage.getItem('zemara_checkout_abandoned');
+    if (abandoned && !isPremiumUser()) {
+        setTimeout(() => {
+            document.getElementById('checkout-recovery-bar')?.classList.remove('hidden');
+            Analytics.track('checkout_recovery_shown');
+        }, 3000);
+    }
+}
+
+function hideCheckoutRecovery() {
+    document.getElementById('checkout-recovery-bar')?.classList.add('hidden');
+    localStorage.removeItem('zemara_checkout_abandoned');
+}
+
+// ═══════════════════════════════════════
+// FREE LIMIT COUNTER UI
+// ═══════════════════════════════════════
+function updateUsageLimitBar() {
+    if (isPremiumUser()) return;
+    const remaining = UsageLimiter.getRemaining();
+    const total = UsageLimiter.FREE_DAILY_LIMIT;
+    if (remaining >= total) return; // hasn't used anything yet, don't show
+    const bar = document.getElementById('usage-limit-bar');
+    const text = document.getElementById('usage-limit-text');
+    if (!bar || !text) return;
+    if (remaining === 0) {
+        text.innerHTML = '⚡ Bugünkü ücretsiz AI hakların <strong>doldu</strong>. Yarın yenilenir.';
+    } else {
+        text.innerHTML = `✦ Bugün <strong>${remaining}</strong> ücretsiz AI hakkın kaldı`;
+    }
+    bar.classList.remove('hidden');
+}
+
+// ═══════════════════════════════════════
+// FREE TRIAL
+// ═══════════════════════════════════════
+function startFreeTrial() {
+    const user = AuthSystem.getUser();
+    if (!user) {
+        showToast('7 günlük trial için önce ücretsiz kayıt ol!');
+        setTimeout(() => openModal('signup-modal'), 600);
+        return;
+    }
+    if (isPremiumUser()) {
+        showToast('Zaten Premium üyesin! ✨');
+        return;
+    }
+    // Mark trial start
+    const trialKey = 'zemara_trial_start';
+    if (localStorage.getItem(trialKey)) {
+        showToast('Trial hakkını daha önce kullandın.');
+        return;
+    }
+    localStorage.setItem(trialKey, Date.now().toString());
+    // Optimistically upgrade locally for 7 days
+    const trialUser = { ...user, plan: 'premium', trialEnd: Date.now() + 7 * 24 * 60 * 60 * 1000 };
+    localStorage.setItem('zemara_user', JSON.stringify(trialUser));
+    AuthSystem.updateUI?.();
+    showToast('🎉 7 günlük Premium trial başladı!');
+    Analytics.track('free_trial_started');
+    // Sync to backend
+    const apiBase = window.__ZEMARA_CONFIG?.apiBase || '';
+    fetch(apiBase + '/api/extras', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start-trial', email: user.email, userId: user.id })
+    }).catch(() => {});
 }
 
 // ═══════════════════════════════════════
@@ -988,6 +885,67 @@ function isPremiumUser() {
 }
 
 // ═══════════════════════════════════════
+// PREMIUM UPSELL MODAL
+// ═══════════════════════════════════════
+const UPSELL_COPY = {
+    transit:    { icon: '🪐', title: 'Transit Rapor — Premium',  sub: 'Şu an aktif gezegen geçişleri ve bunların seni nasıl etkilediğini görüntüle.' },
+    tarot:      { icon: '🃏', title: 'Kelt Haçı Tarot — Premium', sub: 'En derin ve kapsamlı 10 kartlık Kelt Haçı açılımı Premium özelliği.' },
+    theme:      { icon: '🎨', title: 'Premium Tema — Premium',    sub: 'Özel kozmetik temalar Premium üyelere özel.' },
+    cities:     { icon: '🌍', title: 'Tüm Şehirler — Premium',   sub: 'Ücretsiz planda ilk 10 şehri görüyorsun. Premium ile tüm 550+ şehri aç.' },
+    limit:      { icon: '⚡', title: 'Günlük Limit Doldu',        sub: 'Günlük ücretsiz AI hakkın bitti. Premium ile sınırsız kullan.' },
+};
+
+function openUpsellModal(type = 'transit') {
+    const copy = UPSELL_COPY[type] || UPSELL_COPY.transit;
+    const icon = document.getElementById('upsell-icon');
+    const title = document.getElementById('upsell-title');
+    const sub = document.getElementById('upsell-sub');
+    if (icon) icon.textContent = copy.icon;
+    if (title) title.textContent = copy.title;
+    if (sub) sub.textContent = copy.sub;
+    const overlay = document.getElementById('upsell-overlay');
+    if (overlay) { overlay.classList.remove('hidden'); Analytics.track('upsell_shown', { type }); }
+}
+
+function closeUpsellModal() {
+    document.getElementById('upsell-overlay')?.classList.add('hidden');
+}
+
+// ═══════════════════════════════════════
+// POST-SIGNUP PERSONALIZE MODAL
+// ═══════════════════════════════════════
+function showPersonalizeModal(user) {
+    // Pre-fill birth time if known
+    const savedTime = ProfileMemory.get()?.birthTime;
+    if (savedTime) {
+        const el = document.getElementById('personalize-birth-time');
+        if (el) el.value = savedTime;
+    }
+    const overlay = document.getElementById('personalize-overlay');
+    if (overlay) overlay.classList.remove('hidden');
+}
+
+function personalizeNext(step) {
+    const timeEl = document.getElementById('personalize-birth-time');
+    const cityEl = document.getElementById('personalize-birth-city');
+    if (step === 0 && timeEl?.value) ProfileMemory.save({ birthTime: timeEl.value });
+    if (step === 1 && cityEl?.value) ProfileMemory.save({ birthCity: cityEl.value });
+    // hide current step
+    document.getElementById(`personalize-step-${step}`)?.classList.add('hidden');
+    // show next step
+    const next = step + 1;
+    document.getElementById(`personalize-step-${next}`)?.classList.remove('hidden');
+    // update dots
+    document.querySelectorAll('.personalize-step-dot').forEach((d, i) => d.classList.toggle('active', i === next));
+}
+
+function personalizeFinish(action) {
+    document.getElementById('personalize-overlay')?.classList.add('hidden');
+    if (action === 'map') navigateTo('home');
+    Analytics.track('personalize_modal_done', { action });
+}
+
+// ═══════════════════════════════════════
 // AI API HELPER
 // ═══════════════════════════════════════
 const _pendingRequests = new Set();
@@ -1008,9 +966,11 @@ async function callAI(endpoint, body, useCache = true) {
 
     // Freemium limit check (cache hits don't count)
     if (!UsageLimiter.canUse()) {
+        openUpsellModal('limit');
         throw new Error(`Günlük ücretsiz AI hakkın doldu (${UsageLimiter.FREE_DAILY_LIMIT}/${UsageLimiter.FREE_DAILY_LIMIT}). Premium'a geç veya yarın tekrar dene!`);
     }
     UsageLimiter.consume();
+    updateUsageLimitBar(); // Refresh counter UI
     
     let res;
     const apiBase = window.__ZEMARA_CONFIG?.apiBase || '';
@@ -1055,6 +1015,11 @@ async function callAI(endpoint, body, useCache = true) {
     const totalUses = parseInt(localStorage.getItem('zemara_total_uses') || '0') + 1;
     localStorage.setItem('zemara_total_uses', String(totalUses));
     if (typeof checkRatingPrompt === 'function') checkRatingPrompt();
+
+    // Trigger push permission prompt after first AI result (high intent moment)
+    if (totalUses === 1 && typeof requestPushPermission === 'function') {
+        setTimeout(requestPushPermission, 2000);
+    }
 
     _pendingRequests.delete(endpoint);
     return sanitized;
@@ -1529,7 +1494,7 @@ function closeModal(id) { const el = document.getElementById(id); if (el) el.cla
 
 // Close modal on backdrop click
 document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal') || e.target.classList.contains('modal-overlay')) {
+    if (e.target.classList.contains('modal')) {
         e.target.classList.add('hidden');
     }
 });
@@ -1626,6 +1591,14 @@ async function handleSignup(e) {
         closeModal('signup-modal');
         AuthSystem.updateUI();
         SoundFX.play('success');
+        // Referral bonus notification
+        const referredBy = localStorage.getItem('zemara_referred_by');
+        if (referredBy) {
+            setTimeout(() => showToast('🎁 Referans ile kaydoldun! 7 gün Premium hediye aktif edildi.'), 1200);
+            Analytics.track('signup_via_referral', { referredBy });
+        }
+        // Show personalization wizard for new users
+        setTimeout(() => showPersonalizeModal(user), referredBy ? 2500 : 600);
     } catch (err) {
         showToast(err.message);
     } finally {
@@ -1659,7 +1632,6 @@ function toggleFaq(el) { el.classList.toggle('open'); }
 
 // ═══════════════════════════════════════
 // LEMON SQUEEZY CHECKOUT FLOW
-// ═══════════════════════════════════════
 let currentCheckoutPlan = null;
 
 const PLAN_DETAILS = {
@@ -1670,7 +1642,6 @@ const PLAN_DETAILS = {
 };
 
 function startCheckout(tier) {
-    // tier = 'premium' or 'vip'
     const isYearly = document.getElementById('billing-toggle')?.checked || false;
     const planKey = `${tier}-${isYearly ? 'yearly' : 'monthly'}`;
     const plan = PLAN_DETAILS[planKey];
@@ -1678,15 +1649,12 @@ function startCheckout(tier) {
 
     currentCheckoutPlan = planKey;
 
-    // Update checkout modal labels
     document.getElementById('checkout-plan-label').textContent = `${plan.name} ${plan.save ? '(' + plan.save + ')' : ''}`;
     document.getElementById('checkout-summary-plan').textContent = plan.name;
     document.getElementById('checkout-summary-amount').textContent = `${plan.price}${plan.period}`;
 
-    // Reset to billing step
     document.getElementById('checkout-step-billing').classList.remove('hidden');
-    document.getElementById('checkout-step-payment').classList.add('hidden');
-    // Open modal
+
     openModal('checkout-modal');
     SoundFX.play('click');
 }
@@ -1730,37 +1698,105 @@ function closeCheckout() {
     currentCheckoutPlan = null;
 }
 
+// ── Activate premium after successful payment (Lemon Squeezy) ──────────────────
+async function _activatePremiumAfterPayment(fallbackPlan, amount) {
+    const tier = (fallbackPlan || '').includes('vip') ? 'vip' : 'premium';
+
+    // Immediate local activation for good UX
+    const user = AuthSystem.getUser();
+    if (user) {
+        user.plan = tier;
+        user.planActivatedAt = new Date().toISOString();
+        localStorage.setItem(AuthSystem._key, JSON.stringify(user));
+        AuthSystem.updateUI();
+    }
+
+    showToast(`Ödeme başarılı! ${amount ? '₺' + amount + ' alındı. ' : ''}${tier.toUpperCase()} aktif ✨`, 5000);
+    SoundFX.play('success');
+    markCheckoutCompleted(); // Clear abandoned checkout flag
+    if (typeof launchCelebration === 'function') launchCelebration();
+
+    // Async server confirm — update plan to whatever DB says
+    if (user?.email) {
+        try {
+            const r = await fetch('/api/premium-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: user.email })
+            });
+            const d = await r.json();
+            localStorage.setItem('zemara_plan_verified', String(Date.now()));
+            if (d.premium && d.plan) {
+                const refreshed = AuthSystem.getUser();
+                if (refreshed && refreshed.plan !== d.plan) {
+                    refreshed.plan = d.plan;
+                    localStorage.setItem(AuthSystem._key, JSON.stringify(refreshed));
+                    AuthSystem.updateUI();
+                }
+            }
+        } catch {} // silent — activation already done locally
+    }
+}
+
+// ── Background premium re-verification (once per 24 h) ───────────────────────
+async function verifyPremiumOnStartup() {
+    const user = AuthSystem.getUser();
+    if (!user || !user.email || !user.plan || user.plan === 'free') return;
+
+    const lastVerified = parseInt(localStorage.getItem('zemara_plan_verified') || '0');
+    const VERIFY_INTERVAL = 24 * 3600 * 1000; // 24 hours
+    if (Date.now() - lastVerified < VERIFY_INTERVAL) return;
+
+    try {
+        const r = await fetch('/api/premium-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: user.email })
+        });
+        const d = await r.json();
+        localStorage.setItem('zemara_plan_verified', String(Date.now()));
+
+        const fresh = AuthSystem.getUser();
+        if (!fresh) return;
+        if (!d.premium && fresh.plan !== 'free') {
+            // Server says no active subscription — downgrade
+            fresh.plan = 'free';
+            delete fresh.planActivatedAt;
+            localStorage.setItem(AuthSystem._key, JSON.stringify(fresh));
+            AuthSystem.updateUI();
+        } else if (d.premium && d.plan && d.plan !== fresh.plan) {
+            fresh.plan = d.plan;
+            localStorage.setItem(AuthSystem._key, JSON.stringify(fresh));
+            AuthSystem.updateUI();
+        }
+    } catch {} // never downgrade on network error
+}
+
 // Listen for checkout result (from callback redirect)
 window.addEventListener('load', () => {
     const params = new URLSearchParams(window.location.search);
     const checkoutStatus = params.get('checkout');
+    const lsSuccess = params.get('ls_success');
 
     if (checkoutStatus === 'success') {
         const amount = params.get('amount');
         const plan = params.get('plan') || 'premium';
-        showToast(`Ödeme başarılı! ${amount ? '₺' + amount + ' alındı.' : ''} ${plan === 'vip' ? 'VIP' : 'Premium'} aktif ✨`, 5000);
-        SoundFX.play('success');
-
-        // Activate premium in local session
-        const user = AuthSystem.getUser();
-        if (user) {
-            user.plan = plan;
-            user.planActivatedAt = new Date().toISOString();
-            localStorage.setItem(AuthSystem._key, JSON.stringify(user));
-            AuthSystem.updateUI();
-        }
-
-        // Clean URL
         window.history.replaceState({}, '', '/');
-
-        // Show celebration
-        if (typeof launchCelebration === 'function') launchCelebration();
+        _activatePremiumAfterPayment(plan, amount);
+    } else if (lsSuccess === '1') {
+        // Lemon Squeezy success
+        const plan = params.get('plan') || 'premium-monthly';
+        window.history.replaceState({}, '', '/');
+        _activatePremiumAfterPayment(plan, null);
     } else if (checkoutStatus === 'fail') {
         const msg = params.get('msg') || 'Ödeme tamamlanamadı';
         showToast(`${decodeURIComponent(msg)} 😔`, 5000);
         window.history.replaceState({}, '', '/');
         navigateTo('pricing');
     }
+
+    // Silent background premium re-verification
+    verifyPremiumOnStartup();
 });
 
 // Listen for postMessage from checkout popup/redirect
@@ -2263,8 +2299,7 @@ document.addEventListener('click', (e) => {
 // ═══════════════════════════════════════
 function openTransitPage() {
     if (!isPremiumUser()) {
-        showToast('Transit Rapor Premium özelliği ✨');
-        navigateTo('pricing');
+        openUpsellModal('transit');
         return;
     }
     navigateTo('transit');
@@ -2280,8 +2315,7 @@ function initTransitForm() {
 
 async function showTransitReport() {
     if (!isPremiumUser()) {
-        showToast('Bu özellik Premium kullanıcılara özel ✨');
-        navigateTo('pricing');
+        openUpsellModal('transit');
         return;
     }
     const birthDate = document.getElementById('transit-birth-date')?.value;
@@ -2298,7 +2332,7 @@ async function showTransitReport() {
     showAILoading(resultEl, 'Transit analizleri hesaplanıyor...');
 
     try {
-        const data = await callAI('transit', { birthDate, birthTime, birthPlace, sunSign, isPremium: true });
+        const data = await callAI('transit', { birthDate, birthTime, birthPlace, sunSign, email: AuthSystem.getUser()?.email });
         renderTransitReport(resultEl, data);
     } catch (err) {
         showAIError(resultEl, err.message);
@@ -2620,6 +2654,8 @@ function calculateResults() {
             document.getElementById('loading-overlay').classList.add('hidden');
             navigateToStep('step-results');
             setTimeout(() => initMap(), 150);
+            // Show share nudge after 30 seconds of viewing results
+            showShareNudge(30000);
         }, 400);
     }, 1600);
 }
@@ -3286,21 +3322,108 @@ async function loadCompareInsights() {
 }
 
 // ═══════════════════════════════════════
+// REFERRAL
+// ═══════════════════════════════════════
+function getMyReferralLink() {
+    const user = AuthSystem.getUser();
+    const code = user?.email
+        ? user.email.split('@')[0].replace(/[^a-z0-9]/gi, '').slice(0, 8)
+        : (localStorage.getItem('zemara_ref_code') || 'share');
+    localStorage.setItem('zemara_ref_code', code);
+    return `https://zemara.app?ref=${code}`;
+}
+
+function copyReferralLink() {
+    const link = getMyReferralLink();
+    navigator.clipboard?.writeText(link).then(() => {
+        showToast('Referans linki kopyalandı! 🎁');
+        Analytics.track('referral_link_copied');
+    }).catch(() => {
+        // Fallback for browsers without clipboard API
+        const ta = document.createElement('textarea');
+        ta.value = link;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('Referans linki kopyalandı! 🎁');
+    });
+}
+
+// Track incoming referral on page load (called from DOMContentLoaded)
+function trackIncomingReferral() {
+    const ref = new URLSearchParams(location.search).get('ref');
+    if (ref && !localStorage.getItem('zemara_referred_by')) {
+        localStorage.setItem('zemara_referred_by', ref);
+    }
+}
+
+// ═══════════════════════════════════════
+// SHARE NUDGE BANNER
+// ═══════════════════════════════════════
+let _nudgeTimer = null;
+
+function showShareNudge(delayMs = 30000) {
+    if (localStorage.getItem('zemara_shared')) return; // already shared before
+    clearTimeout(_nudgeTimer);
+    _nudgeTimer = setTimeout(() => {
+        const el = document.getElementById('share-nudge');
+        if (el) el.classList.remove('hidden');
+    }, delayMs);
+}
+
+function hideShareNudge() {
+    clearTimeout(_nudgeTimer);
+    document.getElementById('share-nudge')?.classList.add('hidden');
+}
+
+// ═══════════════════════════════════════
 // SHARE
 // ═══════════════════════════════════════
 function shareResults() {
-    const modal = document.getElementById('share-modal');
-    modal.classList.remove('hidden');
+    if (!allRenderedCities?.length) { showToast('Önce analiz yap!'); return; }
+
     const top3 = allRenderedCities.slice(0, 3);
-    document.getElementById('share-top3').innerHTML = top3.map((c, i) => `
+    const natal = results?.natalChart;
+
+    // Try Web Share API on mobile (no modal needed)
+    const shareText = top3.map((c, i) => `${i + 1}. ${c.city} - ${c.score}%`).join('\n');
+    const refLink = getMyReferralLink();
+    if (navigator.share && /Mobi|Android|iP(hone|ad)/i.test(navigator.userAgent)) {
+        navigator.share({
+            title: 'Zemara — Benim Yıldız Haritam',
+            text: `Zemara'da yıldızlarımın beni nereye çağırdığını keşfettim!\n\n${shareText}\n\n${refLink}`,
+            url: refLink
+        }).then(() => {
+            localStorage.setItem('zemara_shared', '1');
+            hideShareNudge();
+            Analytics.track('results_shared', { method: 'webshare' });
+        }).catch(() => _openShareModal(top3, natal));
+        return;
+    }
+
+    _openShareModal(top3, natal);
+}
+
+function _openShareModal(top3, natal) {
+    const modal = document.getElementById('share-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    document.getElementById('share-top3').innerHTML = (top3 || []).map((c, i) => `
         <div class="share-city-row">
             <span class="share-city-rank">${i + 1}</span>
             <div class="share-city-info"><div class="share-city-name">${c.city}</div><div class="share-city-country">${c.country}</div></div>
             <span class="share-city-score">${c.score}%</span>
         </div>
     `).join('');
-    const natal = results.natalChart;
-    document.getElementById('share-natal').textContent = `${natal.sun.sign} ☉ · ${natal.moon.sign} ☽ · ${natal.venus.sign} ♀`;
+    if (natal) {
+        document.getElementById('share-natal').textContent = `${natal.sun.sign} ☉ · ${natal.moon.sign} ☽ · ${natal.venus.sign} ♀`;
+    }
+    localStorage.setItem('zemara_shared', '1');
+    hideShareNudge();
+    Analytics.track('results_shared', { method: 'modal' });
 }
 
 async function downloadShareCard() {
@@ -3339,6 +3462,195 @@ async function downloadShareCard() {
 // ═══════════════════════════════════════
 // AI RESULT SHARE (Canvas-based)
 // ═══════════════════════════════════════
+
+// ── Dynamic OG / share card ──────────────────────────────────────────────────
+// Generates a 1200×630 png card with zodiac sign + top cities and returns dataURL
+function generateOGCard(sunSign, top3Cities) {
+    const W = 1200, H = 630;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // Dark gradient background
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, '#0e0e2e');
+    bg.addColorStop(1, '#1a0a3e');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle star dots
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    const rng = mulberry32(42);
+    for (let i = 0; i < 160; i++) {
+        const r = rng() * 1.8;
+        ctx.beginPath();
+        ctx.arc(rng() * W, rng() * H, r, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Top accent bar
+    const accent = ctx.createLinearGradient(0, 0, W, 0);
+    accent.addColorStop(0, '#7b5cff');
+    accent.addColorStop(1, '#c9a0ff');
+    ctx.fillStyle = accent;
+    ctx.fillRect(0, 0, W, 5);
+
+    // Brand name
+    ctx.font = 'bold 36px Inter, system-ui, sans-serif';
+    ctx.fillStyle = '#c9a0ff';
+    ctx.textAlign = 'left';
+    ctx.fillText('✦ ZEMARA', 72, 80);
+
+    // Tagline
+    ctx.font = '18px Inter, system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(226,224,255,0.5)';
+    ctx.fillText('AI Destekli Astrokartografi', 72, 112);
+
+    // Zodiac sign circle
+    const SIGN_GLYPHS = {
+        'Koç': '♈', 'Boğa': '♉', 'İkizler': '♊', 'Yengeç': '♋',
+        'Aslan': '♌', 'Başak': '♍', 'Terazi': '♎', 'Akrep': '♏',
+        'Yay': '♐', 'Oğlak': '♑', 'Kova': '♒', 'Balık': '♓',
+        'Aries': '♈', 'Taurus': '♉', 'Gemini': '♊', 'Cancer': '♋',
+        'Leo': '♌', 'Virgo': '♍', 'Libra': '♎', 'Scorpio': '♏',
+        'Sagittarius': '♐', 'Capricorn': '♑', 'Aquarius': '♒', 'Pisces': '♓'
+    };
+    const glyph = SIGN_GLYPHS[sunSign] || '✦';
+
+    // Circle glow
+    ctx.save();
+    ctx.shadowColor = '#c9a0ff';
+    ctx.shadowBlur = 40;
+    const circleGrad = ctx.createRadialGradient(950, 315, 0, 950, 315, 160);
+    circleGrad.addColorStop(0, 'rgba(201,160,255,0.3)');
+    circleGrad.addColorStop(1, 'rgba(123,92,255,0.05)');
+    ctx.fillStyle = circleGrad;
+    ctx.beginPath();
+    ctx.arc(950, 315, 160, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Glyph
+    ctx.font = '120px serif';
+    ctx.fillStyle = '#c9a0ff';
+    ctx.textAlign = 'center';
+    ctx.fillText(glyph, 950, 365);
+
+    // Sign name
+    if (sunSign) {
+        ctx.font = 'bold 22px Inter, system-ui, sans-serif';
+        ctx.fillStyle = 'rgba(226,224,255,0.7)';
+        ctx.fillText(sunSign, 950, 415);
+    }
+
+    // Top cities
+    if (top3Cities?.length) {
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 24px Inter, system-ui, sans-serif';
+        ctx.fillStyle = 'rgba(226,224,255,0.6)';
+        ctx.fillText('YILDIZLARIMın ÇAĞIRDığı YERLEr', 72, 200);
+
+        top3Cities.slice(0, 3).forEach((city, i) => {
+            const y = 256 + i * 64;
+            // Row bg
+            ctx.fillStyle = `rgba(255,255,255,${0.04 + i * 0.01})`;
+            roundRect(ctx, 68, y - 34, 560, 52, 10);
+            ctx.fill();
+
+            // Rank
+            ctx.font = 'bold 16px Inter, system-ui, sans-serif';
+            ctx.fillStyle = '#c9a0ff';
+            ctx.fillText(`0${i + 1}`, 88, y + 4);
+
+            // City name
+            ctx.font = 'bold 22px Inter, system-ui, sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(city.city || city, 120, y + 4);
+
+            // Score
+            if (city.score) {
+                ctx.font = 'bold 20px Inter, system-ui, sans-serif';
+                ctx.fillStyle = '#c9a0ff';
+                ctx.textAlign = 'right';
+                ctx.fillText(`${city.score}%`, 620, y + 4);
+                ctx.textAlign = 'left';
+            }
+        });
+    }
+
+    // Bottom watermark
+    ctx.font = '16px Inter, system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(201,160,255,0.4)';
+    ctx.textAlign = 'right';
+    ctx.fillText('zemara.app', W - 60, H - 30);
+
+    return canvas.toDataURL('image/jpeg', 0.92);
+}
+
+// Deterministic RNG for star positions (no Math.random to keep reproducible)
+function mulberry32(seed) {
+    return function() {
+        seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+        let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
+// ── Patch shareResults to use OG card on mobile ─────────────────────────────
+function shareOGCard() {
+    const user   = typeof AuthSystem !== 'undefined' ? AuthSystem.getUser() : null;
+    const sunSign = user?.sunSign || results?.natalChart?.sun?.sign || null;
+    const top3   = (allRenderedCities || []).slice(0, 3);
+
+    const dataUrl = generateOGCard(sunSign, top3);
+
+    // Update meta og:image dynamically for this session
+    let metaOG = document.querySelector('meta[property="og:image"]');
+    if (metaOG) metaOG.setAttribute('content', dataUrl);
+
+    // Try native share with file
+    if (navigator.canShare) {
+        fetch(dataUrl).then(r => r.blob()).then(blob => {
+            const file = new File([blob], 'zemara-haritam.jpg', { type: 'image/jpeg' });
+            if (navigator.canShare({ files: [file] })) {
+                const refLink = getMyReferralLink ? getMyReferralLink() : 'https://zemara.app';
+                navigator.share({
+                    title: 'Zemara — Yıldız Haritam',
+                    text: `Yıldızlarımın beni çağırdığı yerler! ${refLink}`,
+                    files: [file]
+                }).catch(() => _downloadOGCard(dataUrl));
+                return;
+            }
+            _downloadOGCard(dataUrl);
+        });
+        return;
+    }
+    _downloadOGCard(dataUrl);
+}
+
+function _downloadOGCard(dataUrl) {
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = 'zemara-haritam.jpg';
+    a.click();
+    showToast('Kart indirildi! Paylaşmaya hazır ✦');
+}
+
 async function shareAIResult(resultElementId, title) {
     const el = document.getElementById(resultElementId);
     if (!el) { showToast('Paylaşılacak sonuç bulunamadı'); return; }
@@ -3824,8 +4136,7 @@ function getTarotSlotClass(spreadKey, index) {
 function selectSpread(btn) {
     // Premium check for celtic-cross
     if (btn.dataset.spread === 'celtic-cross' && !isPremiumUser()) {
-        showToast('Kelt Haçı açılımı Premium kullanıcılara özel');
-        navigateTo('pricing');
+        openUpsellModal('tarot');
         return;
     }
     selectedSpread = btn.dataset.spread;
@@ -4998,14 +5309,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // First-time onboarding
     showOnboardingIfNeeded();
-
-    // Handle ?page= URL parameter for direct page navigation
-    const _urlParams = new URLSearchParams(window.location.search);
-    const _targetPage = _urlParams.get('page');
-    if (_targetPage && typeof navigateTo === 'function') {
-        // Delay to ensure DOM is ready after onboarding check
-        setTimeout(() => navigateTo(_targetPage), 300);
-    }
 
     // Daily energy card on home
     renderDailyEnergyCard();
@@ -6460,8 +6763,7 @@ function selectTheme(themeName) {
     
     // Premium check
     if (theme.premium && !isPremiumUser()) {
-        showToast('Bu tema Premium kullanıcılara özel. Yükseltmek için Fiyatlar sayfasına git.');
-        navigateTo('pricing');
+        openUpsellModal('theme');
         toggleThemePanel();
         return;
     }

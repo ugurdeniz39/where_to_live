@@ -2,6 +2,54 @@ const { corsHeaders, askGPT, parseJSON } = require('./_lib/openai');
 const { getSupabase } = require('./_lib/supabase');
 const { getDB } = require('./_lib/db');
 
+// ── Resend welcome email ──────────────────────────────────────────────────────
+async function sendWelcomeEmail(email, name) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return;
+    const firstName = (name || 'Ziyaretçi').split(' ')[0];
+    await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            from: 'Zemara <merhaba@zemara.app>',
+            to: [email],
+            subject: `${firstName}, yıldız haritanı keşfetmeye hazır mısın? ✦`,
+            html: `
+<div style="font-family:Inter,sans-serif;max-width:520px;margin:0 auto;background:#0e0e2e;color:#e2e0ff;padding:32px;border-radius:16px">
+  <h1 style="color:#c9a0ff;font-size:24px;margin-bottom:8px">Hoş geldin, ${firstName} ✦</h1>
+  <p style="color:#b8b0d0;line-height:1.6">Zemara'ya katıldığın için teşekkürler. Şimdi yıldızların seni nereye çağırdığını keşfetmeye hazırsın.</p>
+  <div style="background:#1a1a3e;border-radius:12px;padding:20px;margin:20px 0">
+    <p style="margin:0 0 12px;font-weight:600;color:#fff">Sana özel ücretsiz özellikler:</p>
+    <p style="margin:6px 0;color:#c9a0ff">🌟 Günlük kişisel burç yorumu</p>
+    <p style="margin:6px 0;color:#c9a0ff">🗺️ İlk 10 şehir astrokartografi analizi</p>
+    <p style="margin:6px 0;color:#c9a0ff">🌙 Doğum haritası & ay takvimi</p>
+  </div>
+  <a href="https://zemara.app" style="display:inline-block;background:#c9a0ff;color:#0e0e2e;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin-bottom:24px">Haritamı Gör →</a>
+  <hr style="border:1px solid rgba(255,255,255,.1);margin:20px 0">
+  <p style="font-size:12px;color:rgba(255,255,255,.3)">Zemara &middot; <a href="https://zemara.app/privacy.html" style="color:rgba(255,255,255,.3)">Gizlilik Politikası</a> &middot; Bu emaili almak istemiyorsan bize <a href="mailto:merhaba@zemara.app" style="color:rgba(255,255,255,.3)">yaz</a></p>
+</div>`
+        })
+    });
+}
+
+// Simple in-memory rate limiter per IP (survives for process lifetime)
+if (!global._rlMap) global._rlMap = new Map();
+function isRateLimited(ip, maxReq = 60, windowMs = 60000) {
+    const now = Date.now();
+    const entry = global._rlMap.get(ip);
+    if (!entry || now > entry.resetAt) {
+        global._rlMap.set(ip, { count: 1, resetAt: now + windowMs });
+        if (global._rlMap.size > 10000) { // prevent unbounded growth
+            const oldest = [...global._rlMap.entries()].filter(([, v]) => now > v.resetAt);
+            oldest.forEach(([k]) => global._rlMap.delete(k));
+        }
+        return false;
+    }
+    if (entry.count >= maxReq) return true;
+    entry.count++;
+    return false;
+}
+
 // Combined serverless function for analytics, push, premium-status, transit, natal-interpretation
 // Routed via vercel.json rewrites based on URL path
 
@@ -15,8 +63,34 @@ module.exports = async (req, res) => {
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     const url = req.url || '';
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+
+    // Rate limit write endpoints (POST only, 60 req/min per IP)
+    if (req.method === 'POST' && isRateLimited(ip)) {
+        return res.status(429).json({ error: 'Çok fazla istek. Lütfen bir dakika bekleyin.' });
+    }
 
     try {
+
+    // ── Register User ──
+    if (url.includes('/register-user')) {
+        if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+        const { id, name, email, birthDate, plan, createdAt } = req.body || {};
+        if (!email || !id) return res.status(400).json({ error: 'id ve email gerekli' });
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) return res.status(400).json({ error: 'Geçersiz e-posta formatı' });
+        const db = getDB();
+        if (!db) return res.json({ ok: true, stored: false });
+        await db.query(`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT, email TEXT UNIQUE NOT NULL, birth_date TEXT, plan TEXT DEFAULT 'free', created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW())`);
+        const insertResult = await db.query(`INSERT INTO users (id, name, email, birth_date, plan, created_at) VALUES ($1, $2, $3, $4, $5, TO_TIMESTAMP($6 / 1000.0)) ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, birth_date = EXCLUDED.birth_date, plan = EXCLUDED.plan, updated_at = NOW() RETURNING (xmax = 0) AS is_new`,
+            [id, name || null, email, birthDate || null, plan || 'free', createdAt || Date.now()]);
+        // Send welcome email only for brand new users
+        const isNew = insertResult.rows?.[0]?.is_new;
+        if (isNew && process.env.RESEND_API_KEY) {
+            sendWelcomeEmail(email, name).catch(() => {});
+        }
+        return res.json({ ok: true, stored: true });
+    }
 
     // ── Analytics ──
     if (url.includes('/analytics')) {
@@ -173,26 +247,53 @@ module.exports = async (req, res) => {
 
         const db = getDB() || getSupabase();
         if (db && db.query) {
+            // Check iyzico payments table
             const result = await db.query(
                 `SELECT plan, period, expires_at FROM payments
                  WHERE email = $1 AND status = 'active' AND expires_at > NOW()
-                 ORDER BY activated_at DESC LIMIT 1`,
+                 ORDER BY created_at DESC LIMIT 1`,
                 [email]
             );
             const payment = result.rows[0];
-            if (!payment) return res.json({ premium: false, plan: 'free' });
-            return res.json({ premium: true, plan: payment.plan, period: payment.period, expiresAt: payment.expires_at });
+            if (payment) return res.json({ premium: true, plan: payment.plan, period: payment.period, expiresAt: payment.expires_at });
+
+            // Also check Lemon Squeezy subscriptions table
+            try {
+                const lsResult = await db.query(
+                    `SELECT plan, expires_at FROM zemara_subscriptions
+                     WHERE email = $1 AND status = 'active'
+                       AND (expires_at IS NULL OR expires_at > NOW())
+                     LIMIT 1`,
+                    [email]
+                );
+                const lsSub = lsResult.rows[0];
+                if (lsSub) return res.json({ premium: true, plan: lsSub.plan, period: 'monthly', expiresAt: lsSub.expires_at });
+            } catch (_) { /* table may not exist yet */ }
+
+            return res.json({ premium: false, plan: 'free' });
         } else if (db) {
             const { data } = await db.from('payments')
                 .select('plan, period, expires_at')
                 .eq('email', email)
                 .eq('status', 'active')
                 .gt('expires_at', new Date().toISOString())
-                .order('activated_at', { ascending: false })
+                .order('created_at', { ascending: false })
                 .limit(1);
             const payment = data?.[0];
-            if (!payment) return res.json({ premium: false, plan: 'free' });
-            return res.json({ premium: true, plan: payment.plan, period: payment.period, expiresAt: payment.expires_at });
+            if (payment) return res.json({ premium: true, plan: payment.plan, period: payment.period, expiresAt: payment.expires_at });
+
+            // Also check Lemon Squeezy subscriptions
+            const { data: lsData } = await db.from('zemara_subscriptions')
+                .select('plan, expires_at')
+                .eq('email', email)
+                .eq('status', 'active')
+                .limit(1)
+                .maybeSingle();
+            if (lsData && (!lsData.expires_at || new Date(lsData.expires_at) > new Date())) {
+                return res.json({ premium: true, plan: lsData.plan, period: 'monthly', expiresAt: lsData.expires_at });
+            }
+
+            return res.json({ premium: false, plan: 'free' });
         }
 
         // In-memory fallback
@@ -206,12 +307,55 @@ module.exports = async (req, res) => {
         return res.json({ premium: true, plan: payment.plan, period: payment.period, expiresAt: payment.expiresAt });
     }
 
+    // ── Free Trial Start ──
+    if (url.includes('/extras') && req.body?.action === 'start-trial') {
+        const { email, userId } = req.body || {};
+        if (!email) return res.status(400).json({ error: 'email gerekli' });
+        const db = getDB();
+        if (db) {
+            const trialEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+            await db.query(
+                `INSERT INTO payments (email, plan, period, status, amount, created_at, expires_at)
+                 VALUES ($1, 'premium', 'trial', 'active', 0, NOW(), $2)
+                 ON CONFLICT DO NOTHING`,
+                [email, trialEnd]
+            ).catch(() => {});
+        }
+        if (process.env.RESEND_API_KEY) {
+            sendWelcomeEmail(email, null).catch(() => {});
+        }
+        return res.json({ ok: true, trialEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() });
+    }
+
     // ── Transit Rapor ──
     if (url.includes('/transit')) {
         if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
-        const { birthDate, sunSign, isPremium, lang } = req.body || {};
-        if (!isPremium) return res.status(403).json({ error: 'premium_required' });
+        const { birthDate, sunSign, email, lang } = req.body || {};
         if (!sunSign) return res.status(400).json({ error: 'sunSign gerekli' });
+
+        // Server-side premium verification — never trust client-supplied isPremium flag
+        if (!email) return res.status(403).json({ error: 'premium_required' });
+        const transitDb = getDB() || getSupabase();
+        let premiumVerified = false;
+        if (transitDb && transitDb.query) {
+            try {
+                const [pr, lsr] = await Promise.all([
+                    transitDb.query(
+                        `SELECT 1 FROM payments WHERE email=$1 AND status='active' AND expires_at > NOW() LIMIT 1`,
+                        [email]
+                    ),
+                    transitDb.query(
+                        `SELECT 1 FROM zemara_subscriptions WHERE email=$1 AND status='active' AND (expires_at IS NULL OR expires_at > NOW()) LIMIT 1`,
+                        [email]
+                    ).catch(() => ({ rows: [] }))
+                ]);
+                premiumVerified = (pr.rows?.length > 0) || (lsr.rows?.length > 0);
+            } catch (_) {}
+        } else if (transitDb) {
+            const { data: pd } = await transitDb.from('payments').select('plan').eq('email', email).eq('status', 'active').limit(1);
+            premiumVerified = (pd?.length > 0);
+        }
+        if (!premiumVerified) return res.status(403).json({ error: 'premium_required' });
 
         const today = new Date().toISOString().slice(0, 10);
         const langCode = lang || 'tr';
