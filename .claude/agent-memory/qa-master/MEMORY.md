@@ -1,0 +1,1 @@
+- [Semara Overview](project_semara_overview.md) — AI astrology platform: Express + vanilla JS + Supabase/Neon + Capacitor + iyzipay

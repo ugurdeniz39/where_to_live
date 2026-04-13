@@ -1,32 +1,32 @@
 /**
- * Zemara — Lemon Squeezy (Single File: Checkout + Webhook)
+ * Zemara — Lemon Squeezy Checkout + Webhook
  *
  * Routes:
- *   POST /api/checkout/ls          → Create checkout session → returns { checkoutUrl }
+ *   POST /api/checkout/ls          → returns { checkoutUrl } with email pre-filled
  *   POST /api/checkout/ls?webhook=1 → Webhook handler (called by LS)
  *
  * ENV vars:
- *   LEMONSQUEEZY_API_KEY
- *   LEMONSQUEEZY_STORE_ID
- *   LEMONSQUEEZY_WEBHOOK_SECRET
- *   LS_VARIANT_PREMIUM_MONTHLY / _YEARLY
- *   LS_VARIANT_VIP_MONTHLY / _YEARLY
+ *   LS_CHECKOUT_PREMIUM_MONTHLY / _YEARLY  — direct checkout URLs from LS dashboard
+ *   LS_CHECKOUT_VIP_MONTHLY / _YEARLY
+ *   LEMONSQUEEZY_WEBHOOK_SECRET            — webhook signature verification
  */
 
 const { corsHeaders } = require('../_lib/openai');
 const crypto = require('crypto');
 
-// Plan → Lemon Squeezy Variant ID mapping (fill after creating products in LS dashboard)
-const LS_VARIANTS = {
-  'premium-monthly': process.env.LS_VARIANT_PREMIUM_MONTHLY || '',
-  'premium-yearly':  process.env.LS_VARIANT_PREMIUM_YEARLY  || '',
-  'vip-monthly':     process.env.LS_VARIANT_VIP_MONTHLY     || '',
-  'vip-yearly':      process.env.LS_VARIANT_VIP_YEARLY      || '',
+// Plan → direct checkout URL (from LS dashboard → Share Product → Checkout Link)
+const LS_CHECKOUT_URLS = {
+  'premium-monthly': process.env.LS_CHECKOUT_PREMIUM_MONTHLY || 'https://zemara.lemonsqueezy.com/checkout/buy/422387ea-d06a-4eb0-ab94-c168384d42c8',
+  'premium-yearly':  process.env.LS_CHECKOUT_PREMIUM_YEARLY  || 'https://zemara.lemonsqueezy.com/checkout/buy/b17004eb-30ce-4e96-8712-5e54e1f4fd64',
+  'vip-monthly':     process.env.LS_CHECKOUT_VIP_MONTHLY     || 'https://zemara.lemonsqueezy.com/checkout/buy/20953a6e-8ac6-4769-930a-c0d07a067555',
+  'vip-yearly':      process.env.LS_CHECKOUT_VIP_YEARLY      || 'https://zemara.lemonsqueezy.com/checkout/buy/87568b4f-bad9-4a7d-84f2-5a6ff566daa0',
 };
 
-const LS_API   = 'https://api.lemonsqueezy.com/v1';
-const LS_KEY   = () => process.env.LEMONSQUEEZY_API_KEY || '';
-const LS_STORE = () => process.env.LEMONSQUEEZY_STORE_ID || '';
+// Variant IDs (for reference / webhook matching)
+// premium-monthly: 1525717 (product: 971833)
+// premium-yearly:  1525789 (product: 971875)
+// vip-monthly:     1525820 (product: 971896)
+// vip-yearly:      1525822 (product: 971898)
 
 // ─── DB helper (optional — save subscription status) ─────────────────────────
 let pool;
@@ -70,70 +70,22 @@ module.exports = async (req, res) => {
   return isWebhook ? handleWebhook(req, res) : handleCheckout(req, res);
 };
 
-// ─── Checkout: create LS checkout session ────────────────────────────────────
+// ─── Checkout: build direct checkout URL with pre-filled email/name ──────────
 async function handleCheckout(req, res) {
   const { plan, email, name } = req.body || {};
 
   if (!plan || !email) return res.status(400).json({ error: 'plan ve email gerekli' });
 
-  const variantId = LS_VARIANTS[plan];
-  if (!variantId) return res.status(400).json({ error: `Geçersiz plan veya LS_VARIANT_${plan.toUpperCase().replace('-','_')} env eksik` });
-  if (!LS_KEY()) return res.status(500).json({ error: 'LEMONSQUEEZY_API_KEY eksik' });
+  const baseUrl = LS_CHECKOUT_URLS[plan];
+  if (!baseUrl) return res.status(400).json({ error: `Geçersiz plan: ${plan}` });
 
-  try {
-    const host  = req.headers['x-forwarded-host'] || req.headers.host || 'zemara.vercel.app';
-    const proto = req.headers['x-forwarded-proto'] || 'https';
-    const base  = `${proto}://${host}`;
+  // Lemon Squeezy supports pre-filling via query params
+  const url = new URL(baseUrl);
+  url.searchParams.set('checkout[email]', email);
+  if (name) url.searchParams.set('checkout[name]', name);
+  url.searchParams.set('checkout[custom][plan]', plan);
 
-    const body = {
-      data: {
-        type: 'checkouts',
-        attributes: {
-          checkout_data: {
-            email,
-            name: name || '',
-            custom: { plan, source: 'zemara-web' },
-          },
-          product_options: {
-            redirect_url: `${base}/?ls_success=1&plan=${plan}`,
-            receipt_thank_you_note: 'Zemara\'ya hoş geldiniz! Kozmik yolculuğunuz başlıyor ✨',
-          },
-          checkout_options: { embed: false, media: true, logo: true },
-          expires_at: null,
-        },
-        relationships: {
-          store:   { data: { type: 'stores',   id: String(LS_STORE()) } },
-          variant: { data: { type: 'variants', id: String(variantId)  } },
-        },
-      },
-    };
-
-    const lsRes = await fetch(`${LS_API}/checkouts`, {
-      method: 'POST',
-      headers: {
-        'Authorization':  `Bearer ${LS_KEY()}`,
-        'Accept':         'application/vnd.api+json',
-        'Content-Type':   'application/vnd.api+json',
-      },
-      body: JSON.stringify(body),
-    });
-
-    const result = await lsRes.json();
-
-    if (result.errors) {
-      console.error('[LS] Checkout error:', JSON.stringify(result.errors));
-      return res.status(500).json({ error: result.errors[0]?.detail || 'Lemon Squeezy hatası' });
-    }
-
-    const checkoutUrl = result.data?.attributes?.url;
-    if (!checkoutUrl) return res.status(500).json({ error: 'Checkout URL alınamadı' });
-
-    return res.json({ checkoutUrl });
-
-  } catch (err) {
-    console.error('[LS] Checkout fatal:', err.message);
-    return res.status(500).json({ error: 'Ödeme sistemi hatası' });
-  }
+  return res.json({ checkoutUrl: url.toString() });
 }
 
 // ─── Webhook: handle LS events ───────────────────────────────────────────────

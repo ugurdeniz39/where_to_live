@@ -11,7 +11,6 @@ const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const OpenAI = require('openai');
-const Iyzipay = require('iyzipay');
 const path = require('path');
 const fs = require('fs');
 const { getSupabase } = require('./api/_lib/supabase');
@@ -58,22 +57,12 @@ const openai = new OpenAI({
     maxRetries: 2
 });
 
-// iyzico client — FAIL FAST if keys missing in production
-if (process.env.NODE_ENV === 'production' && (!process.env.IYZICO_API_KEY || !process.env.IYZICO_SECRET_KEY)) {
-    console.error('❌ IYZICO_API_KEY ve IYZICO_SECRET_KEY env vars zorunludur (production)');
-}
-const iyzipay = new Iyzipay({
-    apiKey: process.env.IYZICO_API_KEY || '',
-    secretKey: process.env.IYZICO_SECRET_KEY || '',
-    uri: process.env.IYZICO_URI || 'https://sandbox-api.iyzipay.com'
-});
-
 // Plan definitions
 const PLANS = {
-    'premium-monthly': { price: '49.00', name: 'Zemara Premium Aylık' },
-    'premium-yearly':  { price: '490.00', name: 'Zemara Premium Yıllık' },
-    'vip-monthly':     { price: '99.00', name: 'Zemara VIP Aylık' },
-    'vip-yearly':      { price: '990.00', name: 'Zemara VIP Yıllık' }
+    'premium-monthly': { price: '150.00', name: 'Zemara Premium Aylık' },
+    'premium-yearly':  { price: '1500.00', name: 'Zemara Premium Yıllık' },
+    'vip-monthly':     { price: '400.00', name: 'Zemara VIP Aylık' },
+    'vip-yearly':      { price: '4000.00', name: 'Zemara VIP Yıllık' }
 };
 
 // CORS — restrict to known origins + allow Capacitor mobile apps
@@ -133,9 +122,9 @@ app.use((req, res, next) => {
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org https://i.pravatar.cc",
         "connect-src 'self' https://zemara.app https://*.vercel.app",
-        "frame-src 'self' https://*.iyzipay.com",
+        "frame-src 'self' https://*.lemonsqueezy.com",
         "base-uri 'self'",
-        "form-action 'self' https://*.iyzipay.com"
+        "form-action 'self' https://*.lemonsqueezy.com"
     ].join('; '));
     next();
 });
@@ -1170,191 +1159,16 @@ ${multiPhoto ? `${imageList.length} fotoğrafı birlikte incele ve ${config.acti
 });
 
 // ═══════════════════════════════════════
-// API: iyzico Checkout — Form Başlat
+// API: Lemon Squeezy Checkout
 // ═══════════════════════════════════════
-app.post('/api/checkout/init', async (req, res) => {
-    try {
-        const { plan, billing } = req.body;
-        const selected = PLANS[plan];
-        if (!selected) return res.status(400).json({ error: 'Geçersiz plan' });
-        if (!billing?.email || !billing?.name) {
-            return res.status(400).json({ error: 'Ad ve e-posta gerekli' });
-        }
-        // E-posta format validasyonu
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(billing.email)) {
-            return res.status(400).json({ error: 'Geçerli bir e-posta adresi girin' });
-        }
-
-        const conversationId = `ASTRO_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
-
-        const request = {
-            locale: Iyzipay.LOCALE.TR,
-            conversationId,
-            price: selected.price,
-            paidPrice: selected.price,
-            currency: Iyzipay.CURRENCY.TRY,
-            basketId: `B_${conversationId}`,
-            paymentGroup: Iyzipay.PAYMENT_GROUP.PRODUCT,
-            callbackUrl: `${req.protocol}://${req.get('host')}/api/checkout/callback`,
-            enabledInstallments: [1, 2, 3, 6],
-            buyer: {
-                id: 'BY_' + Date.now(),
-                name: (billing?.name || 'Misafir').split(' ')[0],
-                surname: (billing?.name || 'Kullanıcı').split(' ').slice(1).join(' ') || 'Kullanıcı',
-                gsmNumber: billing?.phone || '+905000000000',
-                email: billing?.email || 'misafir@zemara.app',
-                identityNumber: '11111111111',
-                lastLoginDate: new Date().toISOString().replace('T', ' ').slice(0, 19),
-                registrationDate: new Date().toISOString().replace('T', ' ').slice(0, 19),
-                registrationAddress: 'İstanbul, Türkiye',
-                ip: req.ip || req.socket?.remoteAddress || '127.0.0.1',
-                city: 'Istanbul',
-                country: 'Turkey',
-                zipCode: '34000'
-            },
-            shippingAddress: {
-                contactName: billing?.name || 'Misafir Kullanıcı',
-                city: 'Istanbul',
-                country: 'Turkey',
-                address: 'İstanbul, Türkiye',
-                zipCode: '34000'
-            },
-            billingAddress: {
-                contactName: billing?.name || 'Misafir Kullanıcı',
-                city: 'Istanbul',
-                country: 'Turkey',
-                address: 'İstanbul, Türkiye',
-                zipCode: '34000'
-            },
-            basketItems: [{
-                id: plan,
-                name: selected.name,
-                category1: 'Dijital Ürün',
-                category2: 'Abonelik',
-                itemType: Iyzipay.BASKET_ITEM_TYPE.VIRTUAL,
-                price: selected.price
-            }]
-        };
-
-        iyzipay.checkoutFormInitialize.create(request, (err, result) => {
-            if (err) {
-                console.error('iyzico Error:', err);
-                return res.status(500).json({ error: 'Ödeme sistemi şu an yanıt veremiyor' });
-            }
-            if (result.status === 'success') {
-                // Token → conversationId eşleştirmesi sakla (callback doğrulaması için)
-                if (!global.checkoutSessions) global.checkoutSessions = new Map();
-                global.checkoutSessions.set(result.token, { conversationId, plan, email: billing.email, createdAt: Date.now() });
-                res.json({
-                    success: true,
-                    checkoutFormContent: result.checkoutFormContent,
-                    token: result.token,
-                    plan: plan,
-                    amount: selected.price
-                });
-            } else {
-                console.error('iyzico Form Error:', result.errorMessage);
-                res.status(400).json({ error: result.errorMessage || 'Ödeme formu oluşturulamadı' });
-            }
-        });
-    } catch (err) {
-        console.error('Checkout Init Error:', err);
-        res.status(500).json({ error: 'Ödeme başlatılamadı' });
-    }
+const lsHandler = require('./api/checkout/ls');
+app.post('/api/checkout/ls', (req, res) => lsHandler(req, res));
+app.post('/api/checkout/ls/webhook', (req, res) => {
+    req.query = req.query || {};
+    req.query.webhook = '1';
+    return lsHandler(req, res);
 });
 
-// ═══════════════════════════════════════
-// API: iyzico Checkout — Callback
-// ═══════════════════════════════════════
-app.post('/api/checkout/callback', express.urlencoded({ extended: true }), async (req, res) => {
-    const { token } = req.body;
-    if (!token) return res.redirect('/?checkout=fail&msg=Token+bulunamadı');
-
-    // Checkout session doğrulaması
-    const session = global.checkoutSessions?.get(token);
-    const conversationId = session?.conversationId || '';
-
-    iyzipay.checkoutForm.retrieve({
-        locale: Iyzipay.LOCALE.TR,
-        conversationId,
-        token
-    }, async (err, result) => {
-        if (err) {
-            console.error('iyzico Callback Error:', err);
-            return res.redirect('/?checkout=fail&msg=Doğrulama+hatası');
-        }
-
-        if (result.paymentStatus === 'SUCCESS') {
-            console.log('✅ Ödeme başarılı:', {
-                paymentId: result.paymentId,
-                price: result.paidPrice,
-                currency: result.currency,
-                basketId: result.basketId,
-                cardType: result.cardType,
-                lastFourDigits: result.lastFourDigits
-            });
-
-            const planKey = result.basketItems?.[0]?.id || 'premium-monthly';
-            const isYearly = planKey.includes('yearly');
-            const planTier = planKey.includes('vip') ? 'vip' : 'premium';
-            const expiresAt = new Date();
-            expiresAt.setMonth(expiresAt.getMonth() + (isYearly ? 12 : 1));
-            const email = result.buyer?.email || 'unknown';
-
-            // Store payment — Neon/Supabase (preferred) or JSON file (fallback)
-            const db = getDB() || getSupabase();
-            if (db && db.query) {
-                // Neon/pg
-                await db.query(
-                    `INSERT INTO payments (payment_id, email, plan, period, amount, currency, expires_at, status)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')
-                     ON CONFLICT (payment_id) DO NOTHING`,
-                    [result.paymentId, email, planTier, isYearly ? 'yearly' : 'monthly',
-                     parseFloat(result.paidPrice) || 0, result.currency || 'TRY', expiresAt.toISOString()]
-                ).catch(err => console.error('Neon payment insert error:', err.message));
-            } else if (db) {
-                // Supabase fallback
-                const { error: dbErr } = await db.from('payments').insert({
-                    payment_id: result.paymentId,
-                    email,
-                    plan: planTier,
-                    period: isYearly ? 'yearly' : 'monthly',
-                    amount: parseFloat(result.paidPrice) || 0,
-                    currency: result.currency || 'TRY',
-                    expires_at: expiresAt.toISOString(),
-                    status: 'active'
-                });
-                if (dbErr) console.error('Supabase payment insert error:', dbErr.message);
-            } else {
-                // Fallback: JSON file
-                if (!global.payments) global.payments = loadPayments();
-                global.payments.push({
-                    paymentId: result.paymentId,
-                    email,
-                    plan: planTier,
-                    period: isYearly ? 'yearly' : 'monthly',
-                    amount: result.paidPrice,
-                    currency: result.currency,
-                    activatedAt: new Date().toISOString(),
-                    expiresAt: expiresAt.toISOString(),
-                    status: 'active'
-                });
-                savePayments(global.payments);
-            }
-
-            console.log(`✅ Premium aktif: ${planTier} (${isYearly ? 'yıllık' : 'aylık'}) — Bitiş: ${expiresAt.toLocaleDateString('tr-TR')}`);
-
-            // Kullanılmış session'ı temizle
-            global.checkoutSessions?.delete(token);
-
-            res.redirect(`/?checkout=success&amount=${result.paidPrice}&plan=${planTier}`);
-        } else {
-            console.log('❌ Ödeme başarısız:', result.errorMessage);
-            res.redirect(`/?checkout=fail&msg=${encodeURIComponent(result.errorMessage || 'Ödeme tamamlanamadı')}`);
-        }
-    });
-});
 
 // ═══════════════════════════════════════
 // API: Premium Status Check
@@ -1484,7 +1298,7 @@ app.listen(PORT, () => {
     console.log(`  → http://localhost:${PORT}`);
     console.log(`  → AI: ${process.env.OPENAI_API_KEY ? '✅ OpenAI bağlı' : '❌ API key yok'}`);
     console.log(`  → Security: Headers ✅ | Rate Limit: ${RATE_MAX}/min ✅ | Cache: ✅`);
-    console.log(`  → iyzico: ${process.env.IYZICO_API_KEY ? '✅ Bağlı' : '⚠️ Sandbox'} (${process.env.IYZICO_URI || 'sandbox'})`);
+    console.log(`  → Lemon Squeezy: ${process.env.LEMONSQUEEZY_API_KEY ? '✅ Bağlı' : '⚠️ API key eksik'}`);
     console.log(`  → Routes: /api/daily-horoscope, /api/compatibility, /api/crystal-guide, /api/tarot, /api/city-insight, /api/dream, /api/fortune`);
-    console.log(`  → Payment: /api/checkout/init, /api/checkout/callback\n`);
+    console.log(`  → Payment: /api/checkout/ls, /api/checkout/ls/webhook\n`);
 });

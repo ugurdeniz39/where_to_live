@@ -3741,8 +3741,68 @@ body.light-theme .dash-fav-card, body.light-theme .dash-history-item {
 }
 body.light-theme .dash-stat-num { color: #7c3aed; }
 
-/* Language Toggle */
+/* ════════════ LANGUAGE PICKER ════════════ */
 .lang-toggle { display: flex; gap: 4px; justify-content: center; margin-bottom: 8px; }
+
+/* Wrapper: positions the globe icon absolutely inside */
+.lang-picker-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.lang-globe {
+    position: absolute;
+    left: 10px;
+    font-size: 14px;
+    pointer-events: none;
+    z-index: 1;
+    line-height: 1;
+    user-select: none;
+}
+
+/* The actual <select> */
+.lang-select {
+    padding: 7px 30px 7px 32px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23a09cb8'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    min-width: 88px;
+}
+.lang-select:hover {
+    border-color: var(--accent);
+    color: var(--text);
+    background-color: rgba(201,160,255,0.08);
+}
+.lang-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    color: var(--text);
+    box-shadow: 0 0 0 2px rgba(201,160,255,0.2);
+}
+.lang-select option { background: #0e0e2a; color: var(--text); }
+
+/* Desktop compact variant */
+.lang-picker-desktop .lang-select { min-width: 80px; font-size: 12px; }
+
+/* Mobile drawer full-width variant */
+.nav-drawer-actions .lang-picker-wrap {
+    width: 100%;
+    margin-bottom: 4px;
+}
+.nav-drawer-actions .lang-select { width: 100%; padding: 11px 30px 11px 36px; font-size: 14px; border-radius: var(--radius-sm); }
+.nav-drawer-actions .lang-globe { font-size: 16px; }
+
+/* Legacy lang-btn (kept for backward compat) */
 .lang-btn {
     padding: 6px 14px; border: 1px solid var(--border); border-radius: var(--radius-xs);
     background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 700;

@@ -46,6 +46,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!CookieConsent.isDecided()) {
         setTimeout(() => CookieConsent.show(), 1500);
     }
+    // Sync lang select dropdown and apply i18n translations
+    const savedLang = localStorage.getItem('zemara_lang') || 'tr';
+    document.querySelectorAll('.lang-select').forEach(s => { s.value = savedLang; });
+    // applyI18n is defined later in the file; defer to ensure it's available
+    setTimeout(applyI18n, 0);
 });
 
 const Analytics = {
@@ -144,7 +149,259 @@ const i18n = {
             calculate: 'Calculate', submit: 'Submit', cancel: 'Cancel',
             dailyLimit: 'Daily free limit reached',
             premiumRequired: 'This feature requires Premium',
-        }
+        },
+        de: {
+            home: 'Start', daily: 'Tageshoroskop', compatibility: 'Kompatibilität',
+            moon: 'Mondkalender', tarot: 'Tarot', crystal: 'Kristalle', dream: 'Traumdeutung',
+            fortune: 'Orakel', retrograde: 'Retrograde', about: 'Über uns', pricing: 'Premium',
+            natal: 'Geburtshoroskop', login: 'Anmelden', signup: 'Kostenlos starten',
+            loading: 'Laden...', error: 'Fehler aufgetreten',
+            offline: 'Keine Internetverbindung', retry: 'Erneut versuchen',
+            share: 'Teilen', download: 'Herunterladen', back: 'Zurück',
+            calculate: 'Berechnen', submit: 'Absenden', cancel: 'Abbrechen',
+            dailyLimit: 'Tägliches Limit erreicht',
+            premiumRequired: 'Diese Funktion erfordert Premium',
+        },
+        fr: {
+            home: 'Accueil', daily: 'Horoscope du jour', compatibility: 'Compatibilité',
+            moon: 'Calendrier lunaire', tarot: 'Tarot', crystal: 'Cristaux', dream: 'Rêves',
+            fortune: 'Bonne aventure', retrograde: 'Rétrograde', about: 'À propos', pricing: 'Premium',
+            natal: 'Thème natal', login: 'Connexion', signup: 'Commencer',
+            loading: 'Chargement...', error: 'Erreur survenue',
+            offline: 'Sans connexion internet', retry: 'Réessayer',
+            share: 'Partager', download: 'Télécharger', back: 'Retour',
+            calculate: 'Calculer', submit: 'Envoyer', cancel: 'Annuler',
+            dailyLimit: 'Limite quotidienne atteinte',
+            premiumRequired: 'Fonctionnalité Premium requise',
+        },
+        es: {
+            home: 'Inicio', daily: 'Horóscopo diario', compatibility: 'Compatibilidad',
+            moon: 'Calendario lunar', tarot: 'Tarot', crystal: 'Cristales', dream: 'Sueños',
+            fortune: 'Fortuna', retrograde: 'Retrógrado', about: 'Acerca de', pricing: 'Premium',
+            natal: 'Carta natal', login: 'Iniciar sesión', signup: 'Empezar gratis',
+            loading: 'Cargando...', error: 'Error ocurrido',
+            offline: 'Sin conexión a internet', retry: 'Reintentar',
+            share: 'Compartir', download: 'Descargar', back: 'Atrás',
+            calculate: 'Calcular', submit: 'Enviar', cancel: 'Cancelar',
+            dailyLimit: 'Límite diario alcanzado',
+            premiumRequired: 'Esta función requiere Premium',
+        },
+        it: {
+            home: 'Home', daily: 'Oroscopo del giorno', compatibility: 'Compatibilità',
+            moon: 'Calendario lunare', tarot: 'Tarocchi', crystal: 'Cristalli', dream: 'Sogni',
+            fortune: 'Fortuna', retrograde: 'Retrogrado', about: 'Chi siamo', pricing: 'Premium',
+            natal: 'Tema natale', login: 'Accedi', signup: 'Inizia gratis',
+            loading: 'Caricamento...', error: 'Errore verificato',
+            offline: 'Senza connessione', retry: 'Riprova',
+            share: 'Condividi', download: 'Scarica', back: 'Indietro',
+            calculate: 'Calcola', submit: 'Invia', cancel: 'Annulla',
+            dailyLimit: 'Limite giornaliero raggiunto',
+            premiumRequired: 'Richiede Premium',
+        },
+        nl: {
+            home: 'Home', daily: 'Dagelijkse horoscoop', compatibility: 'Compatibiliteit',
+            moon: 'Maankalender', tarot: 'Tarot', crystal: 'Kristallen', dream: 'Dromen',
+            fortune: 'Fortuin', retrograde: 'Retrograde', about: 'Over ons', pricing: 'Premium',
+            natal: 'Geboorteshoroscoop', login: 'Inloggen', signup: 'Gratis starten',
+            loading: 'Laden...', error: 'Fout opgetreden',
+            offline: 'Geen internetverbinding', retry: 'Opnieuw proberen',
+            share: 'Delen', download: 'Downloaden', back: 'Terug',
+            calculate: 'Berekenen', submit: 'Verzenden', cancel: 'Annuleren',
+            dailyLimit: 'Daglimiet bereikt',
+            premiumRequired: 'Vereist Premium',
+        },
+        pt: {
+            home: 'Início', daily: 'Horóscopo diário', compatibility: 'Compatibilidade',
+            moon: 'Calendário lunar', tarot: 'Tarô', crystal: 'Cristais', dream: 'Sonhos',
+            fortune: 'Fortuna', retrograde: 'Retrógrado', about: 'Sobre nós', pricing: 'Premium',
+            natal: 'Mapa natal', login: 'Entrar', signup: 'Começar grátis',
+            loading: 'Carregando...', error: 'Erro ocorrido',
+            offline: 'Sem conexão com a internet', retry: 'Tentar novamente',
+            share: 'Compartilhar', download: 'Baixar', back: 'Voltar',
+            calculate: 'Calcular', submit: 'Enviar', cancel: 'Cancelar',
+            dailyLimit: 'Limite diário atingido',
+            premiumRequired: 'Requer Premium',
+        },
+        pl: {
+            home: 'Strona główna', daily: 'Codzienny horoskop', compatibility: 'Zgodność',
+            moon: 'Kalendarz księżycowy', tarot: 'Tarot', crystal: 'Kryształy', dream: 'Sny',
+            fortune: 'Wróżba', retrograde: 'Retrograd', about: 'O nas', pricing: 'Premium',
+            natal: 'Mapa urodzenia', login: 'Zaloguj się', signup: 'Zacznij za darmo',
+            loading: 'Ładowanie...', error: 'Wystąpił błąd',
+            offline: 'Brak połączenia z internetem', retry: 'Spróbuj ponownie',
+            share: 'Udostępnij', download: 'Pobierz', back: 'Wstecz',
+            calculate: 'Oblicz', submit: 'Wyślij', cancel: 'Anuluj',
+            dailyLimit: 'Codzienny limit osiągnięty',
+            premiumRequired: 'Wymaga Premium',
+        },
+        sv: {
+            home: 'Hem', daily: 'Daglig horoskop', compatibility: 'Kompatibilitet',
+            moon: 'Månkalender', tarot: 'Tarot', crystal: 'Kristaller', dream: 'Drömmar',
+            fortune: 'Lycka', retrograde: 'Retrograd', about: 'Om oss', pricing: 'Premium',
+            natal: 'Födelsekarta', login: 'Logga in', signup: 'Börja gratis',
+            loading: 'Laddar...', error: 'Ett fel inträffade',
+            offline: 'Ingen internetanslutning', retry: 'Försök igen',
+            share: 'Dela', download: 'Ladda ner', back: 'Tillbaka',
+            calculate: 'Beräkna', submit: 'Skicka', cancel: 'Avbryt',
+            dailyLimit: 'Daglig gräns nådd',
+            premiumRequired: 'Kräver Premium',
+        },
+        no: {
+            home: 'Hjem', daily: 'Daglig horoskop', compatibility: 'Kompatibilitet',
+            moon: 'Månekalender', tarot: 'Tarot', crystal: 'Krystaller', dream: 'Drømmer',
+            fortune: 'Lykke', retrograde: 'Retrograd', about: 'Om oss', pricing: 'Premium',
+            natal: 'Fødselskart', login: 'Logg inn', signup: 'Start gratis',
+            loading: 'Laster...', error: 'En feil oppsto',
+            offline: 'Ingen internettforbindelse', retry: 'Prøv igjen',
+            share: 'Del', download: 'Last ned', back: 'Tilbake',
+            calculate: 'Beregn', submit: 'Send', cancel: 'Avbryt',
+            dailyLimit: 'Daglig grense nådd',
+            premiumRequired: 'Krever Premium',
+        },
+        da: {
+            home: 'Hjem', daily: 'Daglig horoskop', compatibility: 'Kompatibilitet',
+            moon: 'Månekalender', tarot: 'Tarot', crystal: 'Krystaller', dream: 'Drømme',
+            fortune: 'Lykke', retrograde: 'Retrograd', about: 'Om os', pricing: 'Premium',
+            natal: 'Fødselskort', login: 'Log ind', signup: 'Start gratis',
+            loading: 'Indlæser...', error: 'Der opstod en fejl',
+            offline: 'Ingen internetforbindelse', retry: 'Prøv igen',
+            share: 'Del', download: 'Download', back: 'Tilbage',
+            calculate: 'Beregn', submit: 'Send', cancel: 'Annuller',
+            dailyLimit: 'Daglig grænse nået',
+            premiumRequired: 'Kræver Premium',
+        },
+        fi: {
+            home: 'Koti', daily: 'Päivähoroskooppi', compatibility: 'Yhteensopivuus',
+            moon: 'Kuukalenteri', tarot: 'Tarot', crystal: 'Kristallit', dream: 'Unet',
+            fortune: 'Onni', retrograde: 'Retrograde', about: 'Tietoa', pricing: 'Premium',
+            natal: 'Syntymähoroskooppi', login: 'Kirjaudu', signup: 'Aloita ilmaiseksi',
+            loading: 'Ladataan...', error: 'Tapahtui virhe',
+            offline: 'Ei internetyhteyttä', retry: 'Yritä uudelleen',
+            share: 'Jaa', download: 'Lataa', back: 'Takaisin',
+            calculate: 'Laske', submit: 'Lähetä', cancel: 'Peruuta',
+            dailyLimit: 'Päiväraja saavutettu',
+            premiumRequired: 'Vaatii Premiumin',
+        },
+        cs: {
+            home: 'Domů', daily: 'Denní horoskop', compatibility: 'Kompatibilita',
+            moon: 'Měsíční kalendář', tarot: 'Tarot', crystal: 'Krystaly', dream: 'Sny',
+            fortune: 'Štěstí', retrograde: 'Retrograd', about: 'O nás', pricing: 'Premium',
+            natal: 'Rodný horoskop', login: 'Přihlásit se', signup: 'Začít zdarma',
+            loading: 'Načítání...', error: 'Došlo k chybě',
+            offline: 'Žádné připojení k internetu', retry: 'Zkusit znovu',
+            share: 'Sdílet', download: 'Stáhnout', back: 'Zpět',
+            calculate: 'Vypočítat', submit: 'Odeslat', cancel: 'Zrušit',
+            dailyLimit: 'Denní limit dosažen',
+            premiumRequired: 'Vyžaduje Premium',
+        },
+        sk: {
+            home: 'Domov', daily: 'Denný horoskop', compatibility: 'Kompatibilita',
+            moon: 'Mesiačný kalandár', tarot: 'Tarot', crystal: 'Kryštály', dream: 'Sny',
+            fortune: 'Šťastie', retrograde: 'Retrograd', about: 'O nás', pricing: 'Premium',
+            natal: 'Rodný horoskop', login: 'Prihlásiť sa', signup: 'Začať zadarmo',
+            loading: 'Načítávanie...', error: 'Nastala chyba',
+            offline: 'Žiadne internetové pripojenie', retry: 'Skúsiť znovu',
+            share: 'Zdieľať', download: 'Stiahnuť', back: 'Späť',
+            calculate: 'Vypočítať', submit: 'Odoslať', cancel: 'Zrušiť',
+            dailyLimit: 'Denný limit dosiahnutý',
+            premiumRequired: 'Vyžaduje Premium',
+        },
+        hu: {
+            home: 'Főoldal', daily: 'Napi horoszkóp', compatibility: 'Kompatibilitás',
+            moon: 'Hold naptár', tarot: 'Tarot', crystal: 'Kristályok', dream: 'Álmok',
+            fortune: 'Szerencse', retrograde: 'Retrograd', about: 'Rólunk', pricing: 'Premium',
+            natal: 'Születési horoszkóp', login: 'Bejelentkezés', signup: 'Ingyenes kezdés',
+            loading: 'Betöltés...', error: 'Hiba történt',
+            offline: 'Nincs internetkapcsolat', retry: 'Próbálja újra',
+            share: 'Megosztás', download: 'Letöltés', back: 'Vissza',
+            calculate: 'Számítás', submit: 'Küldés', cancel: 'Mégse',
+            dailyLimit: 'Napi korlát elérve',
+            premiumRequired: 'Premium szükséges',
+        },
+        ro: {
+            home: 'Acasă', daily: 'Horoscop zilnic', compatibility: 'Compatibilitate',
+            moon: 'Calendar lunar', tarot: 'Tarot', crystal: 'Cristale', dream: 'Vise',
+            fortune: 'Noroc', retrograde: 'Retrograd', about: 'Despre noi', pricing: 'Premium',
+            natal: 'Hartă natală', login: 'Autentificare', signup: 'Începř gratuit',
+            loading: 'Se încarcă...', error: 'A apărut o eroare',
+            offline: 'Fără conexiune la internet', retry: 'Reîncearcă',
+            share: 'Distribuie', download: 'Descărcă', back: 'Înapoi',
+            calculate: 'Calculează', submit: 'Trimite', cancel: 'Anulează',
+            dailyLimit: 'Limita zilnică atinsă',
+            premiumRequired: 'Necesită Premium',
+        },
+        bg: {
+            home: 'Начало', daily: 'Дневен хороскоп', compatibility: 'Съвместимост',
+            moon: 'Лунен календар', tarot: 'Таро', crystal: 'Кристали', dream: 'Сънища',
+            fortune: 'Съдба', retrograde: 'Ретроград', about: 'За нас', pricing: 'Премиум',
+            natal: 'Натална карта', login: 'Влезте', signup: 'Започнете безплатно',
+            loading: 'Зарежда се...', error: 'Възникна грешка',
+            offline: 'Няма връзка с интернет', retry: 'Опитайте отново',
+            share: 'Споделете', download: 'Изтеглете', back: 'Назад',
+            calculate: 'Изчислете', submit: 'Изпратете', cancel: 'Отказ',
+            dailyLimit: 'Дневният лимит е достигнат',
+            premiumRequired: 'Изисква Премиум',
+        },
+        hr: {
+            home: 'Početna', daily: 'Dnevni horoskop', compatibility: 'Kompatibilnost',
+            moon: 'Lunarni kalendar', tarot: 'Tarot', crystal: 'Kristali', dream: 'Snovi',
+            fortune: 'Sudbina', retrograde: 'Retrogradan', about: 'O nama', pricing: 'Premium',
+            natal: 'Natalna karta', login: 'Prijava', signup: 'Počni besplatno',
+            loading: 'Učitavanje...', error: 'Došlo je do pogreške',
+            offline: 'Nema internet veze', retry: 'Pokušaj ponovo',
+            share: 'Podijeli', download: 'Preuzmi', back: 'Natrag',
+            calculate: 'Izračunaj', submit: 'Pošalji', cancel: 'Odustani',
+            dailyLimit: 'Dostiguto dnevno ograničenje',
+            premiumRequired: 'Potreban Premium',
+        },
+        sr: {
+            home: 'Почетна', daily: 'Дневни хороскоп', compatibility: 'Компатибилност',
+            moon: 'Лунарни календар', tarot: 'Таро', crystal: 'Кристали', dream: 'Снови',
+            fortune: 'Судбина', retrograde: 'Ретроградан', about: 'О нама', pricing: 'Премиум',
+            natal: 'Натална карта', login: 'Пријава', signup: 'Почни бесплатно',
+            loading: 'Учитавање...', error: 'Дошло је до грешке',
+            offline: 'Нема интернет везе', retry: 'Покушај поново',
+            share: 'Подели', download: 'Преузми', back: 'Назад',
+            calculate: 'Израчунај', submit: 'Пошаљи', cancel: 'Откажи',
+            dailyLimit: 'Достигнут дневни лимит',
+            premiumRequired: 'Потребан Премиум',
+        },
+        el: {
+            home: 'Αρχική', daily: 'Ημερήσιο Ωροσκόπιο', compatibility: 'Συμβατότητα',
+            moon: 'Σεληνιακό Ημερολόγιο', tarot: 'Ταρώ', crystal: 'Κρύσταλλοι', dream: 'Όνειρα',
+            fortune: 'Τύχη', retrograde: 'Ανάδρομος', about: 'Σχετικά', pricing: 'Premium',
+            natal: 'Ωροσκόπιο γέννησης', login: 'Σύνδεση', signup: 'Ξεκινήστε δωρεάν',
+            loading: 'Φόρτωση...', error: 'Παρουσιάστηκε σφάλμα',
+            offline: 'Χωρίς σύνδεση διαδικτύου', retry: 'Δοκιμάστε ξανά',
+            share: 'Κοινοποίηση', download: 'Λήψη', back: 'Πίσω',
+            calculate: 'Υπολογισμός', submit: 'Υποβολή', cancel: 'Ακύρωση',
+            dailyLimit: 'Ημερήσιος περιορισμός συμπληρώθηκε',
+            premiumRequired: 'Απαιτείται Premium',
+        },
+        uk: {
+            home: 'Головна', daily: 'Щоденний гороскоп', compatibility: 'Сумісність',
+            moon: 'Місячний календар', tarot: 'Таро', crystal: 'Кристали', dream: 'Сни',
+            fortune: 'Доля', retrograde: 'Ретроград', about: 'Про нас', pricing: 'Преміум',
+            natal: 'Натальна карта', login: 'Увійти', signup: 'Почати безкоштовно',
+            loading: 'Завантаження...', error: 'Сталася помилка',
+            offline: 'Немає підключення до інтернету', retry: 'Спробувати знову',
+            share: 'Поділитися', download: 'Завантажити', back: 'Назад',
+            calculate: 'Обчислити', submit: 'Надіслати', cancel: 'Скасувати',
+            dailyLimit: 'Денний ліміт досягнуто',
+            premiumRequired: 'Потрібний Преміум',
+        },
+        ru: {
+            home: 'Главная', daily: 'Ежедневный гороскоп', compatibility: 'Совместимость',
+            moon: 'Лунный календарь', tarot: 'Таро', crystal: 'Кристаллы', dream: 'Сны',
+            fortune: 'Судьба', retrograde: 'Ретроград', about: 'О нас', pricing: 'Премиум',
+            natal: 'Натальная карта', login: 'Войти', signup: 'Начать бесплатно',
+            loading: 'Загрузка...', error: 'Произошла ошибка',
+            offline: 'Нет подключения к интернету', retry: 'Повторить',
+            share: 'Поделиться', download: 'Скачать', back: 'Назад',
+            calculate: 'Рассчитать', submit: 'Отправить', cancel: 'Отмена',
+            dailyLimit: 'Дневной лимит достигнут',
+            premiumRequired: 'Требуется Премиум',
+        },
     },
 
     t(key) {
@@ -160,12 +417,59 @@ const i18n = {
     getLang() { return this._lang; }
 };
 
+const _LANG_NAMES = {
+    tr: 'Türkçe', en: 'English', de: 'Deutsch', fr: 'Français',
+    es: 'Español', it: 'Italiano', nl: 'Nederlands', pt: 'Português', pl: 'Polski',
+    sv: 'Svenska', no: 'Norsk', da: 'Dansk', fi: 'Suomi',
+    cs: 'Čeština', sk: 'Slovenčina', hu: 'Magyar', ro: 'Română',
+    bg: 'Български', hr: 'Hrvatski', sr: 'Srpski',
+    el: 'Ελληνικά', uk: 'Українська', ru: 'Русский'
+};
+
+const _LANG_FLAGS = {
+    tr: '🇹🇷', en: '🇬🇧', de: '🇩🇪', fr: '🇫🇷', es: '🇪🇸',
+    it: '🇮🇹', nl: '🇳🇱', pt: '🇵🇹', pl: '🇵🇱', sv: '🇸🇪',
+    no: '🇳🇴', da: '🇩🇰', fi: '🇫🇮', cs: '🇨🇿', sk: '🇸🇰',
+    hu: '🇭🇺', ro: '🇷🇴', bg: '🇧🇬', hr: '🇭🇷', sr: '🇷🇸',
+    el: '🇬🇷', uk: '🇺🇦', ru: '🇷🇺'
+};
+
+// Patch "today" key into every language translation
+{
+    const _todayMap = {
+        tr: 'Bugün', en: 'Today', de: 'Heute', fr: "Aujourd'hui", es: 'Hoy',
+        it: 'Oggi', nl: 'Vandaag', pt: 'Hoje', pl: 'Dzisiaj', sv: 'Idag',
+        no: 'I dag', da: 'I dag', fi: 'Tänään', cs: 'Dnes', sk: 'Dnes',
+        hu: 'Ma', ro: 'Azi', bg: 'Днес', hr: 'Danas', sr: 'Данас',
+        el: 'Σήμερα', uk: 'Сьогодні', ru: 'Сегодня'
+    };
+    Object.entries(_todayMap).forEach(([l, v]) => { if (i18n.translations[l]) i18n.translations[l].today = v; });
+}
+
+function applyI18n() {
+    const lang = i18n.getLang();
+    // Translate elements with data-i18n attribute (nav links, buttons, etc.)
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        const emoji = el.dataset.emoji;
+        const translated = i18n.t(key);
+        el.textContent = emoji ? emoji + '\u00A0' + translated : translated;
+    });
+    // Update compact lang picker labels (desktop nav)
+    const flag = _LANG_FLAGS[lang] || '🌐';
+    document.querySelectorAll('.lang-picker-label').forEach(el => {
+        el.textContent = flag + ' ' + lang.toUpperCase();
+    });
+    // Update html lang attribute
+    document.documentElement.lang = lang;
+}
+
 function switchLang(lang) {
     i18n.setLang(lang);
+    document.querySelectorAll('.lang-select').forEach(s => { s.value = lang; });
     document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
-    showToast(lang === 'tr' ? 'Dil: Türkçe' : 'Language: English');
-    // Note: Full page translation would require reload or dynamic text replacement
-    // For now, just sets the preference — AI responses will use this language
+    applyI18n();
+    showToast((_LANG_FLAGS[lang] || '🌐') + ' ' + (_LANG_NAMES[lang] || lang));
 }
 
 // ═══════════════════════════════════════
@@ -1345,24 +1649,24 @@ function toggleBilling() {
     const cls = (id, cls, on) => { const el = document.getElementById(id); if (el) el.classList.toggle(cls, on); };
     cls('lbl-monthly', 'active', !isYearly);
     cls('lbl-yearly', 'active', isYearly);
-    set('price-premium', isYearly ? '₺490' : '₺49');
+    set('price-premium', isYearly ? '₺1.500' : '₺150');
     set('period-premium', isYearly ? '/yıl' : '/ay');
-    set('price-vip', isYearly ? '₺990' : '₺99');
+    set('price-vip', isYearly ? '₺4.000' : '₺400');
     set('period-vip', isYearly ? '/yıl' : '/ay');
 }
 
 function toggleFaq(el) { el.classList.toggle('open'); }
 
 // ═══════════════════════════════════════
-// iyzico CHECKOUT FLOW
+// LEMON SQUEEZY CHECKOUT FLOW
 // ═══════════════════════════════════════
 let currentCheckoutPlan = null;
 
 const PLAN_DETAILS = {
-    'premium-monthly': { name: 'Premium Aylık', price: '₺49', period: '/ay' },
-    'premium-yearly':  { name: 'Premium Yıllık', price: '₺490', period: '/yıl', save: '2 ay bedava!' },
-    'vip-monthly':     { name: 'VIP Aylık', price: '₺99', period: '/ay' },
-    'vip-yearly':      { name: 'VIP Yıllık', price: '₺990', period: '/yıl', save: '2 ay bedava!' }
+    'premium-monthly': { name: 'Premium Aylık', price: '₺150', period: '/ay' },
+    'premium-yearly':  { name: 'Premium Yıllık', price: '₺1.500', period: '/yıl', save: '2 ay bedava!' },
+    'vip-monthly':     { name: 'VIP Aylık', price: '₺400', period: '/ay' },
+    'vip-yearly':      { name: 'VIP Yıllık', price: '₺4.000', period: '/yıl', save: '2 ay bedava!' }
 };
 
 function startCheckout(tier) {
@@ -1382,23 +1686,9 @@ function startCheckout(tier) {
     // Reset to billing step
     document.getElementById('checkout-step-billing').classList.remove('hidden');
     document.getElementById('checkout-step-payment').classList.add('hidden');
-    document.getElementById('iyzico-checkout-form').innerHTML = '<div class="checkout-loading"><div class="loading-spinner">✦</div><p>Ödeme formu yükleniyor...</p></div>';
-
     // Open modal
     openModal('checkout-modal');
     SoundFX.play('click');
-    // Auto-detect payment region
-    setTimeout(initCheckoutRegion, 50);
-}
-
-// ── Detect if user is likely outside Turkey (for LS vs iyzico routing) ───────
-function isInternationalUser() {
-    // Check stored preference first
-    const stored = localStorage.getItem('zemara_payment_region');
-    if (stored) return stored === 'international';
-    // Fallback: check browser language
-    const lang = navigator.language || navigator.userLanguage || '';
-    return !lang.toLowerCase().startsWith('tr');
 }
 
 async function submitBillingAndPay(e) {
@@ -1406,131 +1696,33 @@ async function submitBillingAndPay(e) {
 
     const name = document.getElementById('checkout-name').value.trim();
     const email = document.getElementById('checkout-email').value.trim();
-    const phone = document.getElementById('checkout-phone')?.value?.trim() || '';
 
     if (!name || !email) {
         showToast('Lütfen ad ve e-posta alanlarını doldurun');
         return;
     }
 
+    const btn = e.target.querySelector('button[type=submit]');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Yönlendiriliyor...'; }
+
     const apiBase = window.__ZEMARA_CONFIG?.apiBase || '';
 
-    // ── Lemon Squeezy flow (international / non-TR users) ──────────────────
-    if (isInternationalUser()) {
-        const btn = e.target.querySelector('button[type=submit]');
-        if (btn) { btn.disabled = true; btn.textContent = '⏳ Yönlendiriliyor...'; }
-
-        try {
-            const lsRes = await fetch(apiBase + '/api/checkout/ls', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ plan: currentCheckoutPlan, email, name })
-            });
-            const lsData = await lsRes.json();
-            if (lsData.checkoutUrl) {
-                window.location.href = lsData.checkoutUrl;
-                return;
-            }
-            throw new Error(lsData.error || 'LS checkout hatası');
-        } catch (err) {
-            showToast('Ödeme yönlendirmesi başarısız: ' + err.message);
-            if (btn) { btn.disabled = false; btn.textContent = 'Devam Et'; }
-        }
-        return;
-    }
-
-    // ── iyzico flow (Turkey) ────────────────────────────────────────────────
-    if (!phone) {
-        showToast('Lütfen telefon numaranızı girin');
-        return;
-    }
-
-    // Switch to payment step
-    document.getElementById('checkout-step-billing').classList.add('hidden');
-    document.getElementById('checkout-step-payment').classList.remove('hidden');
-
     try {
-        const response = await fetch(apiBase + '/api/checkout/init', {
+        const lsRes = await fetch(apiBase + '/api/checkout/ls', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                plan: currentCheckoutPlan,
-                billing: { name, email, phone }
-            })
+            body: JSON.stringify({ plan: currentCheckoutPlan, email, name })
         });
-
-        const ct = response.headers.get('content-type') || '';
-        if (!ct.includes('application/json')) {
-            throw new Error('Ödeme sistemi şu an kullanılamıyor. localhost:3000 üzerinden açın.');
+        const lsData = await lsRes.json();
+        if (lsData.checkoutUrl) {
+            window.location.href = lsData.checkoutUrl;
+            return;
         }
-        const data = await response.json();
-
-        if (data.success && data.checkoutFormContent) {
-            // Render iyzico checkout form
-            const container = document.getElementById('iyzico-checkout-form');
-            container.innerHTML = '';
-
-            // Create a div and inject iyzico's checkout form HTML+JS
-            const formDiv = document.createElement('div');
-            formDiv.innerHTML = data.checkoutFormContent;
-            container.appendChild(formDiv);
-
-            // Execute any scripts in the injected content (validate iyzico domain)
-            const trustedDomains = ['iyzipay.com', 'iyzico.com'];
-            const scripts = formDiv.querySelectorAll('script');
-            scripts.forEach(oldScript => {
-                const newScript = document.createElement('script');
-                if (oldScript.src) {
-                    try {
-                        const srcHost = new URL(oldScript.src).hostname;
-                        if (!trustedDomains.some(d => srcHost === d || srcHost.endsWith('.' + d))) {
-                            console.warn('Blocked untrusted checkout script:', oldScript.src);
-                            return;
-                        }
-                    } catch { return; }
-                    newScript.src = oldScript.src;
-                } else {
-                    newScript.textContent = oldScript.textContent;
-                }
-                document.body.appendChild(newScript);
-            });
-
-            SoundFX.play('success');
-        } else {
-            showToast(data.error || 'Ödeme formu yüklenemedi');
-            // Go back to billing step
-            document.getElementById('checkout-step-payment').classList.add('hidden');
-            document.getElementById('checkout-step-billing').classList.remove('hidden');
-        }
+        throw new Error(lsData.error || 'Checkout hatası');
     } catch (err) {
-        console.error('Checkout error:', err);
-        showToast('Ödeme sistemi şu an yanıt veremiyor. Lütfen tekrar deneyin.');
-        document.getElementById('checkout-step-payment').classList.add('hidden');
-        document.getElementById('checkout-step-billing').classList.remove('hidden');
+        showToast('Ödeme yönlendirmesi başarısız: ' + err.message);
+        if (btn) { btn.disabled = false; btn.textContent = 'Devam Et'; }
     }
-}
-
-// ── Payment Region Toggle ────────────────────────────────────────────────────
-function setPaymentRegion(region) {
-    const isIntl = region === 'international';
-    localStorage.setItem('zemara_payment_region', isIntl ? 'international' : 'turkey');
-
-    document.getElementById('region-tr')?.classList.toggle('active', !isIntl);
-    document.getElementById('region-intl')?.classList.toggle('active', isIntl);
-
-    // Show/hide phone field (only needed for iyzico/TR)
-    const phoneGroup = document.getElementById('checkout-phone-group');
-    if (phoneGroup) phoneGroup.style.display = isIntl ? 'none' : '';
-
-    // Update price display if pricing differs
-    // (Optional: swap TL ↔ USD prices here)
-}
-
-// Auto-detect region on modal open
-function initCheckoutRegion() {
-    const stored = localStorage.getItem('zemara_payment_region');
-    const region = stored || (navigator.language?.toLowerCase().startsWith('tr') ? 'turkey' : 'international');
-    setPaymentRegion(region);
 }
 
 function closeCheckout() {
