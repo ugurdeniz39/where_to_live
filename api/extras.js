@@ -330,7 +330,7 @@ module.exports = async (req, res) => {
     // ── Transit Rapor ──
     if (url.includes('/transit')) {
         if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
-        const { birthDate, sunSign, email, lang } = req.body || {};
+        const { birthDate, sunSign, moonSign, risingSign, email, lang } = req.body || {};
         if (!sunSign) return res.status(400).json({ error: 'sunSign gerekli' });
 
         // Server-side premium verification — never trust client-supplied isPremium flag
@@ -359,7 +359,7 @@ module.exports = async (req, res) => {
 
         const today = new Date().toISOString().slice(0, 10);
         const langCode = lang || 'tr';
-        const cacheKey = `transit_${sunSign}_${birthDate || 'unknown'}_${today}_${langCode}`;
+        const cacheKey = `transit_${sunSign}_${moonSign || ''}_${risingSign || ''}_${birthDate || 'unknown'}_${today}_${langCode}`;
 
         const cached = global._transitCache.get(cacheKey);
         if (cached && Date.now() - cached.ts < 86400000) {
@@ -371,30 +371,47 @@ module.exports = async (req, res) => {
             ? 'Write ALL your response in ENGLISH.'
             : 'Tüm yanıtını TÜRKÇE yaz.';
 
-        const systemPrompt = `Sen deneyimli bir astroloji uzmanısın. ${langInstruction}
-Güncel gezegen konumlarına dayanarak kişisel transit raporu hazırla.
+        // Build natal context for richer transit interpretation
+        const natalParts = [`Güneş: ${sunSign}`];
+        if (moonSign && moonSign !== 'bilinmiyor') natalParts.push(`Ay: ${moonSign}`);
+        if (risingSign && risingSign !== 'bilinmiyor') natalParts.push(`Yükselen: ${risingSign}`);
+        const natalContext = natalParts.join(', ');
+
+        const systemPrompt = `Sen gezegen hareketlerini ve kişisel doğum haritalarını sentezleyen ileri düzey bir astrologsun. ${langInstruction}
+Mevcut tarih: ${today}. Bu tarihe uygun gerçekçi gezegen transitlerini kullan.
+Kişinin doğum haritası: ${natalContext}.
+
+Transit yorumları şunları kapsamalı:
+- Retrograt gezegenlerin etkisi varsa mutlaka belirt (Merkür, Mars, Satürn vb. retrograt dönemleri yavaşlama, yeniden gözden geçirme enerjisi getirir).
+- Her transitin pratik hayata nasıl yansıyacağını somut bir eylem önerisiyle bağla.
+- Zorlayıcı transitlerde büyüme fırsatını, destekleyici transitlerde en iyi kullanım şeklini göster.
+
 Yanıtını SADECE şu JSON formatında ver, başka hiçbir şey yazma:
 {
   "transits": [
     {
       "planet": "gezegen adı",
-      "aspect": "açı tipi (trikon/kare/kavuşum vb.)",
-      "natalPlanet": "natal gezegenin adı",
+      "aspect": "açı tipi (trikon/kare/kavuşum/muhalefet/sekstil)",
+      "natalPlanet": "natal gezegenin adı veya evi",
+      "isRetrograde": true veya false,
       "effect": "positive veya challenging veya neutral",
-      "title": "kısa başlık",
-      "description": "2-3 cümle kişisel açıklama",
-      "advice": "somut 1 cümle tavsiye",
-      "duration": "süre bilgisi (örn: 3-4 hafta)"
+      "title": "kısa, çarpıcı başlık",
+      "description": "Bu transitin bu kişinin haritasına özgü etkisi — somut yaşam alanlarına (ilişki, kariyer, iç dünya) bağla, 3 cümle",
+      "advice": "Bu transit süresince bugünden itibaren yapılabilecek en önemli tek eylem, 1 cümle",
+      "duration": "Yaklaşık süre (örn: 3-4 hafta, 2 ay)"
     }
   ],
-  "overallEnergy": "Bu dönem genel enerji özeti, 2 cümle",
-  "bestDays": "Bu ay en güçlü günler (örn: 5-8, 22-25)"
+  "dominantTheme": "Bu dönemin ana dersi veya fırsatı — arketipsel bir çerçevede, 2 cümle",
+  "retrogradePlanets": ["Şu an retrograt olan gezegenler listesi, yoksa boş dizi"],
+  "overallEnergy": "Bu dönem genel kozmik iklimi ve nasıl hissettireceği, 2 cümle",
+  "bestDays": "Bu ay için öne çıkan güçlü günler veya dönemler (örn: 5-8, 22-25)",
+  "watchOutFor": "Bu dönemde dikkat edilmesi gereken enerji veya tuzak, 1 cümle"
 }`;
 
-        const userPrompt = `${sunSign} burcu için güncel transit raporu hazırla.${birthDate ? ` Doğum tarihi: ${birthDate}.` : ''}
-3 önemli aktif transit ver. Mevcut tarihe göre gerçekçi gezegen hareketlerini kullan.`;
+        const userPrompt = `${natalContext}${birthDate ? ` | Doğum tarihi: ${birthDate}` : ''} için ${today} tarihli güncel transit raporu.
+4 önemli aktif transit ver: en az 1 tanesi yavaş gezegen (Satürn/Jüpiter/Plüton/Neptün/Uranüs), geri kalanlar gündelik etkili (Venüs/Mars/Merkür/Güneş). Retrograt gezegenleri doğru işaretle.`;
 
-        const raw = await askGPT(systemPrompt, userPrompt, 700, 0.8);
+        const raw = await askGPT(systemPrompt, userPrompt, 900, 0.8);
         const result = parseJSON(raw);
 
         if (global._transitCache.size >= 10) {
@@ -408,7 +425,7 @@ Yanıtını SADECE şu JSON formatında ver, başka hiçbir şey yazma:
     // ── Natal Chart AI Yorumu ──
     if (url.includes('/natal-interpretation')) {
         if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
-        const { planets, sunSign, moonSign, ascendant, lang } = req.body || {};
+        const { planets, sunSign, moonSign, ascendant, birthDate, lang } = req.body || {};
         if (!planets || !sunSign) return res.status(400).json({ error: 'planets ve sunSign gerekli' });
 
         const langCode = lang || 'tr';
@@ -424,30 +441,56 @@ Yanıtını SADECE şu JSON formatında ver, başka hiçbir şey yazma:
             ? 'Write ALL your response in ENGLISH.'
             : 'Tüm yanıtını TÜRKÇE yaz.';
 
-        const systemPrompt = `Sen doğum haritası yorumlama uzmanı bir astrologsun. ${langInstruction}
-Bilgece, ilham verici ama somut bir ton kullan. Klişelerden kaçın. Gezegenleri birbirleriyle bağdaştır.
+        // Detect dominant element and modality from planet signs
+        const elementMap = {
+            Koç: 'ateş', Aslan: 'ateş', Yay: 'ateş',
+            Boğa: 'toprak', Başak: 'toprak', Oğlak: 'toprak',
+            İkizler: 'hava', Terazi: 'hava', Kova: 'hava',
+            Yengeç: 'su', Akrep: 'su', Balık: 'su'
+        };
+        const elementCounts = { ateş: 0, toprak: 0, hava: 0, su: 0 };
+        const planetEntries = Object.entries(planets);
+        for (const [, v] of planetEntries) {
+            const el = elementMap[v.sign];
+            if (el) elementCounts[el]++;
+        }
+        const dominantElement = Object.entries(elementCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'belirsiz';
+
+        const systemPrompt = `Sen arketipsel astroloji ve Jungcu psikoloji sentezinde uzmanlaşmış ileri düzey bir natal chart yorumlayıcısısın. ${langInstruction}
+Klişe burç tanımlamalarından kaçın. Gezegenlerin birbirleriyle dinamiğini, baskın elementi ve bu kişinin olası yaşam yolculuğunu derinlemesine sentezle.
+Kişinin doğum haritasındaki baskın element: ${dominantElement}. Bu elementi yorumun alt metnine işle.
+
+YORUM İLKELERİ:
+- Güneş = bilinçli kimlik ve hayatta yaratmak istenen şey.
+- Ay = duygusal güvenlik ihtiyacı ve içgüdüsel tepkiler.
+- Yükselen = dünyaya yansıyan maske ve hayat sahnesindeki rol.
+- Gezegenlerin birbirini desteklemesi veya gerilemesi dinamiğini keşfet.
+- Güçlü yanları ve gölge alanları dengeli biçimde sun — yargılamadan, şefkatle.
+
 Yanıtını SADECE şu JSON formatında ver, başka hiçbir şey yazma:
 {
-  "summary": "Kişinin genel karakter özeti, 4-5 cümle. Gezegenleri birbirleriyle bağdaştır.",
-  "strongestPlanet": "En güçlü gezegen adı",
-  "strongestPlanetReason": "Neden bu gezegen güçlü, 1-2 cümle",
-  "lifeThemes": ["Temel yaşam teması 1", "tema 2", "tema 3"],
-  "strengths": ["Güçlü yön 1", "Güçlü yön 2", "Güçlü yön 3"],
-  "challenges": ["Zorluk 1", "Zorluk 2"],
-  "advice": "Bu kişiye özel yaşam tavsiyesi, 2-3 cümle. Somut ve uygulanabilir.",
-  "soulPurpose": "Ruhsal amaç veya yaşam dersi, 1-2 cümle"
+  "summary": "Güneş-Ay-Yükselen üçgenini ve baskın elementi harmanlayan derin karakter özeti — 5-6 cümle. Arketipsel dil kullan (örn: 'Kaşif ruhu', 'Şifacı arketipi').",
+  "strongestPlanet": "Bu haritada en dominant gezegen adı",
+  "strongestPlanetReason": "Neden bu gezegen haritaya damgasını vuruyor — ev, açı veya burç bağlamında, 2 cümle",
+  "dominantElement": "${dominantElement}",
+  "lifeThemes": ["Bu hayatın ana teması 1 (spesifik)", "tema 2 (spesifik)", "tema 3 (spesifik)"],
+  "strengths": ["Doğal güçlü yön 1 — somut örnekle", "güçlü yön 2", "güçlü yön 3", "güçlü yön 4"],
+  "challenges": ["Büyüme alanı 1 — nasıl dönüştürüleceğine dair ipucu ile", "büyüme alanı 2"],
+  "shadowWork": "Bu haritanın gösterdiği gölge yön veya bilinçdışı örüntü — şefkatli ama dürüst, 2 cümle",
+  "advice": "Bu kişinin haritasına özel, hayatını dönüştürebilecek somut tavsiye — 2-3 cümle. Genel astroloji klişesi değil, bu haritaya özgü olsun.",
+  "soulPurpose": "Ruhsal evrim yönü veya yaşam misyonu — ilham verici, 1-2 cümle",
+  "compatibilityHint": "Bu haritanın hangi eleman/burç enerjisiyle en çok rezonansa geçtiğine dair kısa ipucu"
 }`;
 
-        const planetList = Object.entries(planets)
-            .map(([k, v]) => `${k}: ${v.sign}${v.degree ? ' ' + Number(v.degree).toFixed(1) + '°' : ''}`)
-            .join(', ');
+        const planetList = planetEntries
+            .map(([k, v]) => `${k}: ${v.sign}${v.degree ? ' ' + Number(v.degree).toFixed(1) + '°' : ''}${v.retrograde ? ' ℞' : ''}`)
+            .join(' | ');
 
-        const userPrompt = `Doğum haritası:
+        const userPrompt = `Natal harita — Güneş: ${sunSign} | Ay: ${moonSign || '?'} | Yükselen: ${ascendant || '?'}${birthDate ? ` | Doğum: ${birthDate}` : ''}
 Gezegenler: ${planetList}
-Güneş: ${sunSign}, Ay: ${moonSign || 'bilinmiyor'}, Yükselen: ${ascendant || 'bilinmiyor'}
-Bu haritayı derinlemesine yorumla. Somut ve kişisel ol.`;
+Bu kişinin içindeki evrenin haritasını çiz. Arketipsel, derinlikli ve kişiye özel yorum yaz.`;
 
-        const raw = await askGPT(systemPrompt, userPrompt, 700, 0.85);
+        const raw = await askGPT(systemPrompt, userPrompt, 850, 0.85);
         const result = parseJSON(raw);
 
         if (global._natalCache.size >= 20) {
