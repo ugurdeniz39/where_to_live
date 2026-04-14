@@ -9,27 +9,28 @@ module.exports = async (req, res) => {
         const { city, country, score, influences, sunSign, moonSign, preferences } = req.body;
         if (!city) return res.status(400).json({ error: 'Şehir bilgisi gerekli' });
 
-        const systemPrompt = `Sen astrokartografi ve yaşam koçluğu uzmanısın. Türkçe yaz.
-İlham verici, heyecan uyandıran bir ton kullan. Kadın kullanıcılara hitap ediyorsun.
-Yanıtını MUTLAKA aşağıdaki JSON formatında ver, başka hiçbir şey yazma:
+        const systemPrompt = `Sen astrokartografi ve kaderin coğrafyasında gezgin bir rehbersin. Her şehrin gökyüzündeki gezegenlerle nasıl dans ettiğini bilir, kişinin doğum haritasını bir pusula gibi kullanırsın.
+Sesini ilham verici, şiirsel ve özgün tut — klişelerden kaçın. Yalnızca Türkçe yaz.
+Güneş ve Ay burçlarını analizin merkezine koy: bu gezegenler o şehrin enerjisiyle nasıl rezonansa giriyor?
+Yanıtını YALNIZCA aşağıdaki JSON formatında ver, başka hiçbir şey ekleme:
 {
-  "headline": "Bu şehir hakkında çarpıcı tek cümle başlık",
-  "whyThisCity": "Bu şehrin kişi için neden ideal olduğu, 3-4 cümle. Astrolojik açıdan açıkla.",
-  "energy": "Şehrin genel enerjisi ve atmosferi, 2 cümle",
-  "bestFor": ["Bu şehirde en iyi yapılacak şey 1", "şey 2", "şey 3"],
-  "lifestyle": "Bu şehirde nasıl bir yaşam tarzı beklemeli, 2-3 cümle",
-  "bestSeason": "Bu şehre taşınmak/ziyaret için en iyi mevsim ve nedeni",
-  "tip": "Bu şehirde yaşayacak birine özel ipucu, 1-2 cümle",
-  "vibe": "Tek kelimelik ruh hali tanımı"
+  "headline": "Bu şehri bu kişi için eşsiz kılan tek çarpıcı cümle — burcuna veya gezegensel etkisine dokunarak",
+  "whyThisCity": "Bu şehrin kişinin doğum haritasıyla neden uyumlu olduğu, 3-4 cümle. Güneş veya Ay burcunun o şehrin enerjisiyle nasıl örtüştüğünü somutlaştır.",
+  "energy": "Şehrin kendine özgü titreşimi ve atmosferi, 2 cümle. Soyut değil, duyusal ve çağrıştırıcı ol.",
+  "bestFor": ["Bu şehirde en güçlü gelişeceği alan 1", "alan 2", "alan 3"],
+  "lifestyle": "Bu şehirde nasıl bir günlük yaşam ritmi beklemeli? 2-3 cümle. Tercihleriyle örtüşen somut detaylar ver.",
+  "bestSeason": "Bu şehre taşınmak veya ziyaret için astrolojik açıdan en güçlü mevsim ve kısa nedeni",
+  "tip": "Bu kişiye — burcunun özelliklerini bilerek — bu şehirde köklenmesi için özel ve uygulanabilir bir ipucu, 1-2 cümle",
+  "vibe": "Şehrin ruhunu özetleyen tek kelime"
 }`;
 
-        const userPrompt = `Şehir: ${city}, ${country} (Uyum skoru: %${score})
-Astrolojik etkiler: ${influences || 'genel'}
-Kişi: Güneş ${sunSign || 'bilinmiyor'}, Ay ${moonSign || 'bilinmiyor'}
-Tercihleri: ${preferences?.join(', ') || 'genel'}
-Bu kişi için bu şehrin astrokartografi analizini yap.`;
+        const userPrompt = `Şehir: ${city}${country ? `, ${country}` : ''} | Uyum skoru: %${score}
+Gezegensel etkiler: ${influences || 'genel'}
+Doğum haritası: Güneş ${sunSign || 'bilinmiyor'} · Ay ${moonSign || 'bilinmiyor'}
+Yaşam tercihleri: ${preferences?.join(', ') || 'belirtilmedi'}
+Bu kişi için ${city} şehrinin astrokartografi derinlemesine analizini yap.`;
 
-        const raw = await askGPT(systemPrompt, userPrompt, 600);
+        const raw = await askGPT(systemPrompt, userPrompt, 650);
         const result = parseJSON(raw);
         res.json({ success: true, data: result });
     } catch (err) {
