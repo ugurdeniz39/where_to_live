@@ -510,10 +510,59 @@ const AstroEngine = (function () {
         return { score, influences: influences.slice(0, 5), lifestyleMatch: lifestyleBonus > 6, vibeMatch };
     }
 
+    // Planet weights for element/modality balance:
+    // Luminaries (Sun, Moon) carry double weight because they define core identity and
+    // emotion. Inner planets (Mercury–Mars) are personal and carry 1.5×. Outer planets
+    // (Jupiter–Pluto) are generational and carry 0.75× so they don't swamp the tally.
+    const PLANET_ELEMENT_WEIGHTS = {
+        sun: 2.0, moon: 2.0,
+        mercury: 1.5, venus: 1.5, mars: 1.5,
+        jupiter: 0.75, saturn: 0.75, uranus: 0.75, neptune: 0.75, pluto: 0.75
+    };
+
     function getDominantElement(positions) {
-        const counts = { fire: 0, earth: 0, air: 0, water: 0 };
-        for (const pos of Object.values(positions)) { counts[pos.element] = (counts[pos.element] || 0) + 1; }
-        return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+        const totals = { fire: 0, earth: 0, air: 0, water: 0 };
+        for (const [key, pos] of Object.entries(positions)) {
+            const w = PLANET_ELEMENT_WEIGHTS[key] || 1.0;
+            const elem = pos.element || SIGNS[Math.floor(pos.longitude / 30)]?.element;
+            if (elem && totals[elem] !== undefined) totals[elem] += w;
+        }
+        return Object.entries(totals).sort((a, b) => b[1] - a[1])[0][0];
+    }
+
+    // Returns weighted element counts (for display as percentages)
+    function getElementBalance(positions) {
+        const totals = { fire: 0, earth: 0, air: 0, water: 0 };
+        let grand = 0;
+        for (const [key, pos] of Object.entries(positions)) {
+            const w = PLANET_ELEMENT_WEIGHTS[key] || 1.0;
+            const elem = pos.element || SIGNS[Math.floor(pos.longitude / 30)]?.element;
+            if (elem && totals[elem] !== undefined) { totals[elem] += w; grand += w; }
+        }
+        const result = {};
+        for (const [el, val] of Object.entries(totals)) {
+            result[el] = { raw: parseFloat(val.toFixed(2)), pct: grand > 0 ? parseFloat((val / grand * 100).toFixed(1)) : 0 };
+        }
+        result.dominant = Object.entries(totals).sort((a, b) => b[1] - a[1])[0][0];
+        return result;
+    }
+
+    // Returns weighted modality (cardinal / fixed / mutable) counts
+    function getModalityBalance(positions) {
+        const totals = { cardinal: 0, fixed: 0, mutable: 0 };
+        let grand = 0;
+        for (const [key, pos] of Object.entries(positions)) {
+            const w = PLANET_ELEMENT_WEIGHTS[key] || 1.0;
+            const signIdx = Math.floor(pos.longitude / 30);
+            const quality = SIGNS[signIdx]?.quality;
+            if (quality && totals[quality] !== undefined) { totals[quality] += w; grand += w; }
+        }
+        const result = {};
+        for (const [mod, val] of Object.entries(totals)) {
+            result[mod] = { raw: parseFloat(val.toFixed(2)), pct: grand > 0 ? parseFloat((val / grand * 100).toFixed(1)) : 0 };
+        }
+        result.dominant = Object.entries(totals).sort((a, b) => b[1] - a[1])[0][0];
+        return result;
     }
 
     // ────────────────────────────────────────
@@ -775,52 +824,88 @@ const AstroEngine = (function () {
 
     // ────────────────────────────────────────
     // NEW: Moon Phase Calculator
+    // Uses actual Sun & Moon ecliptic longitudes (from the engine's ELP2000/Meeus
+    // formulas) for the elongation angle — accurate to ±0.5° / ~1 hour.
     // ────────────────────────────────────────
     function calculateMoonPhase(date) {
         const d = date || new Date();
-        const year = d.getFullYear();
-        const month = d.getMonth() + 1;
-        const day = d.getDate();
 
-        // Metonic cycle approximation
-        let c = 0, e = 0;
-        if (month < 3) { c = year - 1; e = month + 12; } else { c = year; e = month; }
-        const jd = Math.floor(365.25 * (c + 4716)) + Math.floor(30.6001 * (e + 1)) + day - 1524.5;
-        const daysSinceNew = (jd - 2451550.1) % 29.530588853;
-        const phase = ((daysSinceNew < 0 ? daysSinceNew + 29.53 : daysSinceNew) / 29.53);
-        const illumination = (1 - Math.cos(phase * 2 * Math.PI)) / 2 * 100;
+        // Build JD including time-of-day for the given moment
+        const yr  = d.getFullYear();
+        const mo  = String(d.getMonth() + 1).padStart(2, '0');
+        const dy  = String(d.getDate()).padStart(2, '0');
+        const hr  = String(d.getHours()).padStart(2, '0');
+        const mn  = String(d.getMinutes()).padStart(2, '0');
+        const jdNow = toJulianDay(`${yr}-${mo}-${dy}`, `${hr}:${mn}`);
 
+        // Compute positions using the engine (ELP2000 Moon, Meeus Sun)
+        const pos = calculatePlanetPositions(jdNow);
+        const sunLon  = pos.sun.longitude;
+        const moonLon = pos.moon.longitude;
+
+        // Elongation = Moon longitude − Sun longitude (0°–360°)
+        let elongation = ((moonLon - sunLon) % 360 + 360) % 360;
+
+        // Phase angle as fraction 0–1 (0 = New, 0.5 = Full)
+        const phase = elongation / 360;
+
+        // Illuminated fraction (correct formula: based on elongation)
+        // i = (1 − cos(elongation)) / 2
+        const illumination = (1 - Math.cos(elongation * Math.PI / 180)) / 2 * 100;
+
+        // Phase name based on elongation in degrees (more precise boundaries)
         let phaseName, phaseEmoji, phaseDesc;
-        if (phase < 0.03 || phase >= 0.97) { phaseName = 'Yeni Ay'; phaseEmoji = '🌑'; phaseDesc = 'Yeni başlangıçlar, niyet koyma ve içe dönme zamanı. Tohumlarını ek.'; }
-        else if (phase < 0.22) { phaseName = 'Hilal (Büyüyen)'; phaseEmoji = '🌒'; phaseDesc = 'Niyetlerin filizleniyor. Harekete geç, cesur ol.'; }
-        else if (phase < 0.28) { phaseName = 'İlk Dördün'; phaseEmoji = '🌓'; phaseDesc = 'Karar zamanı. Engellerle yüzleş ve yoluna devam et.'; }
-        else if (phase < 0.47) { phaseName = 'Şişkin Ay (Büyüyen)'; phaseEmoji = '🌔'; phaseDesc = 'Sabırlı ol, meyveler olgunlaşıyor. Detayları düzelt.'; }
-        else if (phase < 0.53) { phaseName = 'Dolunay'; phaseEmoji = '🌕'; phaseDesc = 'Tamamlanma ve aydınlanma! Duygular yoğun, gerçekler ortaya çıkar. Kutla! ✨'; }
-        else if (phase < 0.72) { phaseName = 'Şişkin Ay (Küçülen)'; phaseEmoji = '🌖'; phaseDesc = 'Şükret ve paylaş. Fazlalıkları bırakma zamanı.'; }
-        else if (phase < 0.78) { phaseName = 'Son Dördün'; phaseEmoji = '🌗'; phaseDesc = 'Eski kalıpları kır. Bırakman gerekeni bırak.'; }
-        else { phaseName = 'Hilal (Küçülen)'; phaseEmoji = '🌘'; phaseDesc = 'Dinlen, arın, hazırlan. Yeni döngü yaklaşıyor.'; }
+        const elong = elongation; // 0-360
+        if (elong < 11.25 || elong >= 348.75) {
+            phaseName = 'Yeni Ay';             phaseEmoji = '🌑';
+            phaseDesc = 'Yeni başlangıçlar, niyet koyma ve içe dönme zamanı. Tohumlarını ek.';
+        } else if (elong < 78.75) {
+            phaseName = 'Hilal (Büyüyen)';     phaseEmoji = '🌒';
+            phaseDesc = 'Niyetlerin filizleniyor. Harekete geç, cesur ol.';
+        } else if (elong < 101.25) {
+            phaseName = 'İlk Dördün';          phaseEmoji = '🌓';
+            phaseDesc = 'Karar zamanı. Engellerle yüzleş ve yoluna devam et.';
+        } else if (elong < 168.75) {
+            phaseName = 'Şişkin Ay (Büyüyen)'; phaseEmoji = '🌔';
+            phaseDesc = 'Sabırlı ol, meyveler olgunlaşıyor. Detayları düzelt.';
+        } else if (elong < 191.25) {
+            phaseName = 'Dolunay';             phaseEmoji = '🌕';
+            phaseDesc = 'Tamamlanma ve aydınlanma! Duygular yoğun, gerçekler ortaya çıkar. Kutla! ✨';
+        } else if (elong < 258.75) {
+            phaseName = 'Şişkin Ay (Küçülen)'; phaseEmoji = '🌖';
+            phaseDesc = 'Şükret ve paylaş. Fazlalıkları bırakma zamanı.';
+        } else if (elong < 281.25) {
+            phaseName = 'Son Dördün';          phaseEmoji = '🌗';
+            phaseDesc = 'Eski kalıpları kır. Bırakman gerekeni bırak.';
+        } else {
+            phaseName = 'Hilal (Küçülen)';     phaseEmoji = '🌘';
+            phaseDesc = 'Dinlen, arın, hazırlan. Yeni döngü yaklaşıyor.';
+        }
 
-        // Calculate next full/new moon (approx)
-        const daysToFull = ((0.5 - phase + 1) % 1) * 29.53;
-        const daysToNew = ((1 - phase) % 1) * 29.53;
+        // Days until next Full / New Moon using synodic period (29.530589 days)
+        // Full Moon at elongation 180°, New Moon at 360°/0°
+        const synodicPeriod = 29.530589;
+        const daysPerDeg = synodicPeriod / 360;
+        const daysToFull = elong < 180
+            ? (180 - elong) * daysPerDeg
+            : (360 - elong + 180) * daysPerDeg;
+        const daysToNew = (360 - elong) * daysPerDeg;
+
         const nextFull = new Date(d.getTime() + daysToFull * 86400000);
-        const nextNew = new Date(d.getTime() + daysToNew * 86400000);
+        const nextNew  = new Date(d.getTime() + daysToNew  * 86400000);
 
-        // Moon sign
-        const jdNow = toJulianDay(
-            `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`, '12:00'
-        );
-        const positions = calculatePlanetPositions(jdNow);
-        const moonSign = SIGNS[Math.floor(positions.moon.longitude / 30)];
+        // Moon sign from the live calculation
+        const moonSign = SIGNS[Math.floor(moonLon / 30)];
 
         // Rituals
         const rituals = getMoonRituals(phaseName);
 
         return {
-            phase, phaseName, phaseEmoji, phaseDesc, illumination: illumination.toFixed(1),
+            phase, elongation: elongation.toFixed(1), phaseName, phaseEmoji, phaseDesc,
+            illumination: illumination.toFixed(1),
             moonSign: moonSign.name, moonSignSymbol: moonSign.symbol, moonElement: moonSign.element,
             nextFull: nextFull.toLocaleDateString('tr-TR'),
-            nextNew: nextNew.toLocaleDateString('tr-TR'),
+            nextNew:  nextNew.toLocaleDateString('tr-TR'),
             rituals
         };
     }
@@ -1010,15 +1095,23 @@ const AstroEngine = (function () {
 
     // ────────────────────────────────────────
     // NATAL ASPECTS — between planet pairs
+    // Orbs are planet-weighted: luminaries (Sun/Moon) receive +2° bonus.
+    // Strength is 1.0 at exact, 0.0 at the orb boundary (linear fade).
+    // Includes major aspects AND the quincunx (150°) minor aspect.
     // ────────────────────────────────────────
     function calculateNatalAspects(positions) {
+        // Base orbs for each aspect type
         const ASPECT_TYPES = [
-            { name: 'Kavuşum',  symbol: '☌', angle: 0,   orb: 8, color: '#C9A0FF', harmony: 'neutral' },
-            { name: 'Sekstil',  symbol: '⚹', angle: 60,  orb: 5, color: '#4ade80', harmony: 'harmonious' },
-            { name: 'Kare',     symbol: '□', angle: 90,  orb: 7, color: '#FF4444', harmony: 'tense' },
-            { name: 'Trigon',   symbol: '△', angle: 120, orb: 7, color: '#4ade80', harmony: 'harmonious' },
-            { name: 'Karşıt',  symbol: '☍', angle: 180, orb: 8, color: '#FF4444', harmony: 'tense' }
+            { name: 'Kavuşum',   symbol: '☌', angle: 0,   orb: 8,   color: '#C9A0FF', harmony: 'neutral',    major: true  },
+            { name: 'Sekstil',   symbol: '⚹', angle: 60,  orb: 5,   color: '#4ade80', harmony: 'harmonious', major: true  },
+            { name: 'Kare',      symbol: '□', angle: 90,  orb: 7,   color: '#FF4444', harmony: 'tense',      major: true  },
+            { name: 'Trigon',    symbol: '△', angle: 120, orb: 7,   color: '#4ade80', harmony: 'harmonious', major: true  },
+            { name: 'Karşıt',   symbol: '☍', angle: 180, orb: 8,   color: '#FF4444', harmony: 'tense',      major: true  },
+            { name: 'Kuinkons',  symbol: '⚻', angle: 150, orb: 3,   color: '#FFA500', harmony: 'ambivalent', major: false }
         ];
+
+        // Luminaries get +2° orb bonus; inner planets +1°; outer planets no bonus
+        const ORB_BONUS = { sun: 2, moon: 2, mercury: 1, venus: 1, mars: 1, jupiter: 0, saturn: 0, uranus: 0, neptune: 0, pluto: 0 };
 
         const planetKeys = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto'];
         const aspects = [];
@@ -1031,14 +1124,22 @@ const AstroEngine = (function () {
                 let diff = Math.abs(lon1 - lon2);
                 if (diff > 180) diff = 360 - diff;
 
+                // Effective orb bonus = average of the two planets' bonuses
+                const orbBonus = ((ORB_BONUS[key1] || 0) + (ORB_BONUS[key2] || 0)) / 2;
+
                 for (const asp of ASPECT_TYPES) {
+                    const effectiveOrb = asp.orb + (asp.major ? orbBonus : 0);
                     const orbDiff = Math.abs(diff - asp.angle);
-                    if (orbDiff <= asp.orb) {
+                    if (orbDiff <= effectiveOrb) {
+                        // Strength: 1.0 = exact, 0.0 = at orb boundary (linear)
+                        const strength = parseFloat((1 - orbDiff / effectiveOrb).toFixed(3));
                         aspects.push({
                             planet1: key1, planet2: key2,
                             type: asp.name, symbol: asp.symbol,
-                            angle: asp.angle, orb: orbDiff,
-                            color: asp.color, harmony: asp.harmony
+                            angle: asp.angle, orb: parseFloat(orbDiff.toFixed(2)),
+                            effectiveOrb: parseFloat(effectiveOrb.toFixed(1)),
+                            strength,                // 0.0–1.0 for UI intensity
+                            color: asp.color, harmony: asp.harmony, major: asp.major
                         });
                         break; // Only one aspect per pair
                     }
@@ -1046,7 +1147,8 @@ const AstroEngine = (function () {
             }
         }
 
-        aspects.sort((a, b) => a.orb - b.orb);
+        // Sort: by strength descending (tighter aspects first)
+        aspects.sort((a, b) => b.strength - a.strength);
         return aspects;
     }
 
@@ -1204,6 +1306,8 @@ const AstroEngine = (function () {
         calculateMoonPhase,
         getCrystalRecommendations,
         getDominantElement,
+        getElementBalance,
+        getModalityBalance,
         getSignRecommendations
     };
 })();
